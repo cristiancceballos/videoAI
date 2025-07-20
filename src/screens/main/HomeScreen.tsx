@@ -87,7 +87,7 @@ export function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>GrowthOfWisdom</Text>
+        <Text style={styles.title}>VideoAI</Text>
         <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
