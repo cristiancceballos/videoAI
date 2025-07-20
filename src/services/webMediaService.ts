@@ -14,6 +14,10 @@ export interface WebMediaAsset {
 class WebMediaService {
   // Create a hidden file input for video selection from gallery
   private createFileInput(forCamera: boolean = false): HTMLInputElement {
+    if (typeof document === 'undefined') {
+      throw new Error('File input not supported in this environment. Please use the web version.');
+    }
+    
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'video/*';
@@ -31,6 +35,15 @@ class WebMediaService {
 
   // Pick video from gallery/files (mobile browsers will show gallery + camera options)
   async pickVideoFromDevice(): Promise<WebMediaAsset | null> {
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        'Web Only Feature',
+        'This feature is only available in the web version. Please visit the deployed app URL in your mobile browser.',
+        [{ text: 'OK' }]
+      );
+      return null;
+    }
+    
     return new Promise((resolve) => {
       try {
         const input = this.createFileInput(false); // Don't force camera
@@ -105,12 +118,21 @@ class WebMediaService {
 
   // Record video using device camera (web API)
   async recordVideoWithCamera(): Promise<WebMediaAsset | null> {
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        'Web Only Feature',
+        'This feature is only available in the web version. Please visit the deployed app URL in your mobile browser.',
+        [{ text: 'OK' }]
+      );
+      return null;
+    }
+    
     try {
       // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         Alert.alert(
           'Camera Not Supported', 
-          'Camera recording is not supported on this device. Please use "Choose File" instead.'
+          'Camera recording is not supported on this device. Please use "Choose from Gallery" instead.'
         );
         return null;
       }

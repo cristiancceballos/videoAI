@@ -82,10 +82,12 @@ export const onNetworkChange = (callback: (isOnline: boolean) => void): (() => v
 // Local storage helpers for offline data
 export const setOfflineData = (key: string, data: any): void => {
   try {
-    localStorage.setItem(`offline_${key}`, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`offline_${key}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    }
   } catch (error) {
     console.warn('Failed to save offline data:', error);
   }
@@ -93,6 +95,10 @@ export const setOfflineData = (key: string, data: any): void => {
 
 export const getOfflineData = (key: string, maxAge = 24 * 60 * 60 * 1000): any => {
   try {
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
+    
     const stored = localStorage.getItem(`offline_${key}`);
     if (!stored) return null;
     
@@ -111,7 +117,9 @@ export const getOfflineData = (key: string, maxAge = 24 * 60 * 60 * 1000): any =
 
 export const clearOfflineData = (key: string): void => {
   try {
-    localStorage.removeItem(`offline_${key}`);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`offline_${key}`);
+    }
   } catch (error) {
     console.warn('Failed to clear offline data:', error);
   }

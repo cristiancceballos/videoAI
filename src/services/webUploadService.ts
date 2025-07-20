@@ -99,6 +99,16 @@ class WebUploadService {
     title?: string
   ): Promise<string | null> {
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No active session found');
+        return null;
+      }
+      
+      console.log('Session user ID:', session.user.id);
+      console.log('Provided user ID:', userId);
+      
       type VideoInsert = Database['public']['Tables']['videos']['Insert'];
       
       const videoData: VideoInsert = {
@@ -115,6 +125,8 @@ class WebUploadService {
         height: asset.height,
       };
 
+      console.log('Attempting to insert video data:', videoData);
+
       const { data, error } = await supabase
         .from('videos')
         .insert(videoData)
@@ -126,6 +138,7 @@ class WebUploadService {
         return null;
       }
 
+      console.log('Video record created successfully:', data);
       return data.id;
     } catch (error) {
       console.error('Database error:', error);

@@ -176,6 +176,11 @@ export function UploadScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Upload Video</Text>
+        {Platform.OS !== 'web' && (
+          <Text style={styles.warningText}>
+            ⚠️ For full functionality, visit the deployed web version
+          </Text>
+        )}
       </View>
 
       <ScrollView 
@@ -276,6 +281,12 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#FF9500',
+    textAlign: 'center',
+    marginTop: 4,
   },
   scrollView: {
     flex: 1,
