@@ -3,6 +3,13 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
+// Polyfill for structuredClone (not available in older mobile browsers)
+if (typeof globalThis.structuredClone === 'undefined') {
+  globalThis.structuredClone = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj));
+  };
+}
+
 // Uncomment this line to test basic Supabase connection
 import TestApp from './TestApp';
 

@@ -277,8 +277,8 @@ class WebUploadService {
         userId,
         {
           uri: url,
-          type: 'video',
-          file: new File([], filename), // Placeholder file
+          type: 'video' as const,
+          file: new File([], filename, { type: 'video/mp4' }), // Proper file constructor
           fileSize: 0, // Will be updated when processed
           filename,
         },

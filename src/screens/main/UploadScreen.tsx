@@ -58,12 +58,16 @@ export function UploadScreen() {
   };
 
   const handleUrlUpload = async () => {
+    console.log('URL Upload clicked with input:', urlInput.trim());
+    
     if (!urlInput.trim()) {
       Alert.alert('Error', 'Please enter a video URL');
       return;
     }
 
     const validation = webUploadService.validateVideoUrl(urlInput.trim());
+    console.log('URL validation result:', validation);
+    
     if (!validation.valid) {
       Alert.alert('Invalid URL', validation.error || 'Please enter a valid YouTube or TikTok URL');
       return;
@@ -74,20 +78,25 @@ export function UploadScreen() {
       return;
     }
 
+    console.log('Starting URL upload process...');
+    
     // Show progress modal for URL processing
     setUploading(true);
     setShowProgress(true);
 
     try {
+      console.log('Calling uploadVideoFromUrl...');
       const result = await webUploadService.uploadVideoFromUrl(
         urlInput.trim(),
         user.id,
         `${validation.type?.toUpperCase()} Video`,
         (progress) => {
+          console.log('Upload progress:', progress);
           setUploadProgress(progress);
         }
       );
 
+      console.log('Upload result:', result);
       setUploading(false);
 
       if (result.success) {
@@ -105,9 +114,10 @@ export function UploadScreen() {
         setShowProgress(false);
       }
     } catch (error) {
+      console.error('URL upload error:', error);
       setUploading(false);
       setShowProgress(false);
-      Alert.alert('Error', 'Failed to process video URL. Please try again.');
+      Alert.alert('Error', `Failed to process video URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GrowthOfWisdom",
-    "slug": "growth-of-wisdom",
+    "name": "VideoAI",
+    "slug": "videoai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,8 +27,8 @@
       "bundler": "metro",
       "output": "single",
       "lang": "en",
-      "name": "GrowthOfWisdom",
-      "shortName": "GrowthOfWisdom",
+      "name": "VideoAI",
+      "shortName": "VideoAI",
       "description": "AI-powered video organizer with smart summaries and Q&A",
       "startUrl": "/",
       "display": "standalone",

@@ -1,5 +1,5 @@
-// Service Worker for GrowthOfWisdom PWA
-const CACHE_NAME = 'growth-of-wisdom-v1';
+// Service Worker for VideoAI PWA
+const CACHE_NAME = 'videoai-v2';
 const STATIC_CACHE_URLS = [
   '/',
   '/static/js/bundle.js',
@@ -114,11 +114,11 @@ self.addEventListener('push', (event) => {
     body: event.data ? event.data.text() : 'Video processing complete!',
     icon: '/assets/icon.png',
     badge: '/assets/icon.png',
-    tag: 'growth-of-wisdom-notification',
+    tag: 'videoai-notification',
     requireInteraction: false,
   };
 
   event.waitUntil(
-    self.registration.showNotification('GrowthOfWisdom', options)
+    self.registration.showNotification('VideoAI', options)
   );
 });
