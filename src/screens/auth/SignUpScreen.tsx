@@ -1,0 +1,207 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  ScrollView,
+} from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+
+export function SignUpScreen({ navigation }: any) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
+
+  const handleSignUp = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await signUp(email, password);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert(
+        'Success',
+        'Account created! Please check your email to verify your account.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.form}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join GrowthOfWisdom</Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#666"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#666"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="password"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#666"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoComplete="password"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSignUp}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.linkText}>
+              Already have an account? Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isSmallScreen = screenWidth < 375;
+const isVerySmallScreen = screenWidth < 320;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: isSmallScreen ? 16 : 24,
+    paddingVertical: 20,
+    minHeight: screenHeight * 0.8,
+  },
+  form: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  header: {
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: isSmallScreen ? 14 : 16,
+    color: '#888',
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: isSmallScreen ? 14 : 16,
+    marginBottom: 16,
+    fontSize: isSmallScreen ? 15 : 16,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: '#333',
+    minHeight: 50,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: isSmallScreen ? 14 : 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: '600',
+  },
+  linkButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  linkText: {
+    color: '#007AFF',
+    fontSize: isSmallScreen ? 13 : 14,
+    textAlign: 'center',
+  },
+});

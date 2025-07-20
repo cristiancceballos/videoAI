@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "videoai-app",
-    "slug": "videoai-app",
+    "name": "GrowthOfWisdom",
+    "slug": "growth-of-wisdom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true
@@ -18,12 +18,49 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "lang": "en",
+      "name": "GrowthOfWisdom",
+      "shortName": "GrowthOfWisdom",
+      "description": "AI-powered video organizer with smart summaries and Q&A",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "themeColor": "#000000",
+      "backgroundColor": "#000000",
+      "preferRelatedApplications": false,
+      "scope": "/",
+      "crossorigin": "use-credentials",
+      "icons": [
+        {
+          "src": "./assets/icon.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any maskable"
+        },
+        {
+          "src": "./assets/adaptive-icon.png", 
+          "sizes": "512x512",
+          "type": "image/png",
+          "purpose": "any maskable"
+        }
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you upload videos.",
+          "cameraPermission": "The app accesses your camera to let you record videos."
+        }
+      ]
+    ]
   }
 }
