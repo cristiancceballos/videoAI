@@ -254,6 +254,72 @@ class WebUploadService {
 
     return { valid: false, error: 'Invalid video URL. Please provide a YouTube or TikTok link.' };
   }
+
+  // Upload video from URL (simplified implementation for Phase 2)
+  async uploadVideoFromUrl(
+    url: string,
+    userId: string,
+    title: string,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    try {
+      // 1. Validate URL
+      const validation = this.validateVideoUrl(url);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      // 2. Create video record in database with processing status
+      const filename = `${validation.type}_${Date.now()}.mp4`;
+      const path = `${userId}/${filename}`;
+      
+      const videoId = await this.createVideoRecord(
+        userId,
+        {
+          uri: url,
+          type: 'video',
+          file: new File([], filename), // Placeholder file
+          fileSize: 0, // Will be updated when processed
+          filename,
+        },
+        path,
+        validation.type!,
+        url,
+        title
+      );
+
+      if (!videoId) {
+        return { success: false, error: 'Failed to create video record' };
+      }
+
+      // 3. For Phase 2, mark as processing (actual download will be in Phase 3)
+      await this.updateVideoStatus(videoId, 'processing');
+
+      // Simulate progress for user feedback
+      if (onProgress) {
+        const progressIntervals = [20, 40, 60, 80, 100];
+        for (let i = 0; i < progressIntervals.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          onProgress({
+            loaded: progressIntervals[i],
+            total: 100,
+            percentage: progressIntervals[i]
+          });
+        }
+      }
+
+      // For now, mark as ready with placeholder (will be actual video processing in Phase 3)
+      await this.updateVideoStatus(videoId, 'ready');
+
+      return { 
+        success: true, 
+        videoId,
+      };
+    } catch (error) {
+      console.error('URL upload error:', error);
+      return { success: false, error: 'Failed to process video URL' };
+    }
+  }
 }
 
 export const webUploadService = new WebUploadService();

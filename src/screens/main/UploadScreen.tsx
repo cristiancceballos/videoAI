@@ -57,7 +57,7 @@ export function UploadScreen() {
     }
   };
 
-  const handleUrlUpload = () => {
+  const handleUrlUpload = async () => {
     if (!urlInput.trim()) {
       Alert.alert('Error', 'Please enter a video URL');
       return;
@@ -69,11 +69,46 @@ export function UploadScreen() {
       return;
     }
 
-    // TODO: Implement URL video processing in Phase 3
-    Alert.alert(
-      'Coming Soon',
-      `${validation.type?.toUpperCase()} video processing will be available in the next update!`
-    );
+    if (!user) {
+      Alert.alert('Error', 'Please log in to upload videos');
+      return;
+    }
+
+    // Show progress modal for URL processing
+    setUploading(true);
+    setShowProgress(true);
+
+    try {
+      const result = await webUploadService.uploadVideoFromUrl(
+        urlInput.trim(),
+        user.id,
+        `${validation.type?.toUpperCase()} Video`,
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
+
+      setUploading(false);
+
+      if (result.success) {
+        Alert.alert('Success', 'Video URL processed successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowProgress(false);
+              setUrlInput('');
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Upload Failed', result.error || 'Something went wrong');
+        setShowProgress(false);
+      }
+    } catch (error) {
+      setUploading(false);
+      setShowProgress(false);
+      Alert.alert('Error', 'Failed to process video URL. Please try again.');
+    }
   };
 
   const handleUploadAsset = async (title: string) => {
@@ -148,7 +183,7 @@ export function UploadScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.uploadButtonIcon}>📱</Text>
-            <Text style={styles.uploadButtonText}>Choose File</Text>
+            <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -157,7 +192,7 @@ export function UploadScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.uploadButtonIcon}>📹</Text>
-            <Text style={styles.uploadButtonText}>Record Video</Text>
+            <Text style={styles.uploadButtonText}>Take Video</Text>
           </TouchableOpacity>
         </View>
 

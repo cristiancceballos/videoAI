@@ -12,22 +12,28 @@ export interface WebMediaAsset {
 }
 
 class WebMediaService {
-  // Create a hidden file input for video selection
-  private createFileInput(): HTMLInputElement {
+  // Create a hidden file input for video selection from gallery
+  private createFileInput(forCamera: boolean = false): HTMLInputElement {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'video/*';
     input.style.display = 'none';
-    input.capture = 'environment'; // Use back camera on mobile
+    
+    // Only add capture attribute if explicitly requesting camera
+    if (forCamera) {
+      input.capture = 'environment'; // Use back camera on mobile
+    }
+    // Without capture attribute, mobile browsers will show gallery + camera options
+    
     document.body.appendChild(input);
     return input;
   }
 
-  // Pick video from device (works on both mobile and desktop browsers)
+  // Pick video from gallery/files (mobile browsers will show gallery + camera options)
   async pickVideoFromDevice(): Promise<WebMediaAsset | null> {
     return new Promise((resolve) => {
       try {
-        const input = this.createFileInput();
+        const input = this.createFileInput(false); // Don't force camera
         
         input.onchange = async (event) => {
           const target = event.target as HTMLInputElement;
@@ -109,13 +115,61 @@ class WebMediaService {
         return null;
       }
 
-      // For now, show alternative since MediaRecorder setup is complex
+      // For mobile browsers, use file input with camera capture as fallback
+      if (this.isMobile()) {
+        return new Promise((resolve) => {
+          const input = this.createFileInput(true); // Force camera
+          
+          input.onchange = async (event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+            
+            if (!file) {
+              resolve(null);
+              return;
+            }
+
+            try {
+              const uri = URL.createObjectURL(file);
+              const metadata = await this.getVideoMetadata(uri);
+              
+              const asset: WebMediaAsset = {
+                uri,
+                type: 'video',
+                file,
+                fileSize: file.size,
+                filename: file.name || `recorded_${Date.now()}.mp4`,
+                duration: metadata.duration,
+                width: metadata.width,
+                height: metadata.height,
+              };
+
+              resolve(asset);
+            } catch (error) {
+              console.error('Error processing recorded video:', error);
+              Alert.alert('Error', 'Failed to process recorded video');
+              resolve(null);
+            } finally {
+              document.body.removeChild(input);
+            }
+          };
+
+          input.oncancel = () => {
+            document.body.removeChild(input);
+            resolve(null);
+          };
+
+          input.click();
+        });
+      }
+
+      // For desktop, implement proper MediaRecorder (simplified for now)
       Alert.alert(
         'Camera Recording',
-        'Camera recording will be available in the next update. For now, please use "Choose File" to select a video.',
+        'Camera recording is optimized for mobile browsers. On desktop, please use "Choose File" instead.',
         [
           {
-            text: 'Choose File Instead',
+            text: 'Choose File Instead', 
             onPress: () => this.pickVideoFromDevice(),
           },
           { text: 'Cancel', style: 'cancel' }
