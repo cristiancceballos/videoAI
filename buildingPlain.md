@@ -23,11 +23,12 @@ comprehensive implementation roadmap:
 
   Phase 2: Video Upload & Storage 🎥
 
-  1. Upload Infrastructure
+  1. Upload Infrastructure (Gallery-Focused)
      - Presigned URL generation for direct Supabase Storage upload
-     - Support for device picker (expo-document-picker)
-     - URL paste functionality for YouTube/TikTok links
+     - Support for device gallery picker (HTML5 File API for web)
+     - Camera recording functionality
      - Thumbnail generation and upload
+     - URL functionality temporarily available but not emphasized
 
   2. Video Processing Queue
      - Supabase Edge Function for upload webhook
@@ -85,7 +86,20 @@ comprehensive implementation roadmap:
      - Filter options (date, category, status)
      - Search result highlighting
 
-  Phase 6: Polish & Production ✨
+  Phase 6: URL Downloads & Advanced Features 🔗
+
+  1. YouTube/TikTok Integration
+     - Video URL parsing and validation
+     - Legal compliance framework
+     - Download service implementation
+     - Rate limiting and user quotas
+
+  2. Advanced Processing
+     - Video format conversion
+     - Quality optimization
+     - Batch processing capabilities
+
+  Phase 7: Polish & Production ✨
 
   1. Error Handling
      - Retry mechanisms for failed processing
@@ -114,7 +128,8 @@ comprehensive implementation roadmap:
   - AI: OpenAI (Whisper, GPT-4, Embeddings)
   - Video Processing: ffmpeg in Supabase Edge Functions
   - Real-time: Supabase Realtime subscriptions
-  - Media Handling: HTML5 File API and XMLHttpRequest for uploads
+  - Media Handling: HTML5 File API and XMLHttpRequest for gallery uploads
+  - Future: Video download services for URL-based content
 
   Your PWA approach is excellent - direct distribution via QR code eliminates app store 
   complexity while providing native-like experience. The presigned URL upload, background 

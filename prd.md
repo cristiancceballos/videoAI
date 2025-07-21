@@ -33,7 +33,8 @@ The Smart Video Organizer is an application designed to help users manage and in
 
 #### Video Upload and Storage
 
-- Users can upload videos from YouTube, TikTok, or personal recordings.
+- **Primary Feature**: Users can upload videos from their device gallery/camera.
+- **Future Enhancement**: URL-based video downloads from YouTube, TikTok (Phase 6).
 - Videos are stored securely with associated metadata.
 
 #### User Notes and Key Points
@@ -123,7 +124,7 @@ The Smart Video Organizer is an application designed to help users manage and in
 ### 6. Constraints and Assumptions
 
 - **User Base:** Initially designed for fewer than 10 users, focusing on functionality over scalability.
-- **Video Sources:** Supports videos from YouTube, TikTok, and personal recordings.
+- **Video Sources:** Primary focus on device gallery uploads. URL downloads (YouTube, TikTok) deferred to future phase due to technical and legal complexities.
 - **AI Capabilities:** Dependent on the performance and availability of chosen LLM APIs.
 - **Budget:** Utilizes free tiers of services where possible to minimize costs.
 
@@ -132,10 +133,11 @@ The Smart Video Organizer is an application designed to help users manage and in
 ### 7. Timeline and Milestones
 
 - **Phase 1:** Set up basic infrastructure (auth, storage, database).
-- **Phase 2:** Implement video upload and notes functionality.
+- **Phase 2:** Implement device video upload and notes functionality.
 - **Phase 3:** Integrate AI for summarization and Q&A.
 - **Phase 4:** Develop search functionality and UI enhancements.
 - **Phase 5:** Testing and deployment.
+- **Phase 6:** Add URL-based video downloads (YouTube, TikTok).
 
 ---
 

@@ -12,6 +12,11 @@ CREATE TABLE IF NOT EXISTS videos (
   status TEXT DEFAULT 'uploading' CHECK (status IN ('uploading', 'processing', 'ready', 'error')),
   duration INTEGER,
   file_size BIGINT,
+  source_type TEXT DEFAULT 'device' CHECK (source_type IN ('device', 'youtube', 'tiktok')),
+  source_url TEXT,
+  width INTEGER,
+  height INTEGER,
+  original_filename TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
