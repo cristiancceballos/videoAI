@@ -117,14 +117,18 @@ export function HomeScreen() {
       const url = await videoService.getVideoUrl(video);
       if (url) {
         setVideoUrl(url);
-        console.log('✅ Video URL loaded successfully');
+        console.log('✅ Secure video URL loaded successfully (expires in 1 hour)');
       } else {
-        setVideoError('Unable to load video. Please try again later.');
-        console.error('❌ Failed to get video URL');
+        setVideoError('Unable to generate secure video link. Please check your permissions.');
+        console.error('❌ Failed to get secure video URL');
       }
     } catch (error) {
       console.error('❌ Error loading video:', error);
-      setVideoError('Failed to load video. Please check your connection.');
+      if (error instanceof Error && error.message.includes('permission')) {
+        setVideoError('Access denied. You can only view videos you uploaded.');
+      } else {
+        setVideoError('Failed to load video. Please check your connection and try again.');
+      }
     } finally {
       setVideoLoading(false);
     }

@@ -60,7 +60,29 @@ class VideoService {
     }
   }
 
-  // Get public URL for a file in storage
+  // Get secure signed URL for a file in storage (user-specific access)
+  async getSecureFileUrl(bucket: string, path: string, expiresIn: number = 3600): Promise<string | null> {
+    try {
+      console.log('🔐 Getting secure signed URL from bucket:', bucket, 'path:', path, 'expires in:', expiresIn, 'seconds');
+      
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, expiresIn);
+
+      if (error) {
+        console.error('❌ Error creating signed URL:', error);
+        return null;
+      }
+
+      console.log('🔗 Supabase signed URL created successfully (expires in', expiresIn / 60, 'minutes)');
+      return data.signedUrl;
+    } catch (error) {
+      console.error('❌ Exception creating signed URL:', error);
+      return null;
+    }
+  }
+
+  // Legacy public URL method (for thumbnails if needed)
   async getFileUrl(bucket: string, path: string): Promise<string | null> {
     try {
       console.log('🪣 Getting public URL from bucket:', bucket, 'path:', path);
@@ -98,8 +120,9 @@ class VideoService {
         return null;
       }
 
-      console.log('🗂️ Attempting to get URL from bucket "videos" with path:', video.storage_path);
-      const videoUrl = await this.getFileUrl('videos', video.storage_path);
+      console.log('🗂️ Attempting to get secure signed URL from bucket "videos" with path:', video.storage_path);
+      // Use signed URL for secure, user-specific access (expires in 1 hour)
+      const videoUrl = await this.getSecureFileUrl('videos', video.storage_path, 3600);
       
       if (videoUrl) {
         console.log('✅ Video URL generated successfully:', videoUrl);

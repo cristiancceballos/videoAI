@@ -14,7 +14,7 @@ import { VideoWithMetadata } from '../services/videoService';
 interface VideoPlayerModalProps {
   visible: boolean;
   video: VideoWithMetadata | null;
-  videoUrl: string | null | undefined;
+  videoUrl: string | null;
   onClose: () => void;
   loading?: boolean;
   error?: string;
