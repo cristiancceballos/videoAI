@@ -63,13 +63,20 @@ class VideoService {
   // Get public URL for a file in storage
   async getFileUrl(bucket: string, path: string): Promise<string | null> {
     try {
+      console.log('🪣 Getting public URL from bucket:', bucket, 'path:', path);
+      
       const { data } = supabase.storage
         .from(bucket)
         .getPublicUrl(path);
 
+      console.log('🔗 Supabase getPublicUrl response:', {
+        publicUrl: data.publicUrl,
+        fullPath: data.fullPath
+      });
+
       return data.publicUrl;
     } catch (error) {
-      console.error('Error getting file URL:', error);
+      console.error('❌ Error getting file URL:', error);
       return null;
     }
   }
@@ -78,14 +85,37 @@ class VideoService {
   async getVideoUrl(video: VideoWithMetadata): Promise<string | null> {
     try {
       console.log('🎥 Getting video URL for:', video.title);
+      console.log('📁 Video storage details:', {
+        id: video.id,
+        storage_path: video.storage_path,
+        status: video.status,
+        file_size: video.file_size,
+        user_id: video.user_id
+      });
       
       if (!video.storage_path) {
-        console.error('❌ No storage path found for video');
+        console.error('❌ No storage path found for video:', video.title);
         return null;
       }
 
+      console.log('🗂️ Attempting to get URL from bucket "videos" with path:', video.storage_path);
       const videoUrl = await this.getFileUrl('videos', video.storage_path);
-      console.log('📹 Video URL generated:', videoUrl ? 'Success' : 'Failed');
+      
+      if (videoUrl) {
+        console.log('✅ Video URL generated successfully:', videoUrl);
+        // Test if URL is accessible
+        try {
+          const response = await fetch(videoUrl, { method: 'HEAD' });
+          console.log('🌐 URL accessibility test:', response.status, response.statusText);
+          if (!response.ok) {
+            console.error('❌ Generated URL is not accessible:', response.status, response.statusText);
+          }
+        } catch (fetchError) {
+          console.error('❌ URL accessibility test failed:', fetchError);
+        }
+      } else {
+        console.error('❌ Failed to generate video URL for path:', video.storage_path);
+      }
       
       return videoUrl;
     } catch (error) {

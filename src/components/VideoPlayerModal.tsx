@@ -100,6 +100,23 @@ export function VideoPlayerModal({
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>⚠️</Text>
               <Text style={styles.errorMessage}>{error}</Text>
+              {videoUrl && (
+                <TouchableOpacity 
+                  onPress={() => {
+                    console.log('🔗 Manual URL test - copying to clipboard:', videoUrl);
+                    if (Platform.OS === 'web') {
+                      navigator.clipboard?.writeText(videoUrl).then(() => {
+                        console.log('📋 URL copied to clipboard');
+                      });
+                    }
+                    // Also try to open URL in new tab for testing
+                    window.open(videoUrl, '_blank');
+                  }}
+                  style={styles.debugButton}
+                >
+                  <Text style={styles.debugButtonText}>Test URL Directly</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity onPress={onClose} style={styles.errorButton}>
                 <Text style={styles.errorButtonText}>Close</Text>
               </TouchableOpacity>
@@ -112,6 +129,26 @@ export function VideoPlayerModal({
               <Text style={styles.errorMessage}>
                 Unable to play this video. It may be corrupted or in an unsupported format.
               </Text>
+              {videoUrl && (
+                <View style={styles.debugContainer}>
+                  <Text style={styles.debugInfo}>Debug Info:</Text>
+                  <Text style={styles.debugUrl} numberOfLines={2}>{videoUrl}</Text>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('🔍 Video debugging:', {
+                        video_title: video?.title,
+                        video_status: video?.status,
+                        storage_path: video?.storage_path,
+                        generated_url: videoUrl
+                      });
+                      window.open(videoUrl, '_blank');
+                    }}
+                    style={styles.debugButton}
+                  >
+                    <Text style={styles.debugButtonText}>Open URL in New Tab</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <TouchableOpacity onPress={onClose} style={styles.errorButton}>
                 <Text style={styles.errorButtonText}>Close</Text>
               </TouchableOpacity>
@@ -263,6 +300,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  debugContainer: {
+    marginVertical: 16,
+    padding: 12,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    width: '100%',
+  },
+  debugInfo: {
+    color: '#888',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  debugUrl: {
+    color: '#007AFF',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    marginBottom: 8,
+  },
+  debugButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  debugButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
   },
   infoContainer: {
     padding: 16,
