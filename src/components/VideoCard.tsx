@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
 import { VideoWithMetadata } from '../services/videoService';
 
@@ -82,21 +83,36 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
   const handleDelete = () => {
     console.log('🗑️ Delete requested for video:', video.title);
     if (onDelete) {
-      Alert.alert(
-        'Delete Video',
-        `Are you sure you want to delete "${video.title}"? This action cannot be undone.`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => onDelete(video),
-          },
-        ]
-      );
+      // Use browser-compatible confirmation for web platform
+      if (Platform.OS === 'web') {
+        const confirmed = window.confirm(
+          `Are you sure you want to delete "${video.title}"? This action cannot be undone.`
+        );
+        console.log('🔍 Confirmation result:', confirmed);
+        if (confirmed) {
+          console.log('✅ User confirmed deletion');
+          onDelete(video);
+        } else {
+          console.log('❌ User cancelled deletion');
+        }
+      } else {
+        // Use native Alert for mobile apps
+        Alert.alert(
+          'Delete Video',
+          `Are you sure you want to delete "${video.title}"? This action cannot be undone.`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: () => onDelete(video),
+            },
+          ]
+        );
+      }
     } else {
       console.log('❌ onDelete prop not provided');
     }
