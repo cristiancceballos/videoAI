@@ -13,7 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
-import { VideoCard } from '../../components/VideoCard';
+import { VideoGridItem } from '../../components/VideoGridItem';
 import { VideoPlayerModal } from '../../components/VideoPlayerModal';
 
 export function HomeScreen() {
@@ -29,6 +29,7 @@ export function HomeScreen() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [urlRetryCount, setUrlRetryCount] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -95,6 +96,28 @@ export function HomeScreen() {
     setRefreshing(false);
   };
 
+  const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<void> => {
+    try {
+      console.log(`🔄 Loading video URL (attempt ${retryCount + 1}) for:`, video.title);
+      const url = await videoService.getVideoUrl(video);
+      if (url) {
+        setVideoUrl(url);
+        setUrlRetryCount(0); // Reset retry count on success
+        console.log('✅ Fresh signed video URL loaded successfully (expires in 1 hour)');
+      } else {
+        setVideoError('Unable to generate secure video link. Please check your permissions.');
+        console.error('❌ Failed to get secure video URL');
+      }
+    } catch (error) {
+      console.error('❌ Error loading video URL:', error);
+      if (error instanceof Error && error.message.includes('permission')) {
+        setVideoError('Access denied. You can only view videos you uploaded.');
+      } else {
+        setVideoError('Failed to load video. Please check your connection and try again.');
+      }
+    }
+  };
+
   const handleVideoPress = async (video: VideoWithMetadata) => {
     if (video.status !== 'ready') {
       if (video.status === 'processing') {
@@ -111,27 +134,29 @@ export function HomeScreen() {
     setSelectedVideo(video);
     setVideoLoading(true);
     setVideoError(null);
+    setVideoUrl(null); // Clear previous URL
+    setUrlRetryCount(0);
     setShowVideoPlayer(true);
 
-    try {
-      const url = await videoService.getVideoUrl(video);
-      if (url) {
-        setVideoUrl(url);
-        console.log('✅ Secure video URL loaded successfully (expires in 1 hour)');
-      } else {
-        setVideoError('Unable to generate secure video link. Please check your permissions.');
-        console.error('❌ Failed to get secure video URL');
-      }
-    } catch (error) {
-      console.error('❌ Error loading video:', error);
-      if (error instanceof Error && error.message.includes('permission')) {
-        setVideoError('Access denied. You can only view videos you uploaded.');
-      } else {
-        setVideoError('Failed to load video. Please check your connection and try again.');
-      }
-    } finally {
-      setVideoLoading(false);
+    // Load fresh URL every time video is opened
+    await loadVideoUrl(video);
+    setVideoLoading(false);
+  };
+
+  const handleVideoUrlExpired = async () => {
+    if (!selectedVideo || urlRetryCount >= 2) {
+      console.error('❌ Max retries reached or no video selected');
+      setVideoError('Video link expired. Please close and reopen the video.');
+      return;
     }
+
+    console.log('🔄 Video URL appears to be expired, refreshing...');
+    setUrlRetryCount(prev => prev + 1);
+    setVideoLoading(true);
+    setVideoError(null);
+    
+    await loadVideoUrl(selectedVideo, urlRetryCount);
+    setVideoLoading(false);
   };
 
   const handleCloseVideoPlayer = () => {
@@ -141,6 +166,7 @@ export function HomeScreen() {
     setVideoUrl(null);
     setVideoError(null);
     setVideoLoading(false);
+    setUrlRetryCount(0);
   };
 
   const handleVideoDelete = async (video: VideoWithMetadata) => {
@@ -168,8 +194,8 @@ export function HomeScreen() {
     }
   };
 
-  const renderVideoCard = ({ item }: { item: VideoWithMetadata }) => (
-    <VideoCard 
+  const renderVideoGridItem = ({ item }: { item: VideoWithMetadata }) => (
+    <VideoGridItem 
       video={item} 
       onPress={handleVideoPress}
       onDelete={handleVideoDelete}
@@ -207,9 +233,11 @@ export function HomeScreen() {
 
       <FlatList
         data={videos}
-        renderItem={renderVideoCard}
+        renderItem={renderVideoGridItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.content}
+        numColumns={3}
+        contentContainerStyle={styles.gridContent}
+        columnWrapperStyle={styles.row}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -227,7 +255,8 @@ export function HomeScreen() {
         videoUrl={videoUrl}
         onClose={handleCloseVideoPlayer}
         loading={videoLoading}
-        error={videoError}
+        error={videoError || undefined}
+        onUrlExpired={handleVideoUrlExpired}
       />
     </View>
   );
@@ -296,6 +325,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmallScreen ? 16 : 20,
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  gridContent: {
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  row: {
+    justifyContent: 'flex-start', // Edge-to-edge alignment
   },
   emptyContainer: {
     flex: 1,

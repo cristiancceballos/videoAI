@@ -18,6 +18,7 @@ interface VideoPlayerModalProps {
   onClose: () => void;
   loading?: boolean;
   error?: string;
+  onUrlExpired?: () => void;
 }
 
 export function VideoPlayerModal({
@@ -27,12 +28,24 @@ export function VideoPlayerModal({
   onClose,
   loading = false,
   error,
+  onUrlExpired,
 }: VideoPlayerModalProps) {
   const [videoError, setVideoError] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
 
-  const handleVideoError = () => {
-    console.error('❌ Video playback error');
+  const handleVideoError = (event: any) => {
+    console.error('❌ Video playback error:', event);
+    
+    // Check if error might be due to expired URL
+    if (event?.target?.error?.code === 4 || // MEDIA_ERR_SRC_NOT_SUPPORTED
+        event?.target?.error?.code === 3) { // MEDIA_ERR_DECODE
+      console.log('🔄 Video error might be expired URL, attempting refresh...');
+      if (onUrlExpired) {
+        onUrlExpired();
+        return; // Don't show error yet, let retry happen
+      }
+    }
+    
     setVideoError(true);
   };
 
@@ -92,7 +105,9 @@ export function VideoPlayerModal({
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingText}>Loading video...</Text>
+              <Text style={styles.loadingText}>
+                {videoUrl ? 'Refreshing video...' : 'Loading video...'}
+              </Text>
             </View>
           )}
 
@@ -164,6 +179,7 @@ export function VideoPlayerModal({
               onLoadedData={handleVideoLoad}
               preload="metadata"
               playsInline
+              key={videoUrl} // Force re-render when URL changes
               poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDMyMCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE2MCIgeT0iOTAiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiI+VmlkZW8gUGxheWVyPC90ZXh0Pgo8L3N2Zz4="
             />
           )}
