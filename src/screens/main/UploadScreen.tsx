@@ -100,7 +100,14 @@ export function UploadScreen() {
           },
         ]);
       } else {
-        Alert.alert('Upload Failed', result.error || 'Something went wrong');
+        console.error('❌ Upload failed:', result.error);
+        const userFriendlyError = result.error?.includes('type integer') 
+          ? 'Video file format error. Please try a different video.'
+          : result.error?.includes('row-level security')
+          ? 'Authentication error. Please sign out and sign back in.'
+          : result.error || 'Upload failed. Please try again.';
+        
+        Alert.alert('Upload Failed', userFriendlyError);
         setShowProgress(false);
       }
     } catch (error) {

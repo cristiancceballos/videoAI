@@ -24,7 +24,8 @@ export function HomeScreen() {
   useEffect(() => {
     if (user) {
       loadVideos();
-      setupRealtimeSubscription();
+      // Temporarily disable real-time subscription due to schema mismatch
+      // setupRealtimeSubscription();
     }
   }, [user]);
 
@@ -59,13 +60,24 @@ export function HomeScreen() {
   const setupRealtimeSubscription = () => {
     if (!user) return;
 
-    const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
-      setVideos(updatedVideos);
-    });
+    try {
+      const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
+        console.log('📱 Real-time update received, updating video list');
+        setVideos(updatedVideos);
+      });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+      return () => {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.log('Real-time unsubscribe error (non-critical):', error);
+        }
+      };
+    } catch (error) {
+      console.log('Real-time subscription setup failed (non-critical):', error);
+      // Fallback to manual refresh only
+      return () => {};
+    }
   };
 
   const handleRefresh = async () => {

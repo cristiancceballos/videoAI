@@ -36,7 +36,12 @@ export function WebVideoPreviewModal({
       setTimeout(() => {
         if (titleInputRef.current) {
           titleInputRef.current.focus();
-          titleInputRef.current.setSelection(0, 5); // Select all 5 characters of 'title'
+          // Use React Native compatible selection method
+          if (titleInputRef.current.setNativeProps) {
+            titleInputRef.current.setNativeProps({
+              selection: { start: 0, end: 5 }
+            });
+          }
         }
       }, 100);
     }
@@ -104,7 +109,12 @@ export function WebVideoPreviewModal({
                 // Ensure text is selected when focused
                 setTimeout(() => {
                   if (titleInputRef.current && title === 'title') {
-                    titleInputRef.current.setSelection(0, 5);
+                    // Use React Native compatible selection
+                    if (titleInputRef.current.setNativeProps) {
+                      titleInputRef.current.setNativeProps({
+                        selection: { start: 0, end: 5 }
+                      });
+                    }
                   }
                 }, 50);
               }}

@@ -116,13 +116,13 @@ class WebUploadService {
         title: title || asset.filename,
         storage_path: storagePath,
         status: 'uploading',
-        file_size: asset.fileSize,
-        duration: asset.duration,
+        file_size: Math.round(asset.fileSize), // Ensure integer
+        duration: asset.duration ? Math.round(asset.duration) : null, // Convert to integer seconds
         source_type: sourceType,
         source_url: sourceUrl,
         original_filename: asset.filename,
-        width: asset.width,
-        height: asset.height,
+        width: asset.width ? Math.round(asset.width) : null, // Ensure integer
+        height: asset.height ? Math.round(asset.height) : null, // Ensure integer
       };
 
       console.log('Attempting to insert video data:', videoData);
@@ -134,7 +134,17 @@ class WebUploadService {
         .single();
 
       if (error) {
-        console.error('Error creating video record:', error);
+        console.error('❌ Error creating video record:', error);
+        
+        // Provide user-friendly error messages
+        if (error.code === '22P02') {
+          console.error('Data type error - likely duration/dimensions format issue');
+        } else if (error.code === '23505') {
+          console.error('Duplicate entry error');
+        } else if (error.message?.includes('row-level security')) {
+          console.error('Authentication/permissions error');
+        }
+        
         return null;
       }
 
@@ -142,7 +152,16 @@ class WebUploadService {
       console.log('📱 Video will appear in home feed with ID:', data.id);
       return data.id;
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('❌ Database exception:', error);
+      
+      // Log additional context for debugging
+      console.error('Video data that failed:', {
+        title: title || asset.filename,
+        fileSize: asset.fileSize,
+        duration: asset.duration,
+        sourceType
+      });
+      
       return null;
     }
   }
