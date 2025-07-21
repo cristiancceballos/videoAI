@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { webMediaService, WebMediaAsset } from '../../services/webMediaService';
-import { UploadProgress } from '../../services/webUploadService';
+import { webUploadService, UploadProgress } from '../../services/webUploadService';
 import { WebVideoPreviewModal } from '../../components/WebVideoPreviewModal';
 import { UploadProgressModal } from '../../components/UploadProgressModal';
 
