@@ -139,6 +139,7 @@ class WebUploadService {
       }
 
       console.log('Video record created successfully:', data);
+      console.log('Video will appear in home feed with status:', 'uploading -> ready');
       return data.id;
     } catch (error) {
       console.error('Database error:', error);
@@ -218,7 +219,8 @@ class WebUploadService {
       }
 
       // 5. Update status to ready (for now, will be 'processing' in Phase 3)
-      await this.updateVideoStatus(videoId, 'ready');
+      const statusUpdated = await this.updateVideoStatus(videoId, 'ready');
+      console.log('Video status updated to ready:', statusUpdated);
 
       // 6. Clean up object URL
       URL.revokeObjectURL(asset.uri);

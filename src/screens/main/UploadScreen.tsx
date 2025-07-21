@@ -11,6 +11,7 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { webMediaService, WebMediaAsset } from '../../services/webMediaService';
 import { webUploadService, UploadProgress } from '../../services/webUploadService';
@@ -19,6 +20,7 @@ import { UploadProgressModal } from '../../components/UploadProgressModal';
 
 export function UploadScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [selectedAsset, setSelectedAsset] = useState<WebMediaAsset | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -79,7 +81,17 @@ export function UploadScreen() {
       if (result.success) {
         Alert.alert('Success', 'Video uploaded successfully!', [
           {
-            text: 'OK',
+            text: 'View in Library',
+            onPress: () => {
+              setShowProgress(false);
+              setSelectedAsset(null);
+              // Navigate to Home tab to see the uploaded video
+              navigation.navigate('Home' as never);
+            },
+          },
+          {
+            text: 'Upload Another',
+            style: 'cancel',
             onPress: () => {
               setShowProgress(false);
               setSelectedAsset(null);

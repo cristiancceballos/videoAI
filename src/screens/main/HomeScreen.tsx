@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoCard } from '../../components/VideoCard';
@@ -27,12 +28,24 @@ export function HomeScreen() {
     }
   }, [user]);
 
-  const loadVideos = async () => {
+  // Refresh videos when screen comes into focus (e.g., after uploading)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        loadVideos();
+      }
+    }, [user])
+  );
+
+  const loadVideos = async (showLoading = false) => {
     if (!user) return;
+    
+    if (showLoading) setLoading(true);
     
     try {
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
+      console.log('Loaded videos:', userVideos.length);
     } catch (error) {
       console.error('Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');

@@ -29,12 +29,8 @@ export function WebVideoPreviewModal({
 
   React.useEffect(() => {
     if (asset?.filename) {
-      // Remove file extension and format title
-      const nameWithoutExt = asset.filename.replace(/\.[^/.]+$/, '');
-      const formattedTitle = nameWithoutExt
-        .replace(/[_-]/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-      setTitle(formattedTitle);
+      // Set default title to simple 'title' for easy editing
+      setTitle('title');
     }
   }, [asset]);
 
@@ -93,6 +89,8 @@ export function WebVideoPreviewModal({
               placeholderTextColor="#666"
               maxLength={100}
               editable={!uploading}
+              selectTextOnFocus={true}
+              autoFocus={true}
             />
 
             <View style={styles.metadata}>
