@@ -20,6 +20,7 @@ export function HomeScreen() {
   const [videos, setVideos] = useState<VideoWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -97,8 +98,37 @@ export function HomeScreen() {
     }
   };
 
+  const handleVideoDelete = async (video: VideoWithMetadata) => {
+    setDeleting(video.id);
+    
+    try {
+      console.log('🗑️ Deleting video:', video.title);
+      const success = await videoService.deleteVideo(video.id);
+      
+      if (success) {
+        // Remove from local state immediately
+        setVideos(prevVideos => prevVideos.filter(v => v.id !== video.id));
+        Alert.alert('Success', 'Video deleted successfully');
+        console.log('✅ Video deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete video. Please try again.');
+        console.error('❌ Failed to delete video');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting video:', error);
+      Alert.alert('Error', 'Failed to delete video. Please try again.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const renderVideoCard = ({ item }: { item: VideoWithMetadata }) => (
-    <VideoCard video={item} onPress={handleVideoPress} />
+    <VideoCard 
+      video={item} 
+      onPress={handleVideoPress}
+      onDelete={handleVideoDelete}
+      isDeleting={deleting === item.id}
+    />
   );
 
   const renderEmptyState = () => (

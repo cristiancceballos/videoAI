@@ -14,6 +14,7 @@ interface UploadProgressModalProps {
   progress: UploadProgress;
   onCancel: () => void;
   uploading: boolean;
+  onClose?: () => void;
 }
 
 export function UploadProgressModal({
@@ -21,6 +22,7 @@ export function UploadProgressModal({
   progress,
   onCancel,
   uploading,
+  onClose,
 }: UploadProgressModalProps) {
   return (
     <Modal
@@ -28,8 +30,13 @@ export function UploadProgressModal({
       transparent
       animationType="fade"
       statusBarTranslucent
+      onRequestClose={onClose || onCancel}
     >
-      <View style={styles.overlay}>
+      <TouchableOpacity 
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={!uploading ? (onClose || onCancel) : undefined}
+      >
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Uploading Video</Text>
@@ -64,10 +71,18 @@ export function UploadProgressModal({
           </View>
 
           {!uploading && (
-            <Text style={styles.successText}>Upload completed!</Text>
+            <View style={styles.completedContainer}>
+              <Text style={styles.successText}>Upload completed!</Text>
+              <TouchableOpacity 
+                onPress={onClose || onCancel}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -149,11 +164,28 @@ const styles = StyleSheet.create({
   spinner: {
     marginLeft: 8,
   },
+  completedContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
   successText: {
     fontSize: 16,
     color: '#34C759',
     textAlign: 'center',
-    marginTop: 8,
+    marginBottom: 16,
     fontWeight: '600',
+  },
+  closeButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

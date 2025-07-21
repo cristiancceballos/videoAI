@@ -184,6 +184,7 @@ export function UploadScreen() {
         progress={uploadProgress}
         onCancel={handleCancelUpload}
         uploading={uploading}
+        onClose={() => setShowProgress(false)}
       />
     </KeyboardAvoidingView>
   );

@@ -7,15 +7,18 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { VideoWithMetadata } from '../services/videoService';
 
 interface VideoCardProps {
   video: VideoWithMetadata;
   onPress: (video: VideoWithMetadata) => void;
+  onDelete?: (video: VideoWithMetadata) => void;
+  isDeleting?: boolean;
 }
 
-export function VideoCard({ video, onPress }: VideoCardProps) {
+export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ready':
@@ -76,11 +79,34 @@ export function VideoCard({ video, onPress }: VideoCardProps) {
     });
   };
 
+  const handleLongPress = () => {
+    if (onDelete) {
+      Alert.alert(
+        'Delete Video',
+        `Are you sure you want to delete "${video.title}"? This action cannot be undone.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => onDelete(video),
+          },
+        ]
+      );
+    }
+  };
+
   return (
     <TouchableOpacity 
-      style={styles.container}
+      style={[styles.container, isDeleting && styles.deleting]}
       onPress={() => onPress(video)}
+      onLongPress={handleLongPress}
       activeOpacity={0.8}
+      delayLongPress={500}
+      disabled={isDeleting}
     >
       <View style={styles.thumbnailContainer}>
         {video.thumbnailUrl ? (
@@ -124,16 +150,27 @@ export function VideoCard({ video, onPress }: VideoCardProps) {
         </View>
 
         <View style={styles.statusContainer}>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(video.status) }]} />
-          <Text style={[styles.statusText, { color: getStatusColor(video.status) }]}>
-            {getStatusText(video.status)}
-          </Text>
-          {video.status === 'processing' && (
-            <ActivityIndicator 
-              size="small" 
-              color={getStatusColor(video.status)}
-              style={styles.statusSpinner}
-            />
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(video.status) }]} />
+            <Text style={[styles.statusText, { color: getStatusColor(video.status) }]}>
+              {getStatusText(video.status)}
+            </Text>
+            {video.status === 'processing' && (
+              <ActivityIndicator 
+                size="small" 
+                color={getStatusColor(video.status)}
+                style={styles.statusSpinner}
+              />
+            )}
+          </View>
+          {onDelete && !isDeleting && (
+            <Text style={styles.deleteHint}>Hold to delete</Text>
+          )}
+          {isDeleting && (
+            <View style={styles.deletingContainer}>
+              <ActivityIndicator size="small" color="#FF3B30" />
+              <Text style={styles.deletingText}>Deleting...</Text>
+            </View>
           )}
         </View>
       </View>
@@ -219,7 +256,29 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteHint: {
+    fontSize: 10,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  deleting: {
+    opacity: 0.5,
+  },
+  deletingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deletingText: {
+    fontSize: 10,
+    color: '#FF3B30',
+    marginLeft: 4,
   },
   statusDot: {
     width: isSmallScreen ? 5 : 6,
