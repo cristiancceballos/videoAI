@@ -74,6 +74,26 @@ class VideoService {
     }
   }
 
+  // Get video playback URL
+  async getVideoUrl(video: VideoWithMetadata): Promise<string | null> {
+    try {
+      console.log('🎥 Getting video URL for:', video.title);
+      
+      if (!video.storage_path) {
+        console.error('❌ No storage path found for video');
+        return null;
+      }
+
+      const videoUrl = await this.getFileUrl('videos', video.storage_path);
+      console.log('📹 Video URL generated:', videoUrl ? 'Success' : 'Failed');
+      
+      return videoUrl;
+    } catch (error) {
+      console.error('❌ Error getting video URL:', error);
+      return null;
+    }
+  }
+
   // Subscribe to real-time video updates
   subscribeToVideoUpdates(userId: string, callback: (videos: VideoWithMetadata[]) => void) {
     console.log('🔍 Setting up real-time subscription for user:', userId);

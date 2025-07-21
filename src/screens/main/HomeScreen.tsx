@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoCard } from '../../components/VideoCard';
+import { VideoPlayerModal } from '../../components/VideoPlayerModal';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
@@ -21,6 +22,13 @@ export function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  
+  // Video player state
+  const [selectedVideo, setSelectedVideo] = useState<VideoWithMetadata | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -87,15 +95,48 @@ export function HomeScreen() {
     setRefreshing(false);
   };
 
-  const handleVideoPress = (video: VideoWithMetadata) => {
-    // TODO: Navigate to video detail screen in Phase 4
-    if (video.status === 'ready') {
-      Alert.alert('Video Ready', 'Video details and AI features coming in Phase 4!');
-    } else if (video.status === 'processing') {
-      Alert.alert('Processing', 'Your video is still being processed. Please wait...');
-    } else if (video.status === 'error') {
-      Alert.alert('Error', 'There was an error processing this video.');
+  const handleVideoPress = async (video: VideoWithMetadata) => {
+    if (video.status !== 'ready') {
+      if (video.status === 'processing') {
+        Alert.alert('Processing', 'Your video is still being processed. Please wait...');
+      } else if (video.status === 'error') {
+        Alert.alert('Error', 'There was an error processing this video.');
+      } else {
+        Alert.alert('Not Ready', 'This video is not ready for playback yet.');
+      }
+      return;
     }
+
+    console.log('🎥 Opening video player for:', video.title);
+    setSelectedVideo(video);
+    setVideoLoading(true);
+    setVideoError(null);
+    setShowVideoPlayer(true);
+
+    try {
+      const url = await videoService.getVideoUrl(video);
+      if (url) {
+        setVideoUrl(url);
+        console.log('✅ Video URL loaded successfully');
+      } else {
+        setVideoError('Unable to load video. Please try again later.');
+        console.error('❌ Failed to get video URL');
+      }
+    } catch (error) {
+      console.error('❌ Error loading video:', error);
+      setVideoError('Failed to load video. Please check your connection.');
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const handleCloseVideoPlayer = () => {
+    console.log('📴 Closing video player');
+    setShowVideoPlayer(false);
+    setSelectedVideo(null);
+    setVideoUrl(null);
+    setVideoError(null);
+    setVideoLoading(false);
   };
 
   const handleVideoDelete = async (video: VideoWithMetadata) => {
@@ -174,6 +215,15 @@ export function HomeScreen() {
         }
         ListEmptyComponent={!loading ? renderEmptyState : null}
         showsVerticalScrollIndicator={false}
+      />
+
+      <VideoPlayerModal
+        visible={showVideoPlayer}
+        video={selectedVideo}
+        videoUrl={videoUrl}
+        onClose={handleCloseVideoPlayer}
+        loading={videoLoading}
+        error={videoError}
       />
     </View>
   );
