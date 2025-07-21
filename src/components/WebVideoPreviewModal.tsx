@@ -26,13 +26,21 @@ export function WebVideoPreviewModal({
   uploading,
 }: WebVideoPreviewModalProps) {
   const [title, setTitle] = React.useState('');
+  const titleInputRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     if (asset?.filename) {
       // Set default title to simple 'title' for easy editing
       setTitle('title');
+      // Select all text after a short delay to ensure input is rendered
+      setTimeout(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          titleInputRef.current.setSelection(0, 5); // Select all 5 characters of 'title'
+        }
+      }, 100);
     }
-  }, [asset]);
+  }, [asset, visible]);
 
   const handleUpload = () => {
     if (!title.trim()) {
@@ -82,6 +90,7 @@ export function WebVideoPreviewModal({
           <View style={styles.form}>
             <Text style={styles.label}>Video Title</Text>
             <TextInput
+              ref={titleInputRef}
               style={styles.titleInput}
               value={title}
               onChangeText={setTitle}
@@ -91,6 +100,14 @@ export function WebVideoPreviewModal({
               editable={!uploading}
               selectTextOnFocus={true}
               autoFocus={true}
+              onFocus={() => {
+                // Ensure text is selected when focused
+                setTimeout(() => {
+                  if (titleInputRef.current && title === 'title') {
+                    titleInputRef.current.setSelection(0, 5);
+                  }
+                }, 50);
+              }}
             />
 
             <View style={styles.metadata}>

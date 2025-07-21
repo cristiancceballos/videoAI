@@ -32,6 +32,7 @@ export function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
+        console.log('🎯 HomeScreen focused - refreshing videos');
         loadVideos();
       }
     }, [user])
@@ -43,11 +44,12 @@ export function HomeScreen() {
     if (showLoading) setLoading(true);
     
     try {
+      console.log('📱 Loading videos for user:', user.id);
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
-      console.log('Loaded videos:', userVideos.length);
+      console.log('📹 Loaded videos:', userVideos.length, userVideos.map(v => ({id: v.id.substring(0,8), title: v.title, status: v.status})));
     } catch (error) {
-      console.error('Error loading videos:', error);
+      console.error('❌ Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');
     } finally {
       setLoading(false);
@@ -101,9 +103,18 @@ export function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>VideoAI</Text>
-        <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            onPress={() => loadVideos(true)} 
+            style={styles.refreshButton}
+            disabled={loading}
+          >
+            <Text style={styles.refreshText}>🔄</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -144,6 +155,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#333',
     minHeight: 44, // Ensure minimum touch target
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  refreshText: {
+    fontSize: 16,
   },
   title: {
     fontSize: isSmallScreen ? 20 : 24,

@@ -138,8 +138,8 @@ class WebUploadService {
         return null;
       }
 
-      console.log('Video record created successfully:', data);
-      console.log('Video will appear in home feed with status:', 'uploading -> ready');
+      console.log('✅ Video record created successfully:', data);
+      console.log('📱 Video will appear in home feed with ID:', data.id);
       return data.id;
     } catch (error) {
       console.error('Database error:', error);
@@ -154,19 +154,28 @@ class WebUploadService {
     thumbnailPath?: string
   ): Promise<boolean> {
     try {
+      console.log(`🔄 Updating video ${videoId} status to: ${status}`);
+      
       const updateData: any = { status };
       if (thumbnailPath) {
         updateData.thumbnail_path = thumbnailPath;
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('videos')
         .update(updateData)
-        .eq('id', videoId);
+        .eq('id', videoId)
+        .select('*');
 
-      return !error;
+      if (error) {
+        console.error('❌ Error updating video status:', error);
+        return false;
+      }
+
+      console.log('✅ Video status updated successfully:', data);
+      return true;
     } catch (error) {
-      console.error('Error updating video status:', error);
+      console.error('❌ Exception updating video status:', error);
       return false;
     }
   }
@@ -219,8 +228,15 @@ class WebUploadService {
       }
 
       // 5. Update status to ready (for now, will be 'processing' in Phase 3)
+      console.log('🎯 Updating video status to ready...');
       const statusUpdated = await this.updateVideoStatus(videoId, 'ready');
-      console.log('Video status updated to ready:', statusUpdated);
+      
+      if (!statusUpdated) {
+        console.error('❌ Failed to update video status to ready');
+        return { success: false, error: 'Failed to finalize video status' };
+      }
+      
+      console.log('✅ Video fully processed and ready!');
 
       // 6. Clean up object URL
       URL.revokeObjectURL(asset.uri);

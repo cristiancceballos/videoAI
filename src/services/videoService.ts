@@ -76,6 +76,8 @@ class VideoService {
 
   // Subscribe to real-time video updates
   subscribeToVideoUpdates(userId: string, callback: (videos: VideoWithMetadata[]) => void) {
+    console.log('🔍 Setting up real-time subscription for user:', userId);
+    
     const subscription = supabase
       .channel('videos_changes')
       .on(
@@ -86,13 +88,18 @@ class VideoService {
           table: 'videos',
           filter: `user_id=eq.${userId}`,
         },
-        async () => {
+        async (payload) => {
+          console.log('🔔 Real-time video change detected:', payload);
           // Refetch videos when changes occur
           const videos = await this.getUserVideos(userId);
+          console.log('🔄 Refreshed videos via real-time:', videos.length);
           callback(videos);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('🔔 Real-time subscription status:', status);
+        if (err) console.error('❌ Real-time subscription error:', err);
+      });
 
     return subscription;
   }
