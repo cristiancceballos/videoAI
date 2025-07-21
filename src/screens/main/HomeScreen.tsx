@@ -99,6 +99,7 @@ export function HomeScreen() {
   };
 
   const handleVideoDelete = async (video: VideoWithMetadata) => {
+    console.log('🏠 HomeScreen: Delete request received for:', video.title);
     setDeleting(video.id);
     
     try {

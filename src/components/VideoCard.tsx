@@ -79,7 +79,8 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
     });
   };
 
-  const handleLongPress = () => {
+  const handleDelete = () => {
+    console.log('🗑️ Delete requested for video:', video.title);
     if (onDelete) {
       Alert.alert(
         'Delete Video',
@@ -96,7 +97,14 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
           },
         ]
       );
+    } else {
+      console.log('❌ onDelete prop not provided');
     }
+  };
+
+  const handleLongPress = () => {
+    console.log('📱 Long press detected on video:', video.title);
+    handleDelete();
   };
 
   return (
@@ -105,7 +113,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
       onPress={() => onPress(video)}
       onLongPress={handleLongPress}
       activeOpacity={0.8}
-      delayLongPress={500}
+      delayLongPress={800}
       disabled={isDeleting}
     >
       <View style={styles.thumbnailContainer}>
@@ -136,6 +144,17 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             {getSourceIcon(video.source_type)}
           </Text>
         </View>
+
+        {/* Delete button */}
+        {onDelete && !isDeleting && (
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.deleteIcon}>🗑️</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.content}>
@@ -164,7 +183,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             )}
           </View>
           {onDelete && !isDeleting && (
-            <Text style={styles.deleteHint}>Hold to delete</Text>
+            <Text style={styles.deleteHint}>Hold or tap 🗑️ to delete</Text>
           )}
           {isDeleting && (
             <View style={styles.deletingContainer}>
@@ -279,6 +298,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FF3B30',
     marginLeft: 4,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: isSmallScreen ? 6 : 8,
+    right: isSmallScreen ? 6 : 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    fontSize: 12,
   },
   statusDot: {
     width: isSmallScreen ? 5 : 6,
