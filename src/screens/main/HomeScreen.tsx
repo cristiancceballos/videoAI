@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   gridContent: {
-    paddingTop: 16,
+    paddingTop: 0, // Remove gap between secondary nav and video grid
     paddingBottom: 20,
   },
   row: {

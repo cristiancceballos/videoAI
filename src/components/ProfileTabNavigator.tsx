@@ -65,15 +65,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    paddingTop: 6,
-    paddingBottom: 2,
-    minHeight: 44, // Reduced by 15% for more compact appearance
+    paddingTop: 3,
+    paddingBottom: 1,
+    minHeight: 26, // Reduced by 40% for TikTok-style compact appearance
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 12,
     minHeight: 44, // Accessibility touch target
     position: 'relative',
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#fff',
-    fontWeight: '700', // Bold text for active tab
+    fontWeight: '500', // Medium weight for cleaner appearance
   },
   activeIndicator: {
     position: 'absolute',
