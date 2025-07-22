@@ -88,8 +88,6 @@ export function TikTokVideoPlayer({
         videoRef.current.currentTime = 0;
       }
       setVideoError(false);
-      setIsPlaying(false);
-      setShowControls(false);
       setShowDetailsSheet(false);
       setIsMuted(true); // Reset to muted for cleanup
       panRef.setValue({ x: 0, y: 0 });
@@ -249,8 +247,6 @@ export function TikTokVideoPlayer({
     }
     
     // Reset all state immediately
-    setIsPlaying(false);
-    setShowControls(false);
     setShowDetailsSheet(false);
     setVideoError(false);
     
@@ -370,7 +366,6 @@ export function TikTokVideoPlayer({
           }
         ]}
         {...unifiedPanResponder.panHandlers}
-        {...progressPanResponder.panHandlers}
       >
         {/* Video Player */}
         <View style={styles.videoContainer}>
