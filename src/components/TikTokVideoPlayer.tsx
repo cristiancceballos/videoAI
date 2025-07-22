@@ -38,7 +38,8 @@ export function TikTokVideoPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay compliance
+  const [isMuted, setIsMuted] = useState(true); // Current video muted state
+  const [hasUserUnmuted, setHasUserUnmuted] = useState(false); // User's audio preference across videos
   const videoRef = useRef<HTMLVideoElement>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
@@ -62,7 +63,7 @@ export function TikTokVideoPlayer({
       setIsPlaying(false);
       setShowControls(false);
       setShowDetailsSheet(false);
-      setIsMuted(true); // Reset to muted for next video
+      setIsMuted(hasUserUnmuted ? false : true); // Respect user's audio preference
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     } else {
@@ -84,33 +85,35 @@ export function TikTokVideoPlayer({
 
   // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
   const unifiedPanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => {
+      console.log('👆 Touch started - showing controls immediately');
+      setShowControls(true);
+      gestureStartTime.current = Date.now();
+      return true;
+    },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      console.log('🎯 Gesture detected:', { dx: gestureState.dx, dy: gestureState.dy });
+      console.log('🎯 Gesture movement detected:', { dx: gestureState.dx, dy: gestureState.dy });
       
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       
-      // Horizontal swipe (exit) - right direction only
+      // Only capture gestures with significant movement (actual swipes)
       if (horizontal && gestureState.dx > 20) {
         console.log('👉 Horizontal swipe detected for exit');
         return true;
       }
       
-      // Vertical swipe (details) - upward direction only
       if (vertical && gestureState.dy < -30) {
         console.log('☝️ Vertical swipe detected for details');
         return true;
       }
       
+      // Don't capture small movements (taps) - let them be handled by onStartShouldSetPanResponder
       return false;
     },
     onMoveShouldSetPanResponderCapture: () => false,
     onPanResponderGrant: () => {
-      console.log('🤏 Gesture granted');
-      gestureStartTime.current = Date.now();
-      // Show controls immediately when user touches screen as backup
-      console.log('👆 Showing controls on gesture grant as backup');
-      setShowControls(true);
+      console.log('🤏 Gesture granted for swipe');
       panRef.setOffset({
         x: panRef.x._value,
         y: panRef.y._value,
@@ -233,6 +236,13 @@ export function TikTokVideoPlayer({
     setIsPlaying(true);
     if (videoRef.current) {
       videoRef.current.play().catch(console.error);
+      
+      // Auto-unmute if user has previously chosen audio
+      if (hasUserUnmuted) {
+        console.log('🔊 Auto-unmuting video based on user preference');
+        videoRef.current.muted = false;
+        setIsMuted(false);
+      }
     }
   };
 
@@ -246,6 +256,7 @@ export function TikTokVideoPlayer({
       console.log('🔊 Unmuting video on first interaction');
       videoRef.current.muted = false;
       setIsMuted(false);
+      setHasUserUnmuted(true); // Remember user preference for future videos
     }
     
     if (videoRef.current) {
@@ -325,19 +336,29 @@ export function TikTokVideoPlayer({
           )}
 
           {videoUrl && !loading && !error && (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              autoPlay
-              muted={isMuted}
-              playsInline
-              loop
-              style={styles.video}
-              onError={handleVideoError}
-              onLoadedData={handleVideoLoad}
-              preload="auto"
-              key={videoUrl}
-            />
+            <TouchableOpacity
+              style={styles.videoTouchArea}
+              onPress={() => {
+                console.log('🎯 Fallback tap handler triggered');
+                setShowControls(true);
+                togglePlayPause();
+              }}
+              activeOpacity={1}
+            >
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                autoPlay
+                muted={isMuted}
+                playsInline
+                loop
+                style={styles.video}
+                onError={handleVideoError}
+                onLoadedData={handleVideoLoad}
+                preload="auto"
+                key={videoUrl}
+              />
+            </TouchableOpacity>
           )}
 
           {/* Minimal Play/Pause Overlay */}
@@ -396,6 +417,12 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoTouchArea: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
