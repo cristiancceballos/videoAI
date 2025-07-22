@@ -56,11 +56,26 @@ export function TikTokVideoPlayer({
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
+      console.log('📱 Modal opened - resetting state');
       setVideoError(false);
       setIsPlaying(false);
       setShowControls(false);
       setShowDetailsSheet(false);
       panRef.setValue({ x: 0, y: 0 });
+      fadeAnim.setValue(1);
+    } else {
+      console.log('📱 Modal closed - ensuring complete cleanup');
+      // Ensure complete cleanup when modal closes
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+      setVideoError(false);
+      setIsPlaying(false);
+      setShowControls(false);
+      setShowDetailsSheet(false);
+      panRef.setValue({ x: 0, y: 0 });
+      fadeAnim.setValue(1);
     }
   }, [visible]);
 
@@ -128,10 +143,13 @@ export function TikTokVideoPlayer({
         const gestureDuration = Date.now() - gestureStartTime.current;
         const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
         
-        if (gestureDuration < 300 && totalMovement < 30) {
+        if (gestureDuration < 500 && totalMovement < 50) {
           // This was a tap - toggle play/pause
           console.log('👆 Tap detected - toggling play/pause');
+          console.log('👆 Tap details:', { duration: gestureDuration, movement: totalMovement });
           togglePlayPause();
+        } else {
+          console.log('❌ Not a tap:', { duration: gestureDuration, movement: totalMovement });
         }
         
         // Snap back to original position
@@ -151,19 +169,40 @@ export function TikTokVideoPlayer({
   });
 
   const handleExit = () => {
-    // Animate exit
+    console.log('🚪 handleExit called - starting cleanup');
+    
+    // Stop video immediately to prevent white screen
+    if (videoRef.current) {
+      console.log('⏹️ Stopping video playback');
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+    
+    // Reset all state immediately
+    setIsPlaying(false);
+    setShowControls(false);
+    setShowDetailsSheet(false);
+    setVideoError(false);
+    
+    console.log('🧹 State cleaned up, starting exit animation');
+    
+    // Quick exit animation
     Animated.parallel([
       Animated.timing(panRef.x, {
         toValue: Dimensions.get('window').width,
-        duration: 200,
+        duration: 150, // Faster animation to reduce white screen chance
         useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 200,
+        duration: 150,
         useNativeDriver: false,
       }),
     ]).start(() => {
+      console.log('✅ Exit animation complete, calling onClose');
+      // Reset animation values before closing
+      panRef.setValue({ x: 0, y: 0 });
+      fadeAnim.setValue(1);
       onClose();
     });
   };
@@ -192,16 +231,22 @@ export function TikTokVideoPlayer({
   };
 
   const togglePlayPause = () => {
+    console.log('🎮 togglePlayPause called, current isPlaying:', isPlaying);
+    console.log('🎮 Setting showControls to true');
+    
     if (videoRef.current) {
       if (isPlaying) {
+        console.log('⏸️ Pausing video');
         videoRef.current.pause();
         setIsPlaying(false);
       } else {
+        console.log('▶️ Playing video');
         videoRef.current.play();
         setIsPlaying(true);
       }
     }
     setShowControls(true);
+    console.log('🎮 showControls state should now be true');
   };
 
 
