@@ -13,6 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
+import { Volume2, VolumeX, AlertTriangle } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { VideoDetailsSheet } from './VideoDetailsSheet';
 
@@ -71,7 +72,7 @@ export function TikTokVideoPlayer({
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
-      console.log('📱 Modal opened - resetting state and preventing screen sleep');
+      console.log('Modal opened - resetting state and preventing screen sleep');
       activateKeepAwake(); // Prevent screen from sleeping during video playback
       setVideoError(false);
       setShowDetailsSheet(false);
@@ -83,7 +84,7 @@ export function TikTokVideoPlayer({
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     } else {
-      console.log('📱 Modal closed - ensuring complete cleanup and allowing screen sleep');
+      console.log('Modal closed - ensuring complete cleanup and allowing screen sleep');
       deactivateKeepAwake(); // Allow screen to sleep when video player closes
       // Ensure complete cleanup when modal closes
       if (videoRef.current) {
@@ -438,7 +439,9 @@ export function TikTokVideoPlayer({
 
           {error && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️</Text>
+              <View style={styles.errorIcon}>
+                <AlertTriangle size={48} color="#FF3B30" />
+              </View>
               <Text style={styles.errorMessage}>{error}</Text>
               <TouchableOpacity onPress={handleExit} style={styles.errorButton}>
                 <Text style={styles.errorButtonText}>Close</Text>
@@ -448,7 +451,9 @@ export function TikTokVideoPlayer({
 
           {videoError && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️</Text>
+              <View style={styles.errorIcon}>
+                <AlertTriangle size={48} color="#FF3B30" />
+              </View>
               <Text style={styles.errorMessage}>
                 Unable to play this video. It may be corrupted or in an unsupported format.
               </Text>
@@ -487,9 +492,11 @@ export function TikTokVideoPlayer({
           {!loading && !error && (
             <TouchableOpacity style={styles.muteButton} onPress={toggleMute}>
               <View style={styles.muteIconContainer}>
-                <Text style={styles.muteIcon}>
-                  {isMuted ? '🔇' : '🔊'}
-                </Text>
+                {isMuted ? (
+                  <VolumeX size={16} color="#fff" />
+                ) : (
+                  <Volume2 size={16} color="#fff" />
+                )}
               </View>
             </TouchableOpacity>
           )}
@@ -506,9 +513,13 @@ export function TikTokVideoPlayer({
           {showMuteFeedback && (
             <Animated.View style={styles.muteFeedback}>
               <View style={styles.muteFeedbackContainer}>
-                <Text style={styles.muteFeedbackIcon}>
-                  {isMuted ? '🔇' : '🔊'}
-                </Text>
+                <View style={styles.muteFeedbackIcon}>
+                  {isMuted ? (
+                    <VolumeX size={24} color="#fff" />
+                  ) : (
+                    <Volume2 size={24} color="#fff" />
+                  )}
+                </View>
                 <Text style={styles.muteFeedbackText}>
                   {isMuted ? 'Muted' : 'Unmuted'}
                 </Text>
@@ -599,9 +610,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  errorText: {
-    fontSize: 48,
+  errorIcon: {
     marginBottom: 16,
+    alignItems: 'center',
   },
   errorMessage: {
     color: '#FF3B30',
@@ -636,9 +647,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  muteIcon: {
-    fontSize: 14,
-  },
   muteFeedback: {
     position: 'absolute',
     top: 0,
@@ -657,8 +665,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   muteFeedbackIcon: {
-    fontSize: 32,
     marginBottom: 8,
+    alignItems: 'center',
   },
   muteFeedbackText: {
     color: '#fff',

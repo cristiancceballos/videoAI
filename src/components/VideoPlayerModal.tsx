@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { AlertTriangle, Clipboard, Search } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 
 interface VideoPlayerModalProps {
@@ -34,12 +35,12 @@ export function VideoPlayerModal({
   const [videoLoaded, setVideoLoaded] = useState(false);
 
   const handleVideoError = (event: any) => {
-    console.error('❌ Video playback error:', event);
+    console.error('Video playback error:', event);
     
     // Check if error might be due to expired URL
     if (event?.target?.error?.code === 4 || // MEDIA_ERR_SRC_NOT_SUPPORTED
         event?.target?.error?.code === 3) { // MEDIA_ERR_DECODE
-      console.log('🔄 Video error might be expired URL, attempting refresh...');
+      console.log('Video error might be expired URL, attempting refresh...');
       if (onUrlExpired) {
         onUrlExpired();
         return; // Don't show error yet, let retry happen
@@ -50,7 +51,7 @@ export function VideoPlayerModal({
   };
 
   const handleVideoLoad = () => {
-    console.log('✅ Video loaded successfully');
+    console.log('Video loaded successfully');
     setVideoLoaded(true);
     setVideoError(false);
   };
@@ -113,7 +114,9 @@ export function VideoPlayerModal({
 
           {error && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️</Text>
+              <View style={styles.errorIcon}>
+                <AlertTriangle size={48} color="#FF3B30" />
+              </View>
               <Text style={styles.errorMessage}>{error}</Text>
               {videoUrl && (
                 <TouchableOpacity 
@@ -121,7 +124,7 @@ export function VideoPlayerModal({
                     console.log('🔗 Manual URL test - copying to clipboard:', videoUrl);
                     if (Platform.OS === 'web') {
                       navigator.clipboard?.writeText(videoUrl).then(() => {
-                        console.log('📋 URL copied to clipboard');
+                        console.log('URL copied to clipboard');
                       });
                     }
                     // Also try to open URL in new tab for testing
@@ -140,7 +143,9 @@ export function VideoPlayerModal({
 
           {videoError && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️</Text>
+              <View style={styles.errorIcon}>
+                <AlertTriangle size={48} color="#FF3B30" />
+              </View>
               <Text style={styles.errorMessage}>
                 Unable to play this video. It may be corrupted or in an unsupported format.
               </Text>
@@ -150,7 +155,7 @@ export function VideoPlayerModal({
                   <Text style={styles.debugUrl} numberOfLines={2}>{videoUrl}</Text>
                   <TouchableOpacity 
                     onPress={() => {
-                      console.log('🔍 Video debugging:', {
+                      console.log('Video debugging:', {
                         video_title: video?.title,
                         video_status: video?.status,
                         storage_path: video?.storage_path,
@@ -295,9 +300,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  errorText: {
-    fontSize: 48,
+  errorIcon: {
     marginBottom: 16,
+    alignItems: 'center',
   },
   errorMessage: {
     color: '#FF3B30',

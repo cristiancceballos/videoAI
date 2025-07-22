@@ -11,6 +11,7 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
+import { Smartphone, Camera, AlertTriangle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { webMediaService, WebMediaAsset } from '../../services/webMediaService';
@@ -85,7 +86,7 @@ export function UploadScreen() {
             onPress: () => {
               setShowProgress(false);
               setSelectedAsset(null);
-              console.log('🎯 Navigating to Home tab after successful upload');
+              console.log('Navigating to Home tab after successful upload');
               // Navigate to Home tab to see the uploaded video
               navigation.navigate('Home' as never);
             },
@@ -100,7 +101,7 @@ export function UploadScreen() {
           },
         ]);
       } else {
-        console.error('❌ Upload failed:', result.error);
+        console.error('Upload failed:', result.error);
         const userFriendlyError = result.error?.includes('type integer') 
           ? 'Video file format error. Please try a different video.'
           : result.error?.includes('row-level security')
@@ -133,7 +134,7 @@ export function UploadScreen() {
         <Text style={styles.title}>Upload Video</Text>
         {Platform.OS !== 'web' && (
           <Text style={styles.warningText}>
-            ⚠️ For full functionality, visit the deployed web version
+            For full functionality, visit the deployed web version
           </Text>
         )}
       </View>
@@ -152,7 +153,9 @@ export function UploadScreen() {
             onPress={handlePickFromDevice}
             activeOpacity={0.8}
           >
-            <Text style={styles.uploadButtonIcon}>📱</Text>
+            <View style={styles.uploadButtonIcon}>
+              <Smartphone size={24} color="#fff" />
+            </View>
             <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
           </TouchableOpacity>
 
@@ -161,7 +164,9 @@ export function UploadScreen() {
             onPress={handleRecordVideo}
             activeOpacity={0.8}
           >
-            <Text style={styles.uploadButtonIcon}>📹</Text>
+            <View style={styles.uploadButtonIcon}>
+              <Camera size={24} color="#fff" />
+            </View>
             <Text style={styles.uploadButtonText}>Take Video</Text>
           </TouchableOpacity>
         </View>
@@ -249,8 +254,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   uploadButtonIcon: {
-    fontSize: isSmallScreen ? 18 : 20,
     marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadButtonText: {
     color: '#fff',

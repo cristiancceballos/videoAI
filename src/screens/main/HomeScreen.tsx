@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Video, Search, Check, RotateCcw } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
@@ -47,7 +48,7 @@ export function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
-        console.log('🎯 HomeScreen focused - refreshing videos');
+        console.log('HomeScreen focused - refreshing videos');
         loadVideos();
       }
     }, [user])
@@ -59,12 +60,12 @@ export function HomeScreen() {
     if (showLoading) setLoading(true);
     
     try {
-      console.log('📱 Loading videos for user:', user.id);
+      console.log('Loading videos for user:', user.id);
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
       console.log('📹 Loaded videos:', userVideos.length, userVideos.map(v => ({id: v.id.substring(0,8), title: v.title, status: v.status})));
     } catch (error) {
-      console.error('❌ Error loading videos:', error);
+      console.error('Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ export function HomeScreen() {
 
     try {
       const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
-        console.log('📱 Real-time update received, updating video list');
+        console.log('Real-time update received, updating video list');
         setVideos(updatedVideos);
       });
 
@@ -102,18 +103,18 @@ export function HomeScreen() {
 
   const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<void> => {
     try {
-      console.log(`🔄 Loading video URL (attempt ${retryCount + 1}) for:`, video.title);
+      console.log(`Loading video URL (attempt ${retryCount + 1}) for:`, video.title);
       const url = await videoService.getVideoUrl(video);
       if (url) {
         setVideoUrl(url);
         setUrlRetryCount(0); // Reset retry count on success
-        console.log('✅ Fresh signed video URL loaded successfully (expires in 1 hour)');
+        console.log('Fresh signed video URL loaded successfully (expires in 1 hour)');
       } else {
         setVideoError('Unable to generate secure video link. Please check your permissions.');
-        console.error('❌ Failed to get secure video URL');
+        console.error('Failed to get secure video URL');
       }
     } catch (error) {
-      console.error('❌ Error loading video URL:', error);
+      console.error('Error loading video URL:', error);
       if (error instanceof Error && error.message.includes('permission')) {
         setVideoError('Access denied. You can only view videos you uploaded.');
       } else {
@@ -134,7 +135,7 @@ export function HomeScreen() {
       return;
     }
 
-    console.log('🎥 Opening video player for:', video.title);
+    console.log('Opening video player for:', video.title);
     setSelectedVideo(video);
     setVideoLoading(true);
     setVideoError(null);
@@ -149,12 +150,12 @@ export function HomeScreen() {
 
   const handleVideoUrlExpired = async () => {
     if (!selectedVideo || urlRetryCount >= 2) {
-      console.error('❌ Max retries reached or no video selected');
+      console.error('Max retries reached or no video selected');
       setVideoError('Video link expired. Please close and reopen the video.');
       return;
     }
 
-    console.log('🔄 Video URL appears to be expired, refreshing...');
+    console.log('Video URL appears to be expired, refreshing...');
     setUrlRetryCount(prev => prev + 1);
     setVideoLoading(true);
     setVideoError(null);
@@ -178,38 +179,39 @@ export function HomeScreen() {
     setDeleting(video.id);
     
     try {
-      console.log('🗑️ Deleting video:', video.title);
+      console.log('Deleting video:', video.title);
       const success = await videoService.deleteVideo(video.id);
       
       if (success) {
         // Remove from local state immediately
         setVideos(prevVideos => prevVideos.filter(v => v.id !== video.id));
         Alert.alert('Success', 'Video deleted successfully');
-        console.log('✅ Video deleted successfully');
+        console.log('Video deleted successfully');
       } else {
         Alert.alert('Error', 'Failed to delete video. Please try again.');
-        console.error('❌ Failed to delete video');
+        console.error('Failed to delete video');
       }
     } catch (error) {
-      console.error('❌ Error deleting video:', error);
+      console.error('Error deleting video:', error);
       Alert.alert('Error', 'Failed to delete video. Please try again.');
     } finally {
       setDeleting(null);
     }
   };
 
-  const renderVideoGridItem = ({ item }: { item: VideoWithMetadata }) => (
+  const renderVideoGridItem = ({ item, index }: { item: VideoWithMetadata, index: number }) => (
     <VideoGridItem 
       video={item} 
       onPress={handleVideoPress}
       onDelete={handleVideoDelete}
       isDeleting={deleting === item.id}
+      columnIndex={index % 3} // Calculate column index (0, 1, or 2)
     />
   );
 
   const handleTabPress = (tab: ProfileTab) => {
     setActiveTab(tab);
-    console.log('🔄 Tab switched to:', tab);
+    console.log('Tab switched to:', tab);
   };
 
   const renderTabContent = () => {
@@ -237,7 +239,7 @@ export function HomeScreen() {
       case 'search':
         return (
           <View style={styles.tabContentContainer}>
-            <Text style={styles.placeholderText}>🔍</Text>
+            <Search size={48} color="#fff" style={styles.placeholderIcon} />
             <Text style={styles.placeholderTitle}>Search</Text>
             <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
           </View>
@@ -245,7 +247,7 @@ export function HomeScreen() {
       case 'select':
         return (
           <View style={styles.tabContentContainer}>
-            <Text style={styles.placeholderText}>✅</Text>
+            <Check size={48} color="#fff" style={styles.placeholderIcon} />
             <Text style={styles.placeholderTitle}>Select</Text>
             <Text style={styles.placeholderSubtitle}>Multi-select functionality coming soon</Text>
           </View>
@@ -257,7 +259,7 @@ export function HomeScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🎥</Text>
+      <Video size={48} color="#fff" style={styles.emptyIcon} />
       <Text style={styles.emptyTitle}>No videos yet</Text>
       <Text style={styles.emptySubtitle}>
         Upload your first video to get started with AI-powered summaries and Q&A
@@ -276,7 +278,7 @@ export function HomeScreen() {
               style={styles.refreshButton}
               disabled={loading}
             >
-              <Text style={styles.refreshText}>🔄</Text>
+              <RotateCcw size={16} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
               <Text style={styles.logoutText}>Sign Out</Text>
