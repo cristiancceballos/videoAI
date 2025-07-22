@@ -103,7 +103,8 @@ export function TikTokVideoPlayer({
       const bottomZone = screenHeight * 0.75; // Bottom 25% for progress bar
       
       if (touchY > bottomZone) {
-        // In bottom zone - let progress handler take precedence
+        // In bottom zone - let progress handler take precedence for horizontal drags
+        console.log('👇 Touch in bottom zone - deferring to progress handler');
         return false;
       }
       
@@ -114,6 +115,16 @@ export function TikTokVideoPlayer({
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
       console.log('🎯 Gesture movement detected:', { dx: gestureState.dx, dy: gestureState.dy });
+      
+      const touchY = evt.nativeEvent.pageY;
+      const screenHeight = Dimensions.get('window').height;
+      const bottomZone = screenHeight * 0.75; // Bottom 25% for progress bar
+      
+      // Don't capture horizontal gestures in bottom zone - let progress handler handle them
+      if (touchY > bottomZone && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
+        console.log('👇 Horizontal gesture in bottom zone - deferring to progress handler');
+        return false;
+      }
       
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
@@ -436,6 +447,14 @@ export function TikTokVideoPlayer({
             </TouchableOpacity>
           )}
           
+          {/* Progress bar gesture detection overlay - bottom 25% of screen */}
+          {!loading && !error && videoUrl && (
+            <View 
+              style={styles.progressGestureOverlay}
+              {...progressPanResponder.panHandlers}
+            />
+          )}
+          
           {/* Mute toggle feedback */}
           {showMuteFeedback && (
             <Animated.View style={styles.muteFeedback}>
@@ -557,11 +576,11 @@ const styles = StyleSheet.create({
   },
   muteButton: {
     position: 'absolute',
-    top: 20,
+    bottom: 80,
     right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -571,7 +590,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   muteIcon: {
-    fontSize: 18,
+    fontSize: 14,
   },
   muteFeedback: {
     position: 'absolute',
@@ -653,5 +672,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontFamily: 'monospace',
+  },
+  progressGestureOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: screenHeight * 0.25, // Bottom 25% of screen for progress detection
+    backgroundColor: 'transparent',
   },
 });
