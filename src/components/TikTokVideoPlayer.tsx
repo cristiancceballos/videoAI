@@ -35,34 +35,48 @@ export function TikTokVideoPlayer({
   onUrlExpired,
 }: TikTokVideoPlayerProps) {
   const [videoError, setVideoError] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showControls, setShowControls] = useState(false);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Current video muted state
   const [hasUserUnmuted, setHasUserUnmuted] = useState(false); // User's audio preference across videos
+  const [showMuteFeedback, setShowMuteFeedback] = useState(false); // Brief mute toggle feedback
+  const [showProgressBar, setShowProgressBar] = useState(false); // Progress bar visibility
+  const [currentTime, setCurrentTime] = useState(0); // Video current time
+  const [duration, setDuration] = useState(0); // Video total duration
   const videoRef = useRef<HTMLVideoElement>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
   const gestureStartTime = useRef(0);
 
-  // Auto-hide controls after 3 seconds
+  // Auto-hide mute feedback after animation
   useEffect(() => {
-    if (showControls) {
+    if (showMuteFeedback) {
       const timer = setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
+        setShowMuteFeedback(false);
+      }, 800);
       return () => clearTimeout(timer);
     }
-  }, [showControls]);
+  }, [showMuteFeedback]);
+  
+  // Auto-hide progress bar after showing
+  useEffect(() => {
+    if (showProgressBar) {
+      const timer = setTimeout(() => {
+        setShowProgressBar(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showProgressBar]);
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
       console.log('📱 Modal opened - resetting state');
       setVideoError(false);
-      setIsPlaying(false);
-      setShowControls(false);
       setShowDetailsSheet(false);
+      setShowMuteFeedback(false);
+      setShowProgressBar(false);
+      setCurrentTime(0);
+      setDuration(0);
       setIsMuted(hasUserUnmuted ? false : true); // Respect user's audio preference
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
@@ -85,9 +99,18 @@ export function TikTokVideoPlayer({
 
   // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
   const unifiedPanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => {
-      console.log('👆 Touch started - showing controls immediately');
-      setShowControls(true);
+    onStartShouldSetPanResponder: (evt) => {
+      const touchY = evt.nativeEvent.pageY;
+      const screenHeight = Dimensions.get('window').height;
+      const bottomZone = screenHeight * 0.75; // Bottom 25% for progress bar
+      
+      if (touchY > bottomZone) {
+        // In bottom zone - let progress handler take precedence
+        return false;
+      }
+      
+      console.log('👆 Touch started - toggling mute');
+      toggleMute();
       gestureStartTime.current = Date.now();
       return true;
     },
@@ -153,10 +176,10 @@ export function TikTokVideoPlayer({
         const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
         
         if (gestureDuration < 500 && totalMovement < 50) {
-          // This was a tap - toggle play/pause
-          console.log('👆 Tap detected - toggling play/pause');
+          // This was a tap - toggle mute
+          console.log('👆 Tap detected - toggling mute');
           console.log('👆 Tap details:', { duration: gestureDuration, movement: totalMovement });
-          togglePlayPause();
+          toggleMute();
         } else {
           console.log('❌ Not a tap:', { duration: gestureDuration, movement: totalMovement });
         }
@@ -174,6 +197,44 @@ export function TikTokVideoPlayer({
           }),
         ]).start();
       }
+    },
+  });
+
+  // Progress bar gesture handler for horizontal drag at bottom
+  const progressPanResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      const touchY = evt.nativeEvent.pageY;
+      const screenHeight = Dimensions.get('window').height;
+      const bottomZone = screenHeight * 0.75; // Bottom 25% of screen
+      
+      // Only activate in bottom zone with horizontal movement
+      const isBottomZone = touchY > bottomZone;
+      const isHorizontalDrag = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const hasMovement = Math.abs(gestureState.dx) > 10;
+      
+      if (isBottomZone && isHorizontalDrag && hasMovement) {
+        console.log('📉 Progress bar drag detected');
+        setShowProgressBar(true);
+        return true;
+      }
+      
+      return false;
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      // Update progress based on horizontal drag
+      if (videoRef.current && duration > 0) {
+        const screenWidth = Dimensions.get('window').width;
+        const progressPercent = Math.max(0, Math.min(1, gestureState.moveX / screenWidth));
+        const newTime = progressPercent * duration;
+        
+        console.log('📊 Updating video time to:', newTime);
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
+    },
+    onPanResponderRelease: () => {
+      console.log('📉 Progress drag ended');
+      // Progress bar will auto-hide after timeout via useEffect
     },
   });
 
@@ -233,7 +294,6 @@ export function TikTokVideoPlayer({
 
   const handleVideoLoad = () => {
     console.log('✅ Video loaded successfully - starting autoplay');
-    setIsPlaying(true);
     if (videoRef.current) {
       videoRef.current.play().catch(console.error);
       
@@ -243,43 +303,52 @@ export function TikTokVideoPlayer({
         videoRef.current.muted = false;
         setIsMuted(false);
       }
+      
+      // Set up video progress tracking
+      setDuration(videoRef.current.duration || 0);
+      
+      const updateTime = () => {
+        if (videoRef.current) {
+          setCurrentTime(videoRef.current.currentTime);
+        }
+      };
+      
+      videoRef.current.addEventListener('timeupdate', updateTime);
+      videoRef.current.addEventListener('loadedmetadata', () => {
+        if (videoRef.current) {
+          setDuration(videoRef.current.duration);
+        }
+      });
     }
   };
 
-  const togglePlayPause = () => {
-    console.log('🎮 togglePlayPause called, current isPlaying:', isPlaying);
-    console.log('🎮 Current showControls state:', showControls);
-    console.log('🎮 Current isMuted state:', isMuted);
-    
-    // Unmute video on first interaction for audio playback
-    if (isMuted && videoRef.current) {
-      console.log('🔊 Unmuting video on first interaction');
-      videoRef.current.muted = false;
-      setIsMuted(false);
-      setHasUserUnmuted(true); // Remember user preference for future videos
-    }
+  const toggleMute = () => {
+    console.log('🔊 toggleMute called, current isMuted:', isMuted);
     
     if (videoRef.current) {
-      if (isPlaying) {
-        console.log('⏸️ Pausing video');
-        videoRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        console.log('▶️ Playing video');
-        videoRef.current.play();
-        setIsPlaying(true);
+      const newMutedState = !isMuted;
+      videoRef.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+      
+      // Remember user preference when they first unmute
+      if (!newMutedState && !hasUserUnmuted) {
+        console.log('🔊 First time unmuting - remembering preference');
+        setHasUserUnmuted(true);
       }
+      
+      // Show brief feedback animation
+      setShowMuteFeedback(true);
+      console.log('🔊 Mute state changed to:', newMutedState ? 'muted' : 'unmuted');
     }
-    
-    console.log('🎮 Setting showControls to true');
-    setShowControls(true);
-    
-    // Add timeout to verify state change
-    setTimeout(() => {
-      console.log('🎮 showControls after timeout:', showControls);
-    }, 100);
   };
 
+
+  // Helper function to format time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   if (!video) return null;
 
@@ -301,6 +370,7 @@ export function TikTokVideoPlayer({
           }
         ]}
         {...unifiedPanResponder.panHandlers}
+        {...progressPanResponder.panHandlers}
       >
         {/* Video Player */}
         <View style={styles.videoContainer}>
@@ -340,8 +410,7 @@ export function TikTokVideoPlayer({
               style={styles.videoTouchArea}
               onPress={() => {
                 console.log('🎯 Fallback tap handler triggered');
-                setShowControls(true);
-                togglePlayPause();
+                toggleMute();
               }}
               activeOpacity={1}
             >
@@ -361,34 +430,58 @@ export function TikTokVideoPlayer({
             </TouchableOpacity>
           )}
 
-          {/* Minimal Play/Pause Overlay */}
-          {showControls && !loading && !error && (
-            <Animated.View style={styles.controlsOverlay}>
-              <TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
-                <Text style={styles.playButtonText}>
-                  {isPlaying ? '⏸️' : '▶️'}
+          {/* Instagram-style persistent mute button */}
+          {!loading && !error && (
+            <TouchableOpacity style={styles.muteButton} onPress={toggleMute}>
+              <View style={styles.muteIconContainer}>
+                <Text style={styles.muteIcon}>
+                  {isMuted ? '🔇' : '🔊'}
                 </Text>
-              </TouchableOpacity>
-              
-              {/* Muted indicator */}
-              {isMuted && (
-                <View style={styles.mutedIndicator}>
-                  <Text style={styles.mutedText}>🔇 Tap to unmute</Text>
-                </View>
-              )}
+              </View>
+            </TouchableOpacity>
+          )}
+          
+          {/* Mute toggle feedback */}
+          {showMuteFeedback && (
+            <Animated.View style={styles.muteFeedback}>
+              <View style={styles.muteFeedbackContainer}>
+                <Text style={styles.muteFeedbackIcon}>
+                  {isMuted ? '🔇' : '🔊'}
+                </Text>
+                <Text style={styles.muteFeedbackText}>
+                  {isMuted ? 'Muted' : 'Unmuted'}
+                </Text>
+              </View>
             </Animated.View>
           )}
           
           {/* Debug overlay to verify render conditions */}
           {__DEV__ && (
             <View style={styles.debugOverlay}>
-              <Text style={styles.debugText}>SC:{String(showControls)}</Text>
               <Text style={styles.debugText}>L:{String(loading)}</Text>
               <Text style={styles.debugText}>E:{String(!!error)}</Text>
               <Text style={styles.debugText}>M:{String(isMuted)}</Text>
+              <Text style={styles.debugText}>P:{String(showProgressBar)}</Text>
             </View>
           )}
         </View>
+
+        {/* TikTok-style Progress Bar - Only on drag */}
+        {showProgressBar && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressTime}>
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </Text>
+          </View>
+        )}
 
         {/* Video Details Sheet */}
         <VideoDetailsSheet
@@ -467,7 +560,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  controlsOverlay: {
+  muteButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  muteIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  muteIcon: {
+    fontSize: 18,
+  },
+  muteFeedback: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -475,19 +586,52 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
-  playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
+  muteFeedbackContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  playButtonText: {
+  muteFeedbackIcon: {
     fontSize: 32,
+    marginBottom: 8,
+  },
+  muteFeedbackText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  progressContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  progressBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 2,
+  },
+  progressTime: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   swipeIndicator: {
     position: 'absolute',
@@ -501,22 +645,6 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
-  },
-  mutedIndicator: {
-    position: 'absolute',
-    bottom: 60,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-  },
-  mutedText: {
-    color: '#fff',
-    fontSize: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    textAlign: 'center',
   },
   debugOverlay: {
     position: 'absolute',
