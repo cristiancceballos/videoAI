@@ -65,17 +65,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    paddingTop: 3,
-    paddingBottom: 1,
-    minHeight: 26, // Reduced by 40% for TikTok-style compact appearance
+    paddingTop: 2,
+    paddingBottom: 2,
+    minHeight: 20, // Compact TikTok-style appearance
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    minHeight: 44, // Accessibility touch target
+    minHeight: 20, // Reduced for compact appearance, touch area maintained by padding
     position: 'relative',
   },
   tabText: {
