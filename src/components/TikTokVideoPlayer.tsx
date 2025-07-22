@@ -131,6 +131,7 @@ export function TikTokVideoPlayer({
       
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      const diagonal = gestureState.dx > 20 && gestureState.dy > 20; // Top-left to bottom-right
       
       // Only capture gestures with significant movement (actual swipes)
       if (horizontal && gestureState.dx > 20) {
@@ -148,6 +149,11 @@ export function TikTokVideoPlayer({
         return true;
       }
       
+      if (diagonal) {
+        console.log('↘️ Diagonal swipe detected for exit');
+        return true;
+      }
+      
       // Don't capture small movements (taps) - let them be handled by onStartShouldSetPanResponder
       return false;
     },
@@ -162,8 +168,18 @@ export function TikTokVideoPlayer({
     onPanResponderMove: (evt, gestureState) => {
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      const diagonal = gestureState.dx > 0 && gestureState.dy > 0 && 
+                      Math.abs(gestureState.dx - gestureState.dy) < 50; // Similar X and Y movement
       
-      if (horizontal && gestureState.dx > 0) {
+      if (diagonal) {
+        // Handle diagonal swipe (top-left to bottom-right) for exit
+        console.log('↘️ Diagonal move:', { dx: gestureState.dx, dy: gestureState.dy });
+        panRef.setValue({ x: gestureState.dx, y: gestureState.dy });
+        // Fade out based on diagonal distance
+        const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+        const opacity = Math.max(0.3, 1 - distance / 280); // Adjusted for diagonal distance
+        fadeAnim.setValue(opacity);
+      } else if (horizontal && gestureState.dx > 0) {
         // Handle horizontal swipe for exit
         console.log('➡️ Horizontal move:', gestureState.dx);
         panRef.setValue({ x: gestureState.dx, y: 0 });
@@ -186,16 +202,22 @@ export function TikTokVideoPlayer({
       
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      const diagonal = gestureState.dx > 0 && gestureState.dy > 0; // Moving right and down
       
-      if (horizontal && gestureState.dx > 100 && gestureState.vx > 0.5) {
-        // Horizontal swipe right threshold met - exit
+      if (horizontal && gestureState.dx > 50 && gestureState.vx > 0.25) {
+        // Horizontal swipe right threshold met - exit (50% easier)
         console.log('🚪 Horizontal exit threshold met - closing video');
         handleExit();
-      } else if (vertical && gestureState.dy > 100 && gestureState.vy > 0.5) {
-        // Vertical swipe down threshold met - exit
+      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
+        // Vertical swipe down threshold met - exit (50% easier)
         console.log('⬇️ Vertical down exit threshold met - closing video');
         handleExit();
-      } else if (vertical && gestureState.dy < -50 && gestureState.vy < -0.5) {
+      } else if (diagonal && gestureState.dx > 50 && gestureState.dy > 50 && 
+                 gestureState.vx > 0.25 && gestureState.vy > 0.25) {
+        // Diagonal swipe (top-left to bottom-right) threshold met - exit
+        console.log('↘️ Diagonal exit threshold met - closing video');
+        handleExit();
+      } else if (vertical && gestureState.dy < -50 && gestureState.vy < -0.25) {
         // Vertical swipe up threshold met - show details
         console.log('📊 Details threshold met - showing sheet');
         setShowDetailsSheet(true);

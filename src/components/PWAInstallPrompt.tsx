@@ -126,7 +126,7 @@ export function PWAInstallPrompt({ onInstallSuccess, onInstallDismiss }: PWAInst
           <View style={styles.promptContainer}>
             <Text style={styles.title}>Add to Home Screen</Text>
             <Text style={styles.subtitle}>
-              Install GrowthOfWisdom for a better experience
+              Install videoAI for a better experience
             </Text>
             <Text style={styles.description}>
               • Faster loading times{'\n'}
@@ -171,7 +171,7 @@ export function PWAInstallPrompt({ onInstallSuccess, onInstallDismiss }: PWAInst
           <View style={styles.promptContainer}>
             <Text style={styles.title}>Add to Home Screen</Text>
             <Text style={styles.subtitle}>
-              Install GrowthOfWisdom on your iPhone
+              Install videoAI on your iPhone
             </Text>
             
             <View style={styles.instructionsContainer}>
