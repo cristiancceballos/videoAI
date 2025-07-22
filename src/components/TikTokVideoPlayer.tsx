@@ -41,6 +41,7 @@ export function TikTokVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
+  const gestureStartTime = useRef(0);
 
   // Auto-hide controls after 3 seconds
   useEffect(() => {
@@ -63,36 +64,78 @@ export function TikTokVideoPlayer({
     }
   }, [visible]);
 
-  // Horizontal swipe-to-exit gesture
-  const panResponder = PanResponder.create({
+  // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
+  const unifiedPanResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to horizontal swipes (right direction)
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && gestureState.dx > 20;
+      console.log('🎯 Gesture detected:', { dx: gestureState.dx, dy: gestureState.dy });
+      
+      const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      
+      // Horizontal swipe (exit) - right direction only
+      if (horizontal && gestureState.dx > 20) {
+        console.log('👉 Horizontal swipe detected for exit');
+        return true;
+      }
+      
+      // Vertical swipe (details) - upward direction only
+      if (vertical && gestureState.dy < -30) {
+        console.log('☝️ Vertical swipe detected for details');
+        return true;
+      }
+      
+      return false;
     },
     onMoveShouldSetPanResponderCapture: () => false,
     onPanResponderGrant: () => {
+      console.log('🤏 Gesture granted');
+      gestureStartTime.current = Date.now();
       panRef.setOffset({
         x: panRef.x._value,
         y: panRef.y._value,
       });
     },
     onPanResponderMove: (evt, gestureState) => {
-      // Only allow rightward swipes
-      if (gestureState.dx > 0) {
+      const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      
+      if (horizontal && gestureState.dx > 0) {
+        // Handle horizontal swipe for exit
+        console.log('➡️ Horizontal move:', gestureState.dx);
         panRef.setValue({ x: gestureState.dx, y: 0 });
         // Fade out as user swipes
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
         fadeAnim.setValue(opacity);
       }
+      // Vertical gestures don't need visual feedback during move
     },
     onPanResponderRelease: (evt, gestureState) => {
+      console.log('🔄 Gesture released:', { dx: gestureState.dx, dy: gestureState.dy, vx: gestureState.vx, vy: gestureState.vy });
       panRef.flattenOffset();
       
-      if (gestureState.dx > 100 && gestureState.vx > 0.5) {
-        // Swipe threshold met - exit
+      const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      
+      if (horizontal && gestureState.dx > 100 && gestureState.vx > 0.5) {
+        // Horizontal swipe threshold met - exit
+        console.log('🚪 Exit threshold met - closing video');
         handleExit();
+      } else if (vertical && gestureState.dy < -50 && gestureState.vy < -0.5) {
+        // Vertical swipe threshold met - show details
+        console.log('📊 Details threshold met - showing sheet');
+        setShowDetailsSheet(true);
       } else {
+        // Check if this was a tap (short duration, minimal movement)
+        const gestureDuration = Date.now() - gestureStartTime.current;
+        const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+        
+        if (gestureDuration < 300 && totalMovement < 30) {
+          // This was a tap - toggle play/pause
+          console.log('👆 Tap detected - toggling play/pause');
+          togglePlayPause();
+        }
+        
         // Snap back to original position
+        console.log('↩️ Snapping back to original position');
         Animated.parallel([
           Animated.spring(panRef, {
             toValue: { x: 0, y: 0 },
@@ -103,20 +146,6 @@ export function TikTokVideoPlayer({
             useNativeDriver: false,
           }),
         ]).start();
-      }
-    },
-  });
-
-  // Vertical swipe detection for details panel
-  const verticalPanResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to vertical swipes (upward direction)
-      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && gestureState.dy < -30;
-    },
-    onPanResponderMove: () => {},
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dy < -50 && gestureState.vy < -0.5) {
-        setShowDetailsSheet(true);
       }
     },
   });
@@ -175,9 +204,6 @@ export function TikTokVideoPlayer({
     setShowControls(true);
   };
 
-  const handleVideoTap = () => {
-    togglePlayPause();
-  };
 
   if (!video) return null;
 
@@ -198,8 +224,7 @@ export function TikTokVideoPlayer({
             transform: panRef.getTranslateTransform(),
           }
         ]}
-        {...panResponder.panHandlers}
-        {...verticalPanResponder.panHandlers}
+        {...unifiedPanResponder.panHandlers}
       >
         {/* Video Player */}
         <View style={styles.videoContainer}>
@@ -235,25 +260,19 @@ export function TikTokVideoPlayer({
           )}
 
           {videoUrl && !loading && !error && (
-            <TouchableOpacity 
-              style={styles.videoTouchArea}
-              activeOpacity={1}
-              onPress={handleVideoTap}
-            >
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                autoPlay
-                muted
-                playsInline
-                loop
-                style={styles.video}
-                onError={handleVideoError}
-                onLoadedData={handleVideoLoad}
-                preload="auto"
-                key={videoUrl}
-              />
-            </TouchableOpacity>
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              autoPlay
+              muted
+              playsInline
+              loop
+              style={styles.video}
+              onError={handleVideoError}
+              onLoadedData={handleVideoLoad}
+              preload="auto"
+              key={videoUrl}
+            />
           )}
 
           {/* Minimal Play/Pause Overlay */}
@@ -295,12 +314,6 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  videoTouchArea: {
-    width: '100%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
