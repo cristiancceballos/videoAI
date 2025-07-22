@@ -14,7 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
-import { VideoPlayerModal } from '../../components/VideoPlayerModal';
+import { TikTokVideoPlayer } from '../../components/TikTokVideoPlayer';
 import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
 
 export function HomeScreen() {
@@ -292,7 +292,7 @@ export function HomeScreen() {
 
       {renderTabContent()}
 
-      <VideoPlayerModal
+      <TikTokVideoPlayer
         visible={showVideoPlayer}
         video={selectedVideo}
         videoUrl={videoUrl}
