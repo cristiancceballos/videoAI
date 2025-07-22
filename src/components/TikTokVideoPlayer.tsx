@@ -38,6 +38,7 @@ export function TikTokVideoPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay compliance
   const videoRef = useRef<HTMLVideoElement>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
@@ -61,6 +62,7 @@ export function TikTokVideoPlayer({
       setIsPlaying(false);
       setShowControls(false);
       setShowDetailsSheet(false);
+      setIsMuted(true); // Reset to muted for next video
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     } else {
@@ -74,6 +76,7 @@ export function TikTokVideoPlayer({
       setIsPlaying(false);
       setShowControls(false);
       setShowDetailsSheet(false);
+      setIsMuted(true); // Reset to muted for cleanup
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     }
@@ -105,6 +108,9 @@ export function TikTokVideoPlayer({
     onPanResponderGrant: () => {
       console.log('🤏 Gesture granted');
       gestureStartTime.current = Date.now();
+      // Show controls immediately when user touches screen as backup
+      console.log('👆 Showing controls on gesture grant as backup');
+      setShowControls(true);
       panRef.setOffset({
         x: panRef.x._value,
         y: panRef.y._value,
@@ -232,7 +238,15 @@ export function TikTokVideoPlayer({
 
   const togglePlayPause = () => {
     console.log('🎮 togglePlayPause called, current isPlaying:', isPlaying);
-    console.log('🎮 Setting showControls to true');
+    console.log('🎮 Current showControls state:', showControls);
+    console.log('🎮 Current isMuted state:', isMuted);
+    
+    // Unmute video on first interaction for audio playback
+    if (isMuted && videoRef.current) {
+      console.log('🔊 Unmuting video on first interaction');
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
     
     if (videoRef.current) {
       if (isPlaying) {
@@ -245,8 +259,14 @@ export function TikTokVideoPlayer({
         setIsPlaying(true);
       }
     }
+    
+    console.log('🎮 Setting showControls to true');
     setShowControls(true);
-    console.log('🎮 showControls state should now be true');
+    
+    // Add timeout to verify state change
+    setTimeout(() => {
+      console.log('🎮 showControls after timeout:', showControls);
+    }, 100);
   };
 
 
@@ -309,7 +329,7 @@ export function TikTokVideoPlayer({
               ref={videoRef}
               src={videoUrl}
               autoPlay
-              muted
+              muted={isMuted}
               playsInline
               loop
               style={styles.video}
@@ -328,7 +348,24 @@ export function TikTokVideoPlayer({
                   {isPlaying ? '⏸️' : '▶️'}
                 </Text>
               </TouchableOpacity>
+              
+              {/* Muted indicator */}
+              {isMuted && (
+                <View style={styles.mutedIndicator}>
+                  <Text style={styles.mutedText}>🔇 Tap to unmute</Text>
+                </View>
+              )}
             </Animated.View>
+          )}
+          
+          {/* Debug overlay to verify render conditions */}
+          {__DEV__ && (
+            <View style={styles.debugOverlay}>
+              <Text style={styles.debugText}>SC:{String(showControls)}</Text>
+              <Text style={styles.debugText}>L:{String(loading)}</Text>
+              <Text style={styles.debugText}>E:{String(!!error)}</Text>
+              <Text style={styles.debugText}>M:{String(isMuted)}</Text>
+            </View>
           )}
         </View>
 
@@ -437,5 +474,34 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
+  },
+  mutedIndicator: {
+    position: 'absolute',
+    bottom: 60,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  mutedText: {
+    color: '#fff',
+    fontSize: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    textAlign: 'center',
+  },
+  debugOverlay: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 8,
+    borderRadius: 4,
+  },
+  debugText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'monospace',
   },
 });
