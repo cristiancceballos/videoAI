@@ -12,6 +12,7 @@ import {
   Animated,
   StatusBar,
 } from 'react-native';
+import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { VideoWithMetadata } from '../services/videoService';
 import { VideoDetailsSheet } from './VideoDetailsSheet';
 
@@ -70,7 +71,8 @@ export function TikTokVideoPlayer({
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
-      console.log('📱 Modal opened - resetting state');
+      console.log('📱 Modal opened - resetting state and preventing screen sleep');
+      activateKeepAwake(); // Prevent screen from sleeping during video playback
       setVideoError(false);
       setShowDetailsSheet(false);
       setShowMuteFeedback(false);
@@ -81,7 +83,8 @@ export function TikTokVideoPlayer({
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     } else {
-      console.log('📱 Modal closed - ensuring complete cleanup');
+      console.log('📱 Modal closed - ensuring complete cleanup and allowing screen sleep');
+      deactivateKeepAwake(); // Allow screen to sleep when video player closes
       // Ensure complete cleanup when modal closes
       if (videoRef.current) {
         videoRef.current.pause();
@@ -532,12 +535,6 @@ export function TikTokVideoPlayer({
           onClose={() => setShowDetailsSheet(false)}
         />
 
-        {/* Subtle swipe indicator at bottom */}
-        {!showDetailsSheet && (
-          <View style={styles.swipeIndicator}>
-            <View style={styles.swipeBar} />
-          </View>
-        )}
       </Animated.View>
     </Modal>
   );
@@ -682,19 +679,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     textAlign: 'center',
-  },
-  swipeIndicator: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  swipeBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
   },
   debugOverlay: {
     position: 'absolute',

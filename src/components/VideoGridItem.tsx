@@ -19,20 +19,6 @@ interface VideoGridItemProps {
 }
 
 export function VideoGridItem({ video, onPress, onDelete, isDeleting }: VideoGridItemProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return '#34C759';
-      case 'processing':
-        return '#FF9500';
-      case 'uploading':
-        return '#007AFF';
-      case 'error':
-        return '#FF3B30';
-      default:
-        return '#666';
-    }
-  };
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -93,8 +79,6 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting }: VideoGri
           </View>
         )}
 
-        {/* Status Indicator */}
-        <View style={[styles.statusDot, { backgroundColor: getStatusColor(video.status) }]} />
 
         {/* Delete Button */}
         {onDelete && !isDeleting && (
@@ -204,14 +188,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '600',
-  },
-  statusDot: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   deleteButton: {
     position: 'absolute',
