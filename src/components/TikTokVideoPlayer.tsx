@@ -100,7 +100,7 @@ export function TikTokVideoPlayer({
     onStartShouldSetPanResponder: (evt) => {
       const touchY = evt.nativeEvent.pageY;
       const screenHeight = Dimensions.get('window').height;
-      const bottomZone = screenHeight * 0.75; // Bottom 25% for progress bar
+      const bottomZone = screenHeight * 0.92; // Bottom 8% for progress bar
       
       if (touchY > bottomZone) {
         // In bottom zone - let progress handler take precedence for horizontal drags
@@ -118,7 +118,7 @@ export function TikTokVideoPlayer({
       
       const touchY = evt.nativeEvent.pageY;
       const screenHeight = Dimensions.get('window').height;
-      const bottomZone = screenHeight * 0.75; // Bottom 25% for progress bar
+      const bottomZone = screenHeight * 0.92; // Bottom 8% for progress bar
       
       // Don't capture horizontal gestures in bottom zone - let progress handler handle them
       if (touchY > bottomZone && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
@@ -136,7 +136,12 @@ export function TikTokVideoPlayer({
       }
       
       if (vertical && gestureState.dy < -30) {
-        console.log('☝️ Vertical swipe detected for details');
+        console.log('☝️ Vertical swipe up detected for details');
+        return true;
+      }
+      
+      if (vertical && gestureState.dy > 30) {
+        console.log('👇 Vertical swipe down detected for exit');
         return true;
       }
       
@@ -153,16 +158,24 @@ export function TikTokVideoPlayer({
     },
     onPanResponderMove: (evt, gestureState) => {
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       
       if (horizontal && gestureState.dx > 0) {
         // Handle horizontal swipe for exit
         console.log('➡️ Horizontal move:', gestureState.dx);
         panRef.setValue({ x: gestureState.dx, y: 0 });
-        // Fade out as user swipes
+        // Fade out as user swipes right
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
         fadeAnim.setValue(opacity);
+      } else if (vertical && gestureState.dy > 0) {
+        // Handle vertical swipe down for exit
+        console.log('⬇️ Vertical down move:', gestureState.dy);
+        panRef.setValue({ x: 0, y: gestureState.dy });
+        // Fade out as user swipes down
+        const opacity = Math.max(0.3, 1 - gestureState.dy / 200);
+        fadeAnim.setValue(opacity);
       }
-      // Vertical gestures don't need visual feedback during move
+      // Vertical up gestures don't need visual feedback during move
     },
     onPanResponderRelease: (evt, gestureState) => {
       console.log('🔄 Gesture released:', { dx: gestureState.dx, dy: gestureState.dy, vx: gestureState.vx, vy: gestureState.vy });
@@ -172,11 +185,15 @@ export function TikTokVideoPlayer({
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       
       if (horizontal && gestureState.dx > 100 && gestureState.vx > 0.5) {
-        // Horizontal swipe threshold met - exit
-        console.log('🚪 Exit threshold met - closing video');
+        // Horizontal swipe right threshold met - exit
+        console.log('🚪 Horizontal exit threshold met - closing video');
+        handleExit();
+      } else if (vertical && gestureState.dy > 100 && gestureState.vy > 0.5) {
+        // Vertical swipe down threshold met - exit
+        console.log('⬇️ Vertical down exit threshold met - closing video');
         handleExit();
       } else if (vertical && gestureState.dy < -50 && gestureState.vy < -0.5) {
-        // Vertical swipe threshold met - show details
+        // Vertical swipe up threshold met - show details
         console.log('📊 Details threshold met - showing sheet');
         setShowDetailsSheet(true);
       } else {
@@ -214,7 +231,7 @@ export function TikTokVideoPlayer({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
       const touchY = evt.nativeEvent.pageY;
       const screenHeight = Dimensions.get('window').height;
-      const bottomZone = screenHeight * 0.75; // Bottom 25% of screen
+      const bottomZone = screenHeight * 0.92; // Bottom 8% of screen
       
       // Only activate in bottom zone with horizontal movement
       const isBottomZone = touchY > bottomZone;
@@ -268,6 +285,11 @@ export function TikTokVideoPlayer({
       Animated.timing(panRef.x, {
         toValue: Dimensions.get('window').width,
         duration: 150, // Faster animation to reduce white screen chance
+        useNativeDriver: false,
+      }),
+      Animated.timing(panRef.y, {
+        toValue: Dimensions.get('window').height,
+        duration: 150,
         useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
@@ -482,19 +504,25 @@ export function TikTokVideoPlayer({
 
         {/* TikTok-style Progress Bar - Only on drag */}
         {showProgressBar && (
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }
-                ]} 
-              />
+          <>
+            {/* Time stamp above progress bar */}
+            <View style={styles.progressTimeContainer}>
+              <Text style={styles.progressTime}>
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </Text>
             </View>
-            <Text style={styles.progressTime}>
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </Text>
-          </View>
+            {/* Progress bar at very bottom */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }
+                  ]} 
+                />
+              </View>
+            </View>
+          </>
         )}
 
         {/* Video Details Sheet */}
@@ -618,12 +646,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  progressTimeContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   progressContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   progressBar: {
     width: '100%',
@@ -631,7 +667,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
@@ -642,10 +677,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    textAlign: 'center',
   },
   swipeIndicator: {
     position: 'absolute',
@@ -678,7 +714,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: screenHeight * 0.25, // Bottom 25% of screen for progress detection
+    height: screenHeight * 0.08, // Bottom 8% of screen for progress detection
     backgroundColor: 'transparent',
   },
 });
