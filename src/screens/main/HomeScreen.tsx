@@ -212,13 +212,6 @@ export function HomeScreen() {
     console.log('🔄 Tab switched to:', tab);
   };
 
-  const renderStickyHeader = () => (
-    <ProfileTabNavigator
-      activeTab={activeTab}
-      onTabPress={handleTabPress}
-    />
-  );
-
   const renderTabContent = () => {
     switch (activeTab) {
       case 'posts':
@@ -230,8 +223,6 @@ export function HomeScreen() {
             numColumns={3}
             contentContainerStyle={styles.gridContent}
             columnWrapperStyle={styles.row}
-            ListHeaderComponent={renderStickyHeader}
-            stickyHeaderIndices={[0]} // Make the first header (ProfileTabNavigator) sticky
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -245,30 +236,18 @@ export function HomeScreen() {
         );
       case 'search':
         return (
-          <View style={styles.fullScreenContainer}>
-            <ProfileTabNavigator
-              activeTab={activeTab}
-              onTabPress={handleTabPress}
-            />
-            <View style={styles.tabContentContainer}>
-              <Text style={styles.placeholderText}>🔍</Text>
-              <Text style={styles.placeholderTitle}>Search</Text>
-              <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
-            </View>
+          <View style={styles.tabContentContainer}>
+            <Text style={styles.placeholderText}>🔍</Text>
+            <Text style={styles.placeholderTitle}>Search</Text>
+            <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
           </View>
         );
       case 'select':
         return (
-          <View style={styles.fullScreenContainer}>
-            <ProfileTabNavigator
-              activeTab={activeTab}
-              onTabPress={handleTabPress}
-            />
-            <View style={styles.tabContentContainer}>
-              <Text style={styles.placeholderText}>✅</Text>
-              <Text style={styles.placeholderTitle}>Select</Text>
-              <Text style={styles.placeholderSubtitle}>Multi-select functionality coming soon</Text>
-            </View>
+          <View style={styles.tabContentContainer}>
+            <Text style={styles.placeholderText}>✅</Text>
+            <Text style={styles.placeholderTitle}>Select</Text>
+            <Text style={styles.placeholderSubtitle}>Multi-select functionality coming soon</Text>
           </View>
         );
       default:
@@ -288,20 +267,27 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>VideoAI</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            onPress={() => loadVideos(true)} 
-            style={styles.refreshButton}
-            disabled={loading}
-          >
-            <Text style={styles.refreshText}>🔄</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>VideoAI</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              onPress={() => loadVideos(true)} 
+              style={styles.refreshButton}
+              disabled={loading}
+            >
+              <Text style={styles.refreshText}>🔄</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
+              <Text style={styles.logoutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        <ProfileTabNavigator
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+          postCount={videos.length}
+        />
       </View>
 
       {renderTabContent()}
@@ -328,6 +314,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  headerContainer: {
+    backgroundColor: '#000',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -335,8 +324,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmallScreen ? 16 : 20,
     paddingTop: Platform.OS === 'web' ? 20 : 60,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    backgroundColor: '#000',
     minHeight: 44, // Ensure minimum touch target
   },
   headerButtons: {

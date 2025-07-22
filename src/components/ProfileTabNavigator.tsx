@@ -12,15 +12,29 @@ export type ProfileTab = 'posts' | 'search' | 'select';
 interface ProfileTabNavigatorProps {
   activeTab: ProfileTab;
   onTabPress: (tab: ProfileTab) => void;
+  postCount?: number;
 }
 
-const tabs: { key: ProfileTab; label: string }[] = [
-  { key: 'posts', label: 'Posts' },
-  { key: 'search', label: 'Search' },
-  { key: 'select', label: 'Select' },
+const getTabLabel = (key: ProfileTab, postCount?: number): string => {
+  switch (key) {
+    case 'posts':
+      return postCount !== undefined ? `Posts (${postCount})` : 'Posts';
+    case 'search':
+      return 'Search';
+    case 'select':
+      return 'Select';
+    default:
+      return '';
+  }
+};
+
+const tabs: { key: ProfileTab }[] = [
+  { key: 'posts' },
+  { key: 'search' },
+  { key: 'select' },
 ];
 
-export function ProfileTabNavigator({ activeTab, onTabPress }: ProfileTabNavigatorProps) {
+export function ProfileTabNavigator({ activeTab, onTabPress, postCount }: ProfileTabNavigatorProps) {
   return (
     <View style={styles.container}>
       {tabs.map((tab) => {
@@ -33,7 +47,7 @@ export function ProfileTabNavigator({ activeTab, onTabPress }: ProfileTabNavigat
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-              {tab.label}
+              {getTabLabel(tab.key, postCount)}
             </Text>
             {isActive && <View style={styles.activeIndicator} />}
           </TouchableOpacity>
@@ -51,9 +65,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    paddingTop: 8,
-    paddingBottom: 4,
-    minHeight: 52, // 10-15% taller than typical tab bar
+    paddingTop: 6,
+    paddingBottom: 2,
+    minHeight: 44, // Reduced by 15% for more compact appearance
   },
   tab: {
     flex: 1,
