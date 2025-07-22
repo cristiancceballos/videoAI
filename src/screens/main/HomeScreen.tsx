@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
 import { VideoPlayerModal } from '../../components/VideoPlayerModal';
+import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
@@ -30,6 +31,9 @@ export function HomeScreen() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [urlRetryCount, setUrlRetryCount] = useState(0);
+  
+  // Profile tab navigation state
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
 
   useEffect(() => {
     if (user) {
@@ -203,6 +207,75 @@ export function HomeScreen() {
     />
   );
 
+  const handleTabPress = (tab: ProfileTab) => {
+    setActiveTab(tab);
+    console.log('🔄 Tab switched to:', tab);
+  };
+
+  const renderStickyHeader = () => (
+    <ProfileTabNavigator
+      activeTab={activeTab}
+      onTabPress={handleTabPress}
+    />
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'posts':
+        return (
+          <FlatList
+            data={videos}
+            renderItem={renderVideoGridItem}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            contentContainerStyle={styles.gridContent}
+            columnWrapperStyle={styles.row}
+            ListHeaderComponent={renderStickyHeader}
+            stickyHeaderIndices={[0]} // Make the first header (ProfileTabNavigator) sticky
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor="#007AFF"
+              />
+            }
+            ListEmptyComponent={!loading ? renderEmptyState : null}
+            showsVerticalScrollIndicator={false}
+          />
+        );
+      case 'search':
+        return (
+          <View style={styles.fullScreenContainer}>
+            <ProfileTabNavigator
+              activeTab={activeTab}
+              onTabPress={handleTabPress}
+            />
+            <View style={styles.tabContentContainer}>
+              <Text style={styles.placeholderText}>🔍</Text>
+              <Text style={styles.placeholderTitle}>Search</Text>
+              <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
+            </View>
+          </View>
+        );
+      case 'select':
+        return (
+          <View style={styles.fullScreenContainer}>
+            <ProfileTabNavigator
+              activeTab={activeTab}
+              onTabPress={handleTabPress}
+            />
+            <View style={styles.tabContentContainer}>
+              <Text style={styles.placeholderText}>✅</Text>
+              <Text style={styles.placeholderTitle}>Select</Text>
+              <Text style={styles.placeholderSubtitle}>Multi-select functionality coming soon</Text>
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>🎥</Text>
@@ -231,23 +304,7 @@ export function HomeScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={videos}
-        renderItem={renderVideoGridItem}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={styles.row}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#007AFF"
-          />
-        }
-        ListEmptyComponent={!loading ? renderEmptyState : null}
-        showsVerticalScrollIndicator={false}
-      />
+      {renderTabContent()}
 
       <VideoPlayerModal
         visible={showVideoPlayer}
@@ -332,6 +389,34 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'flex-start', // Edge-to-edge alignment
+  },
+  fullScreenContainer: {
+    flex: 1,
+  },
+  tabContentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: screenHeight * 0.15,
+    paddingHorizontal: isSmallScreen ? 24 : 40,
+  },
+  placeholderText: {
+    fontSize: isSmallScreen ? 40 : 48,
+    marginBottom: 16,
+  },
+  placeholderTitle: {
+    fontSize: isSmallScreen ? 18 : 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  placeholderSubtitle: {
+    fontSize: isSmallScreen ? 14 : 16,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: isSmallScreen ? 20 : 22,
+    maxWidth: isLargeScreen ? 320 : '100%',
   },
   emptyContainer: {
     flex: 1,
