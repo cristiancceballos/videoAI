@@ -7,7 +7,8 @@ import {
   Dimensions,
   Platform,
   Modal,
-} from 'react-native';\nimport { Share } from 'lucide-react-native';
+} from 'react-native';
+import { Share } from 'lucide-react-native';
 import { 
   BeforeInstallPromptEvent, 
   isAppInstalled, 
