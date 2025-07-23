@@ -70,14 +70,14 @@ class VideoService {
         .createSignedUrl(path, expiresIn);
 
       if (error) {
-        console.error('❌ Error creating signed URL:', error);
+        console.error('Error creating signed URL:', error);
         return null;
       }
 
-      console.log('🔗 Supabase signed URL created successfully (expires in', expiresIn / 60, 'minutes)');
+      console.log('Supabase signed URL created successfully (expires in', expiresIn / 60, 'minutes)');
       return data.signedUrl;
     } catch (error) {
-      console.error('❌ Exception creating signed URL:', error);
+      console.error('Exception creating signed URL:', error);
       return null;
     }
   }
@@ -91,14 +91,14 @@ class VideoService {
         .from(bucket)
         .getPublicUrl(path);
 
-      console.log('🔗 Supabase getPublicUrl response:', {
+      console.log('Supabase getPublicUrl response:', {
         publicUrl: data.publicUrl,
         fullPath: data.fullPath
       });
 
       return data.publicUrl;
     } catch (error) {
-      console.error('❌ Error getting file URL:', error);
+      console.error('Error getting file URL:', error);
       return null;
     }
   }
@@ -106,8 +106,8 @@ class VideoService {
   // Get video playback URL
   async getVideoUrl(video: VideoWithMetadata): Promise<string | null> {
     try {
-      console.log('🎥 Getting video URL for:', video.title);
-      console.log('📁 Video storage details:', {
+      console.log('Getting video URL for:', video.title);
+      console.log('Video storage details:', {
         id: video.id,
         storage_path: video.storage_path,
         status: video.status,
@@ -116,40 +116,40 @@ class VideoService {
       });
       
       if (!video.storage_path) {
-        console.error('❌ No storage path found for video:', video.title);
+        console.error('No storage path found for video:', video.title);
         return null;
       }
 
-      console.log('🗂️ Attempting to get secure signed URL from bucket "videos" with path:', video.storage_path);
+      console.log('Attempting to get secure signed URL from bucket "videos" with path:', video.storage_path);
       // Use signed URL for secure, user-specific access (expires in 1 hour)
       const videoUrl = await this.getSecureFileUrl('videos', video.storage_path, 3600);
       
       if (videoUrl) {
-        console.log('✅ Video URL generated successfully:', videoUrl);
+        console.log('Video URL generated successfully:', videoUrl);
         // Test if URL is accessible
         try {
           const response = await fetch(videoUrl, { method: 'HEAD' });
-          console.log('🌐 URL accessibility test:', response.status, response.statusText);
+          console.log('URL accessibility test:', response.status, response.statusText);
           if (!response.ok) {
-            console.error('❌ Generated URL is not accessible:', response.status, response.statusText);
+            console.error('Generated URL is not accessible:', response.status, response.statusText);
           }
         } catch (fetchError) {
-          console.error('❌ URL accessibility test failed:', fetchError);
+          console.error('URL accessibility test failed:', fetchError);
         }
       } else {
-        console.error('❌ Failed to generate video URL for path:', video.storage_path);
+        console.error('Failed to generate video URL for path:', video.storage_path);
       }
       
       return videoUrl;
     } catch (error) {
-      console.error('❌ Error getting video URL:', error);
+      console.error('Error getting video URL:', error);
       return null;
     }
   }
 
   // Subscribe to real-time video updates
   subscribeToVideoUpdates(userId: string, callback: (videos: VideoWithMetadata[]) => void) {
-    console.log('🔍 Setting up real-time subscription for user:', userId);
+    console.log('Setting up real-time subscription for user:', userId);
     
     const subscription = supabase
       .channel('videos_changes')
@@ -162,10 +162,10 @@ class VideoService {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('🔔 Real-time video change detected:', payload);
+          console.log('Real-time video change detected:', payload);
           // Refetch videos when changes occur
           const videos = await this.getUserVideos(userId);
-          console.log('🔄 Refreshed videos via real-time:', videos.length);
+          console.log('Refreshed videos via real-time:', videos.length);
           callback(videos);
         }
       )

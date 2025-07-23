@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-} from 'react-native';
+} from 'react-native';\nimport { Check, Wifi } from 'lucide-react-native';
 import { getNetworkStatus, onNetworkChange } from '../utils/pwaUtils';
 
 interface NetworkStatusProps {
@@ -64,9 +64,13 @@ export function NetworkStatus({ onNetworkChange: onNetworkChangeCallback }: Netw
       ]}
     >
       <View style={styles.content}>
-        <Text style={styles.icon}>
-          {isOnline ? '✅' : '📡'}
-        </Text>
+        <View style={styles.icon}>
+          {isOnline ? (
+            <Check size={20} color="#4CAF50" />
+          ) : (
+            <Wifi size={20} color="#FF9500" />
+          )}
+        </View>
         <Text style={styles.message}>
           {isOnline 
             ? 'Back online! All features restored.' 
@@ -106,8 +110,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: {
-    fontSize: isSmallScreen ? 14 : 16,
     marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   message: {
     color: '#fff',

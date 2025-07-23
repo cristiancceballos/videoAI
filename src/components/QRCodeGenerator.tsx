@@ -8,7 +8,7 @@ import {
   Alert,
   Dimensions,
   Platform,
-} from 'react-native';
+} from 'react-native';\nimport { Lightbulb, Smartphone } from 'lucide-react-native';
 
 interface QRCodeGeneratorProps {
   appUrl?: string;
@@ -161,13 +161,16 @@ export function QRCodeGenerator({ appUrl = '', onUrlChange }: QRCodeGeneratorPro
           </TouchableOpacity>
           
           <Text style={styles.instructions}>
-            💡 Users can scan this QR code to install your PWA
+            <View style={styles.tipIcon}><Lightbulb size={16} color="#FFA500" /></View> Users can scan this QR code to install your PWA
           </Text>
         </View>
       )}
 
       <View style={styles.tips}>
-        <Text style={styles.tipsTitle}>📱 Distribution Tips:</Text>
+        <View style={styles.tipsTitle}>
+          <Smartphone size={18} color="#007AFF" />
+          <Text style={styles.tipsTitleText}> Distribution Tips:</Text>
+        </View>
         <Text style={styles.tipText}>• Print QR codes at least 2cm x 2cm</Text>
         <Text style={styles.tipText}>• Use high contrast (black on white)</Text>
         <Text style={styles.tipText}>• Test scanning before distributing</Text>
@@ -285,10 +288,19 @@ const styles = StyleSheet.create({
     borderColor: '#333',
   },
   tipsTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tipsTitleText: {
     fontSize: isSmallScreen ? 15 : 16,
     color: '#fff',
     fontWeight: '600',
     marginBottom: 12,
+  },
+  tipIcon: {
+    marginRight: 6,
+    alignItems: 'center',
   },
   tipText: {
     fontSize: isSmallScreen ? 13 : 14,

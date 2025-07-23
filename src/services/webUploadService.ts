@@ -134,7 +134,7 @@ class WebUploadService {
         .single();
 
       if (error) {
-        console.error('❌ Error creating video record:', error);
+        console.error('Error creating video record:', error);
         
         // Provide user-friendly error messages
         if (error.code === '22P02') {
@@ -148,11 +148,11 @@ class WebUploadService {
         return null;
       }
 
-      console.log('✅ Video record created successfully:', data);
-      console.log('📱 Video will appear in home feed with ID:', data.id);
+      console.log('Video record created successfully:', data);
+      console.log('Video will appear in home feed with ID:', data.id);
       return data.id;
     } catch (error) {
-      console.error('❌ Database exception:', error);
+      console.error('Database exception:', error);
       
       // Log additional context for debugging
       console.error('Video data that failed:', {
@@ -173,7 +173,7 @@ class WebUploadService {
     thumbnailPath?: string
   ): Promise<boolean> {
     try {
-      console.log(`🔄 Updating video ${videoId} status to: ${status}`);
+      console.log(`Updating video ${videoId} status to: ${status}`);
       
       const updateData: any = { status };
       if (thumbnailPath) {
@@ -187,14 +187,14 @@ class WebUploadService {
         .select('*');
 
       if (error) {
-        console.error('❌ Error updating video status:', error);
+        console.error('Error updating video status:', error);
         return false;
       }
 
-      console.log('✅ Video status updated successfully:', data);
+      console.log('Video status updated successfully:', data);
       return true;
     } catch (error) {
-      console.error('❌ Exception updating video status:', error);
+      console.error('Exception updating video status:', error);
       return false;
     }
   }
@@ -214,12 +214,12 @@ class WebUploadService {
       }
 
       // 2. Generate presigned URL
-      console.log('🔗 Generating presigned URL for bucket: videos, user:', userId, 'filename:', asset.filename);
+      console.log('Generating presigned URL for bucket: videos, user:', userId, 'filename:', asset.filename);
       const uploadUrl = await this.generatePresignedUrl(userId, asset.filename);
       if (!uploadUrl) {
         return { success: false, error: 'Failed to generate upload URL' };
       }
-      console.log('✅ Presigned URL generated:', { url: '***', path: uploadUrl.path });
+      console.log('Presigned URL generated:', { url: '***', path: uploadUrl.path });
 
       // 3. Create video record in database
       const videoId = await this.createVideoRecord(
