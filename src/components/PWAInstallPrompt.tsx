@@ -7,7 +7,7 @@ import {
   Dimensions,
   Platform,
   Modal,
-} from 'react-native';
+} from 'react-native';\nimport { Share } from 'lucide-react-native';
 import { 
   BeforeInstallPromptEvent, 
   isAppInstalled, 
@@ -176,7 +176,7 @@ export function PWAInstallPrompt({ onInstallSuccess, onInstallDismiss }: PWAInst
             
             <View style={styles.instructionsContainer}>
               <Text style={styles.instructionStep}>
-                1. Tap the share button <Text style={styles.shareIcon}>⬆️</Text> in Safari
+                1. Tap the share button <View style={styles.shareIcon}><Share size={14} color="#007AFF" /></View> in Safari
               </Text>
               <Text style={styles.instructionStep}>
                 2. Scroll down and tap "Add to Home Screen"
@@ -251,7 +251,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   shareIcon: {
-    fontSize: 16,
     backgroundColor: '#007AFF',
     paddingHorizontal: 4,
     paddingVertical: 2,

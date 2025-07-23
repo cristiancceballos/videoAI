@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { Video, Smartphone, Monitor, Trash2, Search, Music } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 
 interface VideoCardProps {
@@ -53,13 +54,13 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
   const getSourceIcon = (sourceType: string) => {
     switch (sourceType) {
       case 'youtube':
-        return '📺';
+        return <Monitor size={16} color="#666" />;
       case 'tiktok':
-        return '🎵';
+        return <Music size={16} color="#666" />;
       case 'device':
-        return '📱';
+        return <Smartphone size={16} color="#666" />;
       default:
-        return '🎥';
+        return <Video size={16} color="#666" />;
     }
   };
 
@@ -81,19 +82,19 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
   };
 
   const handleDelete = () => {
-    console.log('🗑️ Delete requested for video:', video.title);
+    console.log('Delete requested for video:', video.title);
     if (onDelete) {
       // Use browser-compatible confirmation for web platform
       if (Platform.OS === 'web') {
         const confirmed = window.confirm(
           `Are you sure you want to delete "${video.title}"? This action cannot be undone.`
         );
-        console.log('🔍 Confirmation result:', confirmed);
+        console.log('Confirmation result:', confirmed);
         if (confirmed) {
-          console.log('✅ User confirmed deletion');
+          console.log('User confirmed deletion');
           onDelete(video);
         } else {
-          console.log('❌ User cancelled deletion');
+          console.log('User cancelled deletion');
         }
       } else {
         // Use native Alert for mobile apps
@@ -114,12 +115,12 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
         );
       }
     } else {
-      console.log('❌ onDelete prop not provided');
+      console.log('onDelete prop not provided');
     }
   };
 
   const handleLongPress = () => {
-    console.log('📱 Long press detected on video:', video.title);
+    console.log('Long press detected on video:', video.title);
     handleDelete();
   };
 
@@ -141,7 +142,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
           />
         ) : (
           <View style={styles.placeholderThumbnail}>
-            <Text style={styles.placeholderIcon}>🎥</Text>
+            <Video size={24} color="#666" />
           </View>
         )}
         
@@ -168,7 +169,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             onPress={handleDelete}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.deleteIcon}>🗑️</Text>
+            <Trash2 size={16} color="#FF3B30" />
           </TouchableOpacity>
         )}
       </View>
@@ -199,7 +200,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             )}
           </View>
           {onDelete && !isDeleting && (
-            <Text style={styles.deleteHint}>Hold or tap 🗑️ to delete</Text>
+            <Text style={styles.deleteHint}>Hold or tap to delete</Text>
           )}
           {isDeleting && (
             <View style={styles.deletingContainer}>
