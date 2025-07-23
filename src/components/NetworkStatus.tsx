@@ -5,7 +5,8 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-} from 'react-native';\nimport { Check, Wifi } from 'lucide-react-native';
+} from 'react-native';
+import { Check, Wifi } from 'lucide-react-native';
 import { getNetworkStatus, onNetworkChange } from '../utils/pwaUtils';
 
 interface NetworkStatusProps {
