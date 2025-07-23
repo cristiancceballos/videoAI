@@ -2,7 +2,9 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { House } from 'lucide-react-native';
+import { SquarePlus } from 'lucide-react-native';
+import { User } from 'lucide-react-native';
 
 import { useAuth } from '../contexts/AuthContext';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -45,21 +47,21 @@ function MainTabs() {
         name="Home" 
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏠</Text>,
+          tabBarIcon: ({ color }) => <House size={24} color = {color}/>,
         }}
       />
       <Tab.Screen 
         name="Upload" 
         component={UploadScreen}
         options={{
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>➕</Text>,
+          tabBarIcon: ({ color }) => <SquarePlus size={24} color = {color}/>,
         }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>👤</Text>,
+          tabBarIcon: ({ color }) => <User size={24} color ={color}/>,
         }}
       />
     </Tab.Navigator>
