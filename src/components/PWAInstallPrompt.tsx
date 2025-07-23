@@ -177,7 +177,7 @@ export function PWAInstallPrompt({ onInstallSuccess, onInstallDismiss }: PWAInst
             
             <View style={styles.instructionsContainer}>
               <Text style={styles.instructionStep}>
-                1. Tap the share button <View style={styles.shareIcon}><Share size={14} color="#007AFF" /></View> in Safari
+                1. Tap the share button <View style={styles.shareIcon}><Share size={14} /></View> in Safari
               </Text>
               <Text style={styles.instructionStep}>
                 2. Scroll down and tap "Add to Home Screen"

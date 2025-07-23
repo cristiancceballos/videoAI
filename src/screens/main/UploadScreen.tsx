@@ -11,7 +11,7 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { Smartphone, Camera, AlertTriangle } from 'lucide-react-native';
+import { Images, Camera, AlertTriangle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { webMediaService, WebMediaAsset } from '../../services/webMediaService';
@@ -154,7 +154,7 @@ export function UploadScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.uploadButtonIcon}>
-              <Smartphone size={24} color="#fff" />
+              <Images size={24} color="#fff" />
             </View>
             <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
           </TouchableOpacity>
