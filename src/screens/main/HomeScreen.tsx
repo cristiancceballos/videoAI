@@ -262,7 +262,7 @@ export function HomeScreen() {
       <Video size={48} color="#fff" style={styles.emptyIcon} />
       <Text style={styles.emptyTitle}>No videos yet</Text>
       <Text style={styles.emptySubtitle}>
-        Upload your first video to get started with AI-powered summaries and Q&A
+        Upload your first video to get started (:
       </Text>
     </View>
   );
