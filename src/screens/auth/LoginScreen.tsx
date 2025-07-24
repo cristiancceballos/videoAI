@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { getInterFontConfig } from '../../utils/fontUtils';
+import { getInterFontConfig, getInterFontConfigNonItalic } from '../../utils/fontUtils';
 
 export function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -127,7 +127,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with -1.2 letterSpacing to fix gaps
+    // Alternative: ...getInterFontConfigNonItalic('300'), // Use non-italic if spacing issues persist
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,

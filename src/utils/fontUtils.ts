@@ -24,6 +24,7 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
   
   // Map font weights to lighter Inter variants for elegant typography
   let interVariant: string;
+  let letterSpacing: number;
   
   switch (normalizedWeight) {
     case '200':
@@ -31,6 +32,7 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
     case 'normal':
       // Regular text uses ExtraLight 200 Italic for elegance
       interVariant = 'Inter_200ExtraLight_Italic';
+      letterSpacing = -0.5; // Light negative spacing for regular text
       break;
     case '300':
     case 'light':
@@ -41,10 +43,12 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
     case 'bold':
       // Bold text uses Light 300 Italic (lighter than traditional bold)
       interVariant = 'Inter_300Light_Italic';
+      letterSpacing = -1.2; // More aggressive negative spacing for titles/bold text
       break;
     default:
       // Default to ExtraLight for any other weight
       interVariant = 'Inter_200ExtraLight_Italic';
+      letterSpacing = -0.5;
   }
 
   // Provide cross-platform font fallbacks
@@ -52,9 +56,11 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
     ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
     : interVariant;
 
+  console.log(`🔤 Font config for weight ${normalizedWeight}:`, { interVariant, letterSpacing });
+
   return { 
     fontFamily,
-    letterSpacing: 0 // Fix character gap issues
+    letterSpacing
   };
 }
 
@@ -85,4 +91,42 @@ export function getInterFontFamily(weight: string | number = '200'): string {
  */
 export function getInterFontConfig(weight: string | number = '200'): { fontFamily: string; letterSpacing: number } {
   return getInterFont(weight);
+}
+
+/**
+ * Alternative font config with non-italic variants for testing
+ * @param weight - Font weight
+ * @returns Font config with non-italic Inter variants and different spacing
+ */
+export function getInterFontConfigNonItalic(weight: string | number = '200'): { fontFamily: string; letterSpacing: number } {
+  const normalizedWeight = String(weight);
+  
+  let interVariant: string;
+  let letterSpacing: number;
+  
+  switch (normalizedWeight) {
+    case '200':
+    case 'extralight':
+    case 'normal':
+      interVariant = 'Inter_200ExtraLight';
+      letterSpacing = -0.3; // Less aggressive spacing for non-italic
+      break;
+    case '300':
+    case 'light':
+    case 'bold':
+      interVariant = 'Inter_300Light';
+      letterSpacing = -0.8; // Moderate spacing for non-italic bold
+      break;
+    default:
+      interVariant = 'Inter_200ExtraLight';
+      letterSpacing = -0.3;
+  }
+
+  const fontFamily = Platform.OS === 'web' 
+    ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
+    : interVariant;
+
+  console.log(`🔤 NON-ITALIC Font config for weight ${normalizedWeight}:`, { interVariant, letterSpacing });
+
+  return { fontFamily, letterSpacing };
 }

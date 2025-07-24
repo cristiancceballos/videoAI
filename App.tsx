@@ -51,7 +51,16 @@ export default function App() {
   useEffect(() => {
     // Hide splash screen when fonts are loaded
     if (fontsLoaded) {
+      console.log('✅ Inter fonts loaded successfully:', {
+        Inter_200ExtraLight: 'loaded',
+        Inter_200ExtraLight_Italic: 'loaded', 
+        Inter_300Light: 'loaded',
+        Inter_300Light_Italic: 'loaded',
+        Inter_400Regular: 'loaded'
+      });
       SplashScreen.hideAsync();
+    } else {
+      console.log('⏳ Waiting for Inter fonts to load...');
     }
   }, [fontsLoaded]);
 
