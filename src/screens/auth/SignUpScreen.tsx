@@ -153,12 +153,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
+    fontFamily: 'Inter',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
+    fontFamily: 'Inter',
     color: '#888',
     textAlign: 'center',
   },
@@ -171,6 +173,7 @@ const styles = StyleSheet.create({
     padding: isSmallScreen ? 14 : 16,
     marginBottom: 16,
     fontSize: isSmallScreen ? 15 : 16,
+    fontFamily: 'Inter',
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -192,6 +195,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   linkButton: {
     alignItems: 'center',
@@ -202,6 +206,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#007AFF',
     fontSize: isSmallScreen ? 13 : 14,
+    fontFamily: 'Inter',
     textAlign: 'center',
   },
 });

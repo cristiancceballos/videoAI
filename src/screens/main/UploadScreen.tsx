@@ -218,10 +218,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
+    fontFamily: 'Inter',
     color: '#fff',
   },
   warningText: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#FF9500',
     textAlign: 'center',
     marginTop: 4,
@@ -240,6 +242,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
+    fontFamily: 'Inter',
     color: '#fff',
     marginBottom: 16,
   },
@@ -266,5 +269,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });

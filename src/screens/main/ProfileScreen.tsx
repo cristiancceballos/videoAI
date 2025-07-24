@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    fontFamily: 'Inter',
     color: '#fff',
   },
   content: {
@@ -64,11 +65,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+    fontFamily: 'Inter',
     color: '#888',
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
+    fontFamily: 'Inter',
     color: '#fff',
   },
   signOutButton: {
@@ -82,5 +85,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });
