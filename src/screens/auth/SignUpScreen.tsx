@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { getInterFontConfig } from '../../utils/fontUtils';
 
 export function SignUpScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -153,14 +154,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#888',
     textAlign: 'center',
   },
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     padding: isSmallScreen ? 14 : 16,
     marginBottom: 16,
     fontSize: isSmallScreen ? 15 : 16,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('600'),
   },
   linkButton: {
     alignItems: 'center',
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#007AFF',
     fontSize: isSmallScreen ? 13 : 14,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     textAlign: 'center',
   },
 });

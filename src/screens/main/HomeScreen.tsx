@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { getInterFontConfig } from '../../utils/fontUtils';
 import { useFocusEffect } from '@react-navigation/native';
 import { Video, Search, Check, RotateCcw } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
     flex: 1,
   },
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('500'),
   },
   content: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
@@ -402,14 +403,14 @@ const styles = StyleSheet.create({
   placeholderTitle: {
     fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   placeholderSubtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#888',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 20 : 22,
@@ -429,14 +430,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#888',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 20 : 22,

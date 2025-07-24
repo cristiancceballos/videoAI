@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-url-polyfill/auto';
 
 // Polyfill for structuredClone (not available in older mobile browsers)
@@ -19,13 +21,36 @@ import { PWAInstallPrompt } from './src/components/PWAInstallPrompt';
 import { NetworkStatus } from './src/components/NetworkStatus';
 import { registerServiceWorker } from './src/utils/pwaUtils';
 
+// Keep splash screen visible while fonts load
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
+  // Load Inter fonts
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
   useEffect(() => {
     // Register service worker for PWA functionality (web only)
     if (Platform.OS === 'web') {
       registerServiceWorker();
     }
   }, []);
+
+  useEffect(() => {
+    // Hide splash screen when fonts are loaded
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  // Show loading screen while fonts are loading
+  if (!fontsLoaded) {
+    return null;
+  }
 
   const handleInstallSuccess = () => {
     console.log('PWA installed successfully!');

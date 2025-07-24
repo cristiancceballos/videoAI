@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { getInterFontConfig } from '../../utils/fontUtils';
 
 export function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
   },
   content: {
@@ -65,13 +66,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#888',
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#fff',
   },
   signOutButton: {
@@ -85,6 +86,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('600'),
   },
 });

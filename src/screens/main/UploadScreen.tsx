@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Images, Camera, AlertTriangle } from 'lucide-react-native';
+import { getInterFontConfig } from '../../utils/fontUtils';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { webMediaService, WebMediaAsset } from '../../services/webMediaService';
@@ -218,12 +219,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('700'),
     color: '#fff',
   },
   warningText: {
     fontSize: 12,
-    fontFamily: 'Inter',
+    ...getInterFontConfig('400'),
     color: '#FF9500',
     textAlign: 'center',
     marginTop: 4,
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('600'),
     color: '#fff',
     marginBottom: 16,
   },
@@ -269,6 +270,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
-    fontFamily: 'Inter',
+    ...getInterFontConfig('600'),
   },
 });
