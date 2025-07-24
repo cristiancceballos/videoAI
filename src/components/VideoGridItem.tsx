@@ -49,7 +49,8 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
       style={[
         styles.container, 
         isDeleting && styles.deleting,
-        columnIndex < 2 && styles.rightBorder // Add right border for first two columns only
+        columnIndex < 2 && styles.rightBorder, // Add right border for first two columns only
+        columnIndex > 0 && styles.leftBorder // Add left border for columns 2 and 3
       ]}
       onPress={() => onPress(video)}
       activeOpacity={0.9}
@@ -135,6 +136,10 @@ const styles = StyleSheet.create({
   rightBorder: {
     borderRightWidth: 1,
     borderRightColor: '#333', // Match the existing line color theme
+  },
+  leftBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#333', // Match the existing line color theme
   },
   deleting: {
     opacity: 0.5,

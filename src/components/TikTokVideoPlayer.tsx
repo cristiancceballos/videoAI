@@ -145,7 +145,7 @@ export function TikTokVideoPlayer({
         return true;
       }
       
-      if (vertical && gestureState.dy > 30) {
+      if (vertical && gestureState.dy > 30 && !showDetailsSheet) {
         console.log('👇 Vertical swipe down detected for exit');
         return true;
       }
@@ -187,7 +187,7 @@ export function TikTokVideoPlayer({
         // Fade out as user swipes right
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
         fadeAnim.setValue(opacity);
-      } else if (vertical && gestureState.dy > 0) {
+      } else if (vertical && gestureState.dy > 0 && !showDetailsSheet) {
         // Handle vertical swipe down for exit
         console.log('⬇️ Vertical down move:', gestureState.dy);
         panRef.setValue({ x: 0, y: gestureState.dy });
@@ -209,7 +209,7 @@ export function TikTokVideoPlayer({
         // Horizontal swipe right threshold met - exit (50% easier)
         console.log('🚪 Horizontal exit threshold met - closing video');
         handleExit();
-      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
+      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25 && !showDetailsSheet) {
         // Vertical swipe down threshold met - exit (50% easier)
         console.log('⬇️ Vertical down exit threshold met - closing video');
         handleExit();

@@ -39,8 +39,9 @@ export function HomeScreen() {
   useEffect(() => {
     if (user) {
       loadVideos();
-      // Temporarily disable real-time subscription due to schema mismatch
-      // setupRealtimeSubscription();
+      // Set up real-time subscription with error handling
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [user]);
 
@@ -73,23 +74,25 @@ export function HomeScreen() {
   };
 
   const setupRealtimeSubscription = () => {
-    if (!user) return;
+    if (!user) return () => {};
 
     try {
+      console.log('🔔 Setting up real-time subscription for user:', user.id);
       const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
-        console.log('Real-time update received, updating video list');
+        console.log('📡 Real-time update received, updating video list with', updatedVideos.length, 'videos');
         setVideos(updatedVideos);
       });
 
       return () => {
         try {
+          console.log('🔕 Cleaning up real-time subscription');
           subscription.unsubscribe();
         } catch (error) {
           console.log('Real-time unsubscribe error (non-critical):', error);
         }
       };
     } catch (error) {
-      console.log('Real-time subscription setup failed (non-critical):', error);
+      console.error('❌ Real-time subscription setup failed:', error);
       // Fallback to manual refresh only
       return () => {};
     }
@@ -239,7 +242,7 @@ export function HomeScreen() {
       case 'search':
         return (
           <View style={styles.tabContentContainer}>
-            <Search size={48} color="#fff" style={styles.placeholderIcon} />
+            <Search size={48} color="#fff" style={styles.emptyIcon} />
             <Text style={styles.placeholderTitle}>Search</Text>
             <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
           </View>
@@ -247,7 +250,7 @@ export function HomeScreen() {
       case 'select':
         return (
           <View style={styles.tabContentContainer}>
-            <Check size={48} color="#fff" style={styles.placeholderIcon} />
+            <Check size={48} color="#fff" style={styles.emptyIcon} />
             <Text style={styles.placeholderTitle}>Select</Text>
             <Text style={styles.placeholderSubtitle}>Multi-select functionality coming soon</Text>
           </View>

@@ -1,0 +1,125 @@
+# Product Requirements Document (PRD)
+
+## VideoAI – Smart Video Organizer with AI Summarization & Interactive Q&A
+
+**Date:** July 23, 2025
+
+---
+
+### 1 · Introduction
+
+#### 1.1 Purpose of the Document
+
+This PRD defines the updated scope, features, and technical requirements for **VideoAI**, enabling the development team to deliver the next product increments with clarity and shared understanding.
+
+#### 1.2 Product Overview  (updated)
+
+**VideoAI** is a smart video‑management application that lets users upload personal videos and unlock AI‑powered insights. Each video is automatically transcribed, summarized, and indexed so learners, creators, and knowledge‑seekers can **instantly surface key moments** and ask questions without re‑watching lengthy footage. Users can search their library by topic or keyword, attach personal notes, and retrieve exactly the clip—or idea—they need.
+
+---
+
+### 2 · Objectives & Goals
+
+1. Provide a **mobile‑first**, frictionless platform for organising personal video libraries.
+2. Enable AI‑driven **summaries, topic extraction, and interactive Q&A** for every uploaded video.
+3. Deliver **fast, intuitive search** across videos, notes, and AI‑generated metadata.
+4. Support **>50 videos per user** while keeping costs predictable.
+5. Maintain a secure, privacy‑respecting architecture with minimal user setup.
+
+---
+
+### 3 · Features & Functionality
+
+#### 3.1 Video Upload & Storage
+
+- **Primary (Phase 2 – *****done*****):** upload from device gallery or camera, real‑time progress, metadata capture.
+- **Deferred (Phase 6):** URL‑based ingest (YouTube, TikTok)—subject to TOS & bandwidth review.
+
+#### 3.2 User Notes & Key Points
+
+- Markdown‑style notes linked to timestamps.
+
+#### 3.3 AI Processing Pipeline
+
+- **Transcription** via Whisper.
+- **Summarisation** (GPT‑4 / Claude) → “TL;DR” + topic tags.
+- **Embeddings** stored in `pgvector` for semantic search.
+
+#### 3.4 Interactive Q&A (RAG)
+
+- Embed user query → similarity search → context‑aware answer with clickable timestamps.
+
+#### 3.5 Search & Discovery
+
+- Hybrid keyword + vector search across titles, notes, summaries.
+- Filters: date, duration, custom tags.
+
+#### 3.6 Swipe‑Up Insight Panel
+
+- Swipe on any video to reveal summary, notes, and chat.
+
+---
+
+### 4 · Technical Requirements  (unchanged core stack)
+
+- **Frontend:** Expo (React Native) PWA.
+- **Auth:** Supabase Auth.
+- **Storage:** Supabase Storage (Pro tier) – 100 GB included; reevaluate S3 hybrid > 1 TB.
+- **Database:** Supabase Postgres + pgvector.
+- **Edge Functions:** Supabase (Deno) for signed URLs & AI hooks.
+- **Background Jobs:** Supabase Queues / Trigger.dev.
+- **LLM APIs:** OpenAI, Anthropic, Gemini.
+- **Vector Search:** pgvector.
+- **CDN:** Fastly (built‑in).
+
+---
+
+### 5 · User Experience Highlights
+
+- **Home Feed:** grid of thumbnails.
+- **Upload Tab:** choose from gallery or record.
+- **Insight Panel:** swipe‑up for summary + chat.
+- **Search Bar:** global, instant results.
+
+---
+
+### 6 · Constraints & Assumptions (updated)
+
+- Initial cohort <10 users; Supabase **Pro** tier covers 100 GB → extra GB at \$0.021.
+- AI cost monitoring in place; fallback models if token usage spikes.
+- URL ingest postponed until legal & cost implications resolved.
+
+---
+
+### 7 · Timeline & Milestones (re‑aligned)
+
+| Phase                                | Status         | Target       | Key Deliverables                                           |
+| ------------------------------------ | -------------- | ------------ | ---------------------------------------------------------- |
+| **1. Foundation**                    | ✅ Complete     | –            | Auth, Storage, DB, CI/CD                                   |
+| **2. Upload & Gallery**              | ✅ Complete     | –            | Device upload, metadata, feed                              |
+| **3. AI Processing**                 | 🚧 In progress | Aug 2025     | Audio extraction, transcription, summarisation, embeddings |
+| **4. Interactive Q&A & Swipe‑Up UI** | Planned        | Sep 2025     | Chat panel, source‑linked answers                          |
+| **5. Search & Discovery**            | Planned        | Oct 2025     | Hybrid search, filters                                     |
+| **6. URL Ingest (optional)**         | Deferred       | TBD          | Server‑side fetch, TOS compliance                          |
+| **7. Polish + Analytics**            | Planned        | Oct/Nov 2025 | Push notifications, error tracking                         |
+
+---
+
+### 9 · Appendices  (unchanged)
+
+#### 9.1 Technology Stack Summary
+
+- **Frontend:** Expo
+- **Auth:** Supabase Auth
+- **Storage:** Supabase Storage
+- **Database:** Supabase Postgres with pgvector
+- **Functions:** Supabase Edge Functions
+- **Queue:** Supabase Queues
+- **LLM APIs:** OpenAI, Anthropic, Gemini
+- **Vector Search:** pgvector
+- **CDN:** Supabase built‑in (Fastly)
+
+---
+
+> **Open question:** should we introduce AWS S3 + Glacier for cold storage once >1 TB is reached? Current plan is to stay on Supabase until that threshold.
+

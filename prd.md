@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD)
+# Product Requirements Document (PRD) OLD!
 
 ## Smart Video Organizer with AI Summarization and Interactive Q&A
 
@@ -14,7 +14,11 @@ This Product Requirements Document (PRD) outlines the specifications for the dev
 
 #### Product Overview
 
-The Smart Video Organizer is an application designed to help users manage and interact with their video content efficiently. It allows users to upload videos from various sources, add personal notes, and leverage AI for summarization and interactive Q&A. The app solves the common problem of recalling key points from videos without rewatching them entirely, especially when video players lack features like 2x speed.
+VideoAI is a smart video management application designed to help users interact with their personal video libraries more efficiently. Users can upload videos from various sources and leverage AI-powered features such as automated summarization, topic extraction, and interactive Q&A. Each video is processed to highlight key points, allowing users to quickly recall important information without needing to rewatch the entire video.
+
+In addition, VideoAI enables users to filter and search their video gallery by specific topics and keywords, solving the common problem of finding favorite moments or subjects buried within long video content. Users can also add personal notes to videos, making it easy to organize insights and revisit them later.
+
+VideoAI is built for learners, content creators, and knowledge-seekers who want to extract maximum value from their video libraries — without the hassle.
 
 ---
 
