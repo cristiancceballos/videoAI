@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { X, Camera, Trash2 } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';

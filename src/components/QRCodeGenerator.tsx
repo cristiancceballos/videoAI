@@ -8,7 +8,8 @@ import {
   Alert,
   Dimensions,
   Platform,
-} from 'react-native';\nimport { Lightbulb, Smartphone } from 'lucide-react-native';
+} from 'react-native';
+import { Lightbulb, Smartphone } from 'lucide-react-native';
 
 interface QRCodeGeneratorProps {
   appUrl?: string;
