@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { getInterFontConfig } from '../../utils/fontUtils';
+import { getInterFontConfig, getInterFontConfigForInputs } from '../../utils/fontUtils';
 
 export function SignUpScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -154,14 +154,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#888',
     textAlign: 'center',
   },
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     padding: isSmallScreen ? 14 : 16,
     marginBottom: 16,
     fontSize: isSmallScreen ? 15 : 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
   },
   linkButton: {
     alignItems: 'center',
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#007AFF',
     fontSize: isSmallScreen ? 13 : 14,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     textAlign: 'center',
   },
 });

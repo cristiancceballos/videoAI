@@ -219,12 +219,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
   },
   warningText: {
     fontSize: 12,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#FF9500',
     textAlign: 'center',
     marginTop: 4,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
     marginBottom: 16,
   },
@@ -270,6 +270,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
   },
 });

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react-native';
 import { WebMediaAsset } from '../services/webMediaService';
+import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 import { ThumbnailGenerator } from './ThumbnailGenerator';
 import { FrameCaptureResult } from '../utils/frameCapture';
 
@@ -354,6 +355,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 8,
   },
@@ -362,6 +364,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -379,12 +382,14 @@ const styles = StyleSheet.create({
   },
   metadataLabel: {
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
   },
   metadataValue: {
     fontSize: 14,
-    color: '#fff',
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#fff',
   },
   thumbnailSection: {
     marginTop: 20,

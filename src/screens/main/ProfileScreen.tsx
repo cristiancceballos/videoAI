@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
   },
   content: {
@@ -66,13 +66,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#888',
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#fff',
   },
   signOutButton: {
@@ -86,6 +86,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
   },
 });

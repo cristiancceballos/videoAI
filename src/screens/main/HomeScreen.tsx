@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
     flex: 1,
   },
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
   },
   content: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
@@ -403,14 +403,14 @@ const styles = StyleSheet.create({
   placeholderTitle: {
     fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   placeholderSubtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#888',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 20 : 22,
@@ -430,14 +430,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
+    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
     color: '#888',
     textAlign: 'center',
     lineHeight: isSmallScreen ? 20 : 22,
