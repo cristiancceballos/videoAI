@@ -135,11 +135,11 @@ const styles = StyleSheet.create({
   },
   rightBorder: {
     borderRightWidth: 1,
-    borderRightColor: '#333', // Match the existing line color theme
+    borderRightColor: '#000', // Pure black to match app dark theme
   },
   leftBorder: {
     borderLeftWidth: 1,
-    borderLeftColor: '#333', // Match the existing line color theme
+    borderLeftColor: '#000', // Pure black to match app dark theme
   },
   deleting: {
     opacity: 0.5,

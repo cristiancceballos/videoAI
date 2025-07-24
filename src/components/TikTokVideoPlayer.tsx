@@ -102,6 +102,12 @@ export function TikTokVideoPlayer({
   // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
   const unifiedPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
+      // Completely disable player gestures when details sheet is open
+      if (showDetailsSheet) {
+        console.log('🚫 Details sheet open - ignoring player gesture');
+        return false;
+      }
+      
       const touchY = evt.nativeEvent.pageY;
       const screenHeight = Dimensions.get('window').height;
       const bottomZone = screenHeight * 0.92; // Bottom 8% for progress bar
@@ -118,6 +124,12 @@ export function TikTokVideoPlayer({
       return true;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Completely disable player gestures when details sheet is open
+      if (showDetailsSheet) {
+        console.log('🚫 Details sheet open - ignoring player gesture movement');
+        return false;
+      }
+      
       console.log('🎯 Gesture movement detected:', { dx: gestureState.dx, dy: gestureState.dy });
       
       const touchY = evt.nativeEvent.pageY;
@@ -145,7 +157,7 @@ export function TikTokVideoPlayer({
         return true;
       }
       
-      if (vertical && gestureState.dy > 30 && !showDetailsSheet) {
+      if (vertical && gestureState.dy > 30) {
         console.log('👇 Vertical swipe down detected for exit');
         return true;
       }
@@ -187,7 +199,7 @@ export function TikTokVideoPlayer({
         // Fade out as user swipes right
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
         fadeAnim.setValue(opacity);
-      } else if (vertical && gestureState.dy > 0 && !showDetailsSheet) {
+      } else if (vertical && gestureState.dy > 0) {
         // Handle vertical swipe down for exit
         console.log('⬇️ Vertical down move:', gestureState.dy);
         panRef.setValue({ x: 0, y: gestureState.dy });
@@ -209,7 +221,7 @@ export function TikTokVideoPlayer({
         // Horizontal swipe right threshold met - exit (50% easier)
         console.log('🚪 Horizontal exit threshold met - closing video');
         handleExit();
-      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25 && !showDetailsSheet) {
+      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
         // Vertical swipe down threshold met - exit (50% easier)
         console.log('⬇️ Vertical down exit threshold met - closing video');
         handleExit();
