@@ -230,8 +230,8 @@ export function TikTokVideoPlayer({
         // Diagonal swipe (top-left to bottom-right) threshold met - exit
         console.log('↘️ Diagonal exit threshold met - closing video');
         handleExit();
-      } else if (vertical && gestureState.dy < -50 && gestureState.vy < -0.25) {
-        // Vertical swipe up threshold met - show details
+      } else if (vertical && gestureState.dy < -30) {
+        // Vertical swipe up threshold met - show details (matches capture threshold)
         console.log('📊 Details threshold met - showing sheet');
         setShowDetailsSheet(true);
       } else {
