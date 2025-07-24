@@ -8,13 +8,16 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react-native';
 import { WebMediaAsset } from '../services/webMediaService';
+import { ThumbnailGenerator } from './ThumbnailGenerator';
+import { FrameCaptureResult } from '../utils/frameCapture';
 
 interface WebVideoPreviewModalProps {
   visible: boolean;
   asset: WebMediaAsset | null;
   onClose: () => void;
-  onUpload: (title: string) => void;
+  onUpload: (title: string, thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null) => void;
   uploading: boolean;
 }
 
@@ -27,6 +30,11 @@ export function WebVideoPreviewModal({
 }: WebVideoPreviewModalProps) {
   const [title, setTitle] = React.useState('');
   const titleInputRef = React.useRef<any>(null);
+  
+  // Thumbnail selection state
+  const [thumbnailOption, setThumbnailOption] = React.useState<'first' | 'custom' | 'none'>('first');
+  const [showThumbnailGenerator, setShowThumbnailGenerator] = React.useState(false);
+  const [customThumbnailData, setCustomThumbnailData] = React.useState<{ frameData: FrameCaptureResult; timeSeconds: number } | null>(null);
 
   React.useEffect(() => {
     if (asset?.filename) {
@@ -52,7 +60,32 @@ export function WebVideoPreviewModal({
       Alert.alert('Error', 'Please enter a title for your video');
       return;
     }
-    onUpload(title.trim());
+
+    // Prepare thumbnail data based on selection
+    let thumbnailData: { frameData: FrameCaptureResult; timeSeconds: number } | null = null;
+    
+    if (thumbnailOption === 'custom' && customThumbnailData) {
+      thumbnailData = customThumbnailData;
+    } else if (thumbnailOption === 'none') {
+      thumbnailData = null;
+    }
+    // For 'first' option, we'll generate it from first frame during upload
+
+    onUpload(title.trim(), thumbnailData);
+  };
+
+  // Handle custom thumbnail generation
+  const handleThumbnailGenerated = (frameData: FrameCaptureResult, timeSeconds: number) => {
+    setCustomThumbnailData({ frameData, timeSeconds });
+    setThumbnailOption('custom');
+    setShowThumbnailGenerator(false);
+  };
+
+  // Handle no thumbnail selection
+  const handleNoThumbnail = () => {
+    setCustomThumbnailData(null);
+    setThumbnailOption('none');
+    setShowThumbnailGenerator(false);
   };
 
   if (!asset) return null;
@@ -120,6 +153,69 @@ export function WebVideoPreviewModal({
               }}
             />
 
+            {/* Thumbnail Selection */}
+            <View style={styles.thumbnailSection}>
+              <Text style={styles.label}>Thumbnail</Text>
+              <View style={styles.thumbnailOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.thumbnailOption,
+                    thumbnailOption === 'first' && styles.thumbnailOptionSelected
+                  ]}
+                  onPress={() => setThumbnailOption('first')}
+                  disabled={uploading}
+                >
+                  <ImageIcon size={16} color={thumbnailOption === 'first' ? '#007AFF' : '#666'} />
+                  <Text style={[
+                    styles.thumbnailOptionText,
+                    thumbnailOption === 'first' && styles.thumbnailOptionTextSelected
+                  ]}>
+                    First Frame
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.thumbnailOption,
+                    thumbnailOption === 'custom' && styles.thumbnailOptionSelected
+                  ]}
+                  onPress={() => setShowThumbnailGenerator(true)}
+                  disabled={uploading}
+                >
+                  <Camera size={16} color={thumbnailOption === 'custom' ? '#007AFF' : '#666'} />
+                  <Text style={[
+                    styles.thumbnailOptionText,
+                    thumbnailOption === 'custom' && styles.thumbnailOptionTextSelected
+                  ]}>
+                    Custom Frame
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.thumbnailOption,
+                    thumbnailOption === 'none' && styles.thumbnailOptionSelected
+                  ]}
+                  onPress={() => setThumbnailOption('none')}
+                  disabled={uploading}
+                >
+                  <Trash2 size={16} color={thumbnailOption === 'none' ? '#007AFF' : '#666'} />
+                  <Text style={[
+                    styles.thumbnailOptionText,
+                    thumbnailOption === 'none' && styles.thumbnailOptionTextSelected
+                  ]}>
+                    No Thumbnail
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {thumbnailOption === 'custom' && customThumbnailData && (
+                <Text style={styles.thumbnailPreview}>
+                  ✓ Custom frame selected at {Math.floor(customThumbnailData.timeSeconds)}s
+                </Text>
+              )}
+            </View>
+
             <View style={styles.metadata}>
               <View style={styles.metadataRow}>
                 <Text style={styles.metadataLabel}>Duration:</Text>
@@ -154,6 +250,25 @@ export function WebVideoPreviewModal({
           </View>
         </View>
       </View>
+
+      {/* Thumbnail Generator Modal */}
+      <ThumbnailGenerator
+        visible={showThumbnailGenerator}
+        video={{
+          id: 'temp',
+          title: title || 'Preview Video',
+          user_id: 'temp',
+          status: 'ready' as const,
+          storage_path: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          source_type: 'device' as const,
+        }}
+        videoUrl={asset?.uri || ''}
+        onClose={() => setShowThumbnailGenerator(false)}
+        onThumbnailGenerated={handleThumbnailGenerated}
+        onThumbnailRemoved={handleNoThumbnail}
+      />
     </Modal>
   );
 }
@@ -270,5 +385,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     fontWeight: '500',
+  },
+  thumbnailSection: {
+    marginTop: 20,
+  },
+  thumbnailOptions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  thumbnailOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: 6,
+  },
+  thumbnailOptionSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  thumbnailOptionText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  thumbnailOptionTextSelected: {
+    color: '#007AFF',
+  },
+  thumbnailPreview: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#007AFF',
+    textAlign: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,37 +8,19 @@ import {
   Dimensions,
   Animated,
   PanResponder,
-  Alert,
 } from 'react-native';
-import { Camera } from 'lucide-react-native';
-import { VideoWithMetadata, videoService } from '../services/videoService';
-import { ThumbnailGenerator } from './ThumbnailGenerator';
-import { FrameCaptureResult } from '../utils/frameCapture';
-import { useAuth } from '../contexts/AuthContext';
+import { VideoWithMetadata } from '../services/videoService';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
   video: VideoWithMetadata;
-  videoUrl: string | null;
   onClose: () => void;
-  onVideoUpdated?: (video: VideoWithMetadata) => void;
 }
 
-export function VideoDetailsSheet({ 
-  visible, 
-  video, 
-  videoUrl, 
-  onClose, 
-  onVideoUpdated 
-}: VideoDetailsSheetProps) {
-  const { user } = useAuth();
+export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheetProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
-  
-  // Thumbnail generator state
-  const [showThumbnailGenerator, setShowThumbnailGenerator] = useState(false);
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -136,93 +118,6 @@ export function VideoDetailsSheet({
     return `${datePart} @ ${timePart}`;
   };
 
-  // Handle thumbnail generation
-  const handleThumbnailGenerated = async (frameData: FrameCaptureResult, timeSeconds: number) => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to generate thumbnails');
-      return;
-    }
-
-    try {
-      setIsGeneratingThumbnail(true);
-      console.log('🖼️ Starting thumbnail generation for video:', video.id);
-
-      const result = await videoService.generateThumbnail(
-        video.id,
-        user.id,
-        frameData,
-        timeSeconds,
-        (progress) => {
-          console.log('📤 Thumbnail upload progress:', progress.percentage + '%');
-        }
-      );
-
-      if (result.success) {
-        Alert.alert('Success', 'Thumbnail generated successfully!');
-        
-        // Update the video with new thumbnail
-        const updatedVideo = await videoService.refreshVideoThumbnail({
-          ...video,
-          thumbnail_path: video.thumbnail_path // This will be updated by generateThumbnail
-        });
-        
-        if (onVideoUpdated) {
-          onVideoUpdated(updatedVideo);
-        }
-      } else {
-        Alert.alert('Error', result.error || 'Failed to generate thumbnail');
-      }
-    } catch (error) {
-      console.error('Thumbnail generation error:', error);
-      Alert.alert('Error', 'Failed to generate thumbnail');
-    } finally {
-      setIsGeneratingThumbnail(false);
-    }
-  };
-
-  // Handle thumbnail removal
-  const handleThumbnailRemoved = async () => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to remove thumbnails');
-      return;
-    }
-
-    try {
-      setIsGeneratingThumbnail(true);
-      console.log('🗑️ Removing thumbnail for video:', video.id);
-
-      const success = await videoService.removeThumbnail(video.id, user.id);
-
-      if (success) {
-        Alert.alert('Success', 'Thumbnail removed successfully!');
-        
-        // Update the video to clear thumbnail
-        const updatedVideo = {
-          ...video,
-          thumbnail_path: null,
-          thumbnailUrl: undefined
-        };
-        
-        if (onVideoUpdated) {
-          onVideoUpdated(updatedVideo);
-        }
-      } else {
-        Alert.alert('Error', 'Failed to remove thumbnail');
-      }
-    } catch (error) {
-      console.error('Thumbnail removal error:', error);
-      Alert.alert('Error', 'Failed to remove thumbnail');
-    } finally {
-      setIsGeneratingThumbnail(false);
-    }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
 
   if (!visible) return null;
 
@@ -282,47 +177,17 @@ export function VideoDetailsSheet({
             <Text style={styles.aiPlaceholder}>ai generated slob coming soon !</Text>
           </View>
 
-          {/* Thumbnail Management */}
-          {videoUrl && (
-            <View style={styles.metadataSection}>
-              <Text style={styles.sectionTitle}>Thumbnail</Text>
-              <TouchableOpacity 
-                style={[
-                  styles.thumbnailButton,
-                  isGeneratingThumbnail && styles.buttonDisabled
-                ]}
-                onPress={() => setShowThumbnailGenerator(true)}
-                disabled={isGeneratingThumbnail}
-              >
-                <Camera size={16} color="#fff" />
-                <Text style={styles.thumbnailButtonText}>
-                  {video.thumbnailUrl ? 'Edit Thumbnail' : 'Generate Thumbnail'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Add some bottom spacing for better UX */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </Animated.View>
 
-      {/* Thumbnail Generator Modal */}
-      {videoUrl && (
-        <ThumbnailGenerator
-          visible={showThumbnailGenerator}
-          video={video}
-          videoUrl={videoUrl}
-          onClose={() => setShowThumbnailGenerator(false)}
-          onThumbnailGenerated={handleThumbnailGenerated}
-          onThumbnailRemoved={handleThumbnailRemoved}
-        />
-      )}
     </>
   );
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -395,24 +260,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     paddingVertical: 20,
-  },
-  thumbnailButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#333',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  thumbnailButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
   },
   metadataRow: {
     flexDirection: 'row',

@@ -67,12 +67,29 @@ export function ThumbnailGenerator({
     }
   };
 
-  // Handle progress bar touch/drag
-  const handleProgressPress = (event: any) => {
+  // Handle progress bar drag gestures
+  const progressPanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (event) => {
+      // Handle initial touch
+      handleProgressUpdate(event);
+    },
+    onPanResponderMove: (event) => {
+      // Handle drag movement
+      handleProgressUpdate(event);
+    },
+    onPanResponderRelease: () => {
+      // Drag ended - could add haptic feedback here
+      console.log('📊 Progress scrubbing completed');
+    },
+  });
+
+  const handleProgressUpdate = (event: any) => {
     if (!videoRef.current || duration === 0) return;
 
     const { locationX } = event.nativeEvent;
-    const progressWidth = screenWidth - 40; // Account for padding
+    const progressWidth = screenWidth - 80; // Account for time labels and padding
     const percentage = Math.max(0, Math.min(1, locationX / progressWidth));
     const newTime = percentage * duration;
 
@@ -189,10 +206,9 @@ export function ThumbnailGenerator({
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
-          <TouchableOpacity
+          <View
             style={styles.progressBar}
-            onPress={handleProgressPress}
-            activeOpacity={1}
+            {...progressPanResponder.panHandlers}
           >
             <View style={styles.progressTrack}>
               <View 
@@ -202,7 +218,7 @@ export function ThumbnailGenerator({
                 ]} 
               />
             </View>
-          </TouchableOpacity>
+          </View>
           <Text style={styles.timeText}>{formatTime(duration)}</Text>
         </View>
 
@@ -219,7 +235,7 @@ export function ThumbnailGenerator({
             disabled={isLoading}
           >
             <Trash2 size={16} color="#FF3B30" />
-            <Text style={styles.removeButtonText}>Remove Thumbnail</Text>
+            <Text style={styles.removeButtonText}>No Thumbnail</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
