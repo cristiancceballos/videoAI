@@ -581,7 +581,13 @@ export function TikTokVideoPlayer({
         <VideoDetailsSheet
           visible={showDetailsSheet}
           video={video}
+          videoUrl={videoUrl}
           onClose={() => setShowDetailsSheet(false)}
+          onVideoUpdated={(updatedVideo) => {
+            // Note: This would ideally update the parent component's video list
+            // For now, just log the update
+            console.log('Video updated with new thumbnail:', updatedVideo.thumbnailUrl ? 'Yes' : 'No');
+          }}
         />
 
       </Animated.View>
