@@ -142,6 +142,12 @@ export function TikTokVideoPlayer({
         return false;
       }
       
+      // Prioritize swipe-up detection first for consistent details sheet opening
+      if (gestureState.dy < -30 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 0.7) {
+        console.log('☝️ Vertical swipe up detected for details (prioritized)');
+        return true;
+      }
+      
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       const diagonal = gestureState.dx > 20 && gestureState.dy > 20; // Top-left to bottom-right
@@ -149,11 +155,6 @@ export function TikTokVideoPlayer({
       // Only capture gestures with significant movement (actual swipes)
       if (horizontal && gestureState.dx > 20) {
         console.log('👉 Horizontal swipe detected for exit');
-        return true;
-      }
-      
-      if (vertical && gestureState.dy < -30) {
-        console.log('☝️ Vertical swipe up detected for details');
         return true;
       }
       
@@ -213,53 +214,56 @@ export function TikTokVideoPlayer({
       console.log('🔄 Gesture released:', { dx: gestureState.dx, dy: gestureState.dy, vx: gestureState.vx, vy: gestureState.vy });
       panRef.flattenOffset();
       
-      const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-      const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      const diagonal = gestureState.dx > 0 && gestureState.dy > 0; // Moving right and down
-      
-      if (horizontal && gestureState.dx > 50 && gestureState.vx > 0.25) {
-        // Horizontal swipe right threshold met - exit (50% easier)
-        console.log('🚪 Horizontal exit threshold met - closing video');
-        handleExit();
-      } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
-        // Vertical swipe down threshold met - exit (50% easier)
-        console.log('⬇️ Vertical down exit threshold met - closing video');
-        handleExit();
-      } else if (diagonal && gestureState.dx > 50 && gestureState.dy > 50 && 
-                 gestureState.vx > 0.25 && gestureState.vy > 0.25) {
-        // Diagonal swipe (top-left to bottom-right) threshold met - exit
-        console.log('↘️ Diagonal exit threshold met - closing video');
-        handleExit();
-      } else if (vertical && gestureState.dy < -30) {
-        // Vertical swipe up threshold met - show details (matches capture threshold)
-        console.log('📊 Details threshold met - showing sheet');
+      // Prioritize swipe-up detection first (matches capture logic)
+      if (gestureState.dy < -30 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 0.7) {
+        // Vertical swipe up threshold met - show details (prioritized)
+        console.log('📊 Details threshold met - showing sheet (prioritized)');
         setShowDetailsSheet(true);
       } else {
-        // Check if this was a tap (short duration, minimal movement)
-        const gestureDuration = Date.now() - gestureStartTime.current;
-        const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+        const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        const diagonal = gestureState.dx > 0 && gestureState.dy > 0; // Moving right and down
         
-        if (gestureDuration < 500 && totalMovement < 50) {
-          // This was a tap - toggle mute
-          console.log('👆 Tap detected - toggling mute');
-          console.log('👆 Tap details:', { duration: gestureDuration, movement: totalMovement });
-          toggleMute();
+        if (horizontal && gestureState.dx > 50 && gestureState.vx > 0.25) {
+          // Horizontal swipe right threshold met - exit (50% easier)
+          console.log('🚪 Horizontal exit threshold met - closing video');
+          handleExit();
+        } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
+          // Vertical swipe down threshold met - exit (50% easier)
+          console.log('⬇️ Vertical down exit threshold met - closing video');
+          handleExit();
+        } else if (diagonal && gestureState.dx > 50 && gestureState.dy > 50 && 
+                   gestureState.vx > 0.25 && gestureState.vy > 0.25) {
+          // Diagonal swipe (top-left to bottom-right) threshold met - exit
+          console.log('↘️ Diagonal exit threshold met - closing video');
+          handleExit();
         } else {
-          console.log('❌ Not a tap:', { duration: gestureDuration, movement: totalMovement });
+          // Check if this was a tap (short duration, minimal movement)
+          const gestureDuration = Date.now() - gestureStartTime.current;
+          const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+          
+          if (gestureDuration < 500 && totalMovement < 50) {
+            // This was a tap - toggle mute
+            console.log('👆 Tap detected - toggling mute');
+            console.log('👆 Tap details:', { duration: gestureDuration, movement: totalMovement });
+            toggleMute();
+          } else {
+            console.log('❌ Not a tap:', { duration: gestureDuration, movement: totalMovement });
+          }
+          
+          // Snap back to original position
+          console.log('↩️ Snapping back to original position');
+          Animated.parallel([
+            Animated.spring(panRef, {
+              toValue: { x: 0, y: 0 },
+              useNativeDriver: false,
+            }),
+            Animated.spring(fadeAnim, {
+              toValue: 1,
+              useNativeDriver: false,
+            }),
+          ]).start();
         }
-        
-        // Snap back to original position
-        console.log('↩️ Snapping back to original position');
-        Animated.parallel([
-          Animated.spring(panRef, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }),
-          Animated.spring(fadeAnim, {
-            toValue: 1,
-            useNativeDriver: false,
-          }),
-        ]).start();
       }
     },
   });

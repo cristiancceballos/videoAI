@@ -169,46 +169,9 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             {formatDate(video.created_at)} • {formatDuration(video.duration)}
           </Text>
 
-          {/* Metadata Section */}
+          {/* AI Summary Placeholder */}
           <View style={styles.metadataSection}>
-            <Text style={styles.sectionTitle}>Video Details</Text>
-            
-            <View style={styles.metadataRow}>
-              <Text style={styles.metadataLabel}>Status</Text>
-              <Text style={[
-                styles.metadataValue,
-                { color: video.status === 'ready' ? '#34C759' : '#FF9500' }
-              ]}>
-                {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
-              </Text>
-            </View>
-
-            {video.file_size && (
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>File Size</Text>
-                <Text style={styles.metadataValue}>
-                  {formatFileSize(video.file_size)}
-                </Text>
-              </View>
-            )}
-
-            {video.width && video.height && (
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Resolution</Text>
-                <Text style={styles.metadataValue}>
-                  {video.width} × {video.height}
-                </Text>
-              </View>
-            )}
-
-            {video.duration && (
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Duration</Text>
-                <Text style={styles.metadataValue}>
-                  {formatDuration(video.duration)}
-                </Text>
-              </View>
-            )}
+            <Text style={styles.aiPlaceholder}>ai generated slob coming soon !</Text>
           </View>
 
           {/* Add some bottom spacing for better UX */}
@@ -285,6 +248,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     marginBottom: 16,
+  },
+  aiPlaceholder: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
   metadataRow: {
     flexDirection: 'row',
