@@ -7,38 +7,44 @@ import { Platform } from 'react-native';
 
 export interface FontConfig {
   fontFamily: string;
+  letterSpacing: number;
 }
 
 /**
  * Get the proper Inter font family based on font weight
- * @param weight - Font weight ('400', '500', '600', '700', 'normal', 'bold', etc.)
- * @returns FontConfig object with proper fontFamily
+ * User prefers elegant, lightweight typography for mobile:
+ * - Bold text → Light 300 Italic
+ * - Regular text → ExtraLight 200 Italic
+ * @param weight - Font weight ('200', '300', '400', '500', '600', '700', 'normal', 'bold', etc.)
+ * @returns FontConfig object with proper fontFamily and letterSpacing
  */
-export function getInterFont(weight: string | number = '400'): FontConfig {
+export function getInterFont(weight: string | number = '200'): FontConfig {
   // Normalize weight to string
   const normalizedWeight = String(weight);
   
-  // Map font weights to Inter variants
+  // Map font weights to lighter Inter variants for elegant typography
   let interVariant: string;
   
   switch (normalizedWeight) {
-    case '400':
+    case '200':
+    case 'extralight':
     case 'normal':
-      interVariant = 'Inter_400Regular';
+      // Regular text uses ExtraLight 200 Italic for elegance
+      interVariant = 'Inter_200ExtraLight_Italic';
       break;
+    case '300':
+    case 'light':
+    case '400':
     case '500':
-      interVariant = 'Inter_500Medium';
-      break;
     case '600':
-      interVariant = 'Inter_600SemiBold';
-      break;
     case '700':
     case 'bold':
-      interVariant = 'Inter_700Bold';
+      // Bold text uses Light 300 Italic (lighter than traditional bold)
+      interVariant = 'Inter_300Light_Italic';
       break;
     default:
-      // Default to regular for any other weight
-      interVariant = 'Inter_400Regular';
+      // Default to ExtraLight for any other weight
+      interVariant = 'Inter_200ExtraLight_Italic';
   }
 
   // Provide cross-platform font fallbacks
@@ -46,17 +52,21 @@ export function getInterFont(weight: string | number = '400'): FontConfig {
     ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
     : interVariant;
 
-  return { fontFamily };
+  return { 
+    fontFamily,
+    letterSpacing: 0 // Fix character gap issues
+  };
 }
 
 /**
- * Convenience functions for common font weights
+ * Convenience functions for elegant lightweight typography
  */
 export const InterFont = {
-  regular: () => getInterFont('400'),
-  medium: () => getInterFont('500'),
-  semiBold: () => getInterFont('600'),
-  bold: () => getInterFont('700'),
+  regular: () => getInterFont('200'),    // ExtraLight 200 Italic
+  bold: () => getInterFont('300'),       // Light 300 Italic  
+  // Legacy aliases for backward compatibility
+  extraLight: () => getInterFont('200'),
+  light: () => getInterFont('300'),
 };
 
 /**
@@ -64,15 +74,15 @@ export const InterFont = {
  * @param weight - Font weight
  * @returns Font family string
  */
-export function getInterFontFamily(weight: string | number = '400'): string {
+export function getInterFontFamily(weight: string | number = '200'): string {
   return getInterFont(weight).fontFamily;
 }
 
 /**
  * Get Inter font config object for spreading into styles
  * @param weight - Font weight  
- * @returns Object with fontFamily property for spreading
+ * @returns Object with fontFamily and letterSpacing properties for spreading
  */
-export function getInterFontConfig(weight: string | number = '400'): { fontFamily: string } {
+export function getInterFontConfig(weight: string | number = '200'): { fontFamily: string; letterSpacing: number } {
   return getInterFont(weight);
 }

@@ -1,7 +1,14 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { 
+  useFonts, 
+  Inter_200ExtraLight, 
+  Inter_200ExtraLight_Italic,
+  Inter_300Light,
+  Inter_300Light_Italic,
+  Inter_400Regular 
+} from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-url-polyfill/auto';
 
@@ -25,12 +32,13 @@ import { registerServiceWorker } from './src/utils/pwaUtils';
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  // Load Inter fonts
+  // Load Inter fonts - focusing on lighter weights for elegant mobile typography
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Inter_200ExtraLight,
+    Inter_200ExtraLight_Italic,
+    Inter_300Light,
+    Inter_300Light_Italic,
+    Inter_400Regular, // Keep as fallback
   });
 
   useEffect(() => {

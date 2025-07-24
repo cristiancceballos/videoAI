@@ -219,12 +219,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
-    ...getInterFontConfig('700'),
+    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
     color: '#fff',
   },
   warningText: {
     fontSize: 12,
-    ...getInterFontConfig('400'),
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic for regular text
     color: '#FF9500',
     textAlign: 'center',
     marginTop: 4,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
-    ...getInterFontConfig('600'),
+    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
     color: '#fff',
     marginBottom: 16,
   },
@@ -270,6 +270,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
-    ...getInterFontConfig('600'),
+    ...getInterFontConfig('300'), // Light 300 Italic for elegant bold
   },
 });
