@@ -8,11 +8,10 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, Trash2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { WebMediaAsset } from '../services/webMediaService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
-import { ThumbnailGenerator } from './ThumbnailGenerator';
-import { FrameCaptureResult } from '../utils/frameCapture';
+import { FrameCaptureResult, captureVideoFrame } from '../utils/frameCapture';
 
 interface WebVideoPreviewModalProps {
   visible: boolean;
@@ -34,8 +33,18 @@ export function WebVideoPreviewModal({
   
   // Thumbnail selection state
   const [thumbnailOption, setThumbnailOption] = React.useState<'first' | 'custom' | 'none'>('first');
-  const [showThumbnailGenerator, setShowThumbnailGenerator] = React.useState(false);
+  const [showThumbnailEditor, setShowThumbnailEditor] = React.useState(false);
   const [customThumbnailData, setCustomThumbnailData] = React.useState<{ frameData: FrameCaptureResult; timeSeconds: number } | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = React.useState<string | null>(null);
+  
+  // Video reference for inline thumbnail generation
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  
+  // Video scrubber state
+  const [videoDuration, setVideoDuration] = React.useState(0);
+  const [currentTime, setCurrentTime] = React.useState(0);
+  const [isVideoLoaded, setIsVideoLoaded] = React.useState(false);
+  const [isCapturingFrame, setIsCapturingFrame] = React.useState(false);
 
   React.useEffect(() => {
     if (asset?.filename) {
@@ -53,8 +62,52 @@ export function WebVideoPreviewModal({
           }
         }
       }, 100);
+      
+      // Generate initial thumbnail preview (first frame)
+      generateThumbnailPreview();
     }
   }, [asset, visible]);
+  
+  // Handle video metadata loaded
+  const handleVideoLoaded = () => {
+    if (videoRef.current) {
+      setVideoDuration(videoRef.current.duration);
+      setCurrentTime(0);
+      setIsVideoLoaded(true);
+      console.log('📹 Video loaded for thumbnail generation, duration:', videoRef.current.duration);
+    }
+  };
+  
+  // Generate thumbnail preview at specific time
+  const generateThumbnailPreview = async (timeSeconds: number = 0) => {
+    if (!asset?.uri) return;
+    
+    try {
+      setIsCapturingFrame(true);
+      // Capture frame at specified time
+      const frameData = await captureVideoFrame(asset.uri, timeSeconds, {
+        width: 160,
+        height: 240, // 2:3 aspect ratio for mobile-style thumbnail
+        quality: 0.7,
+      });
+      setThumbnailPreview(frameData.dataUrl);
+      
+      // If this is for custom thumbnail, save the data
+      if (thumbnailOption === 'custom') {
+        setCustomThumbnailData({ frameData, timeSeconds });
+      }
+    } catch (error) {
+      console.error('Failed to generate thumbnail preview:', error);
+    } finally {
+      setIsCapturingFrame(false);
+    }
+  };
+  
+  // Handle scrubber time change
+  const handleTimeChange = (newTime: number) => {
+    setCurrentTime(newTime);
+    generateThumbnailPreview(newTime);
+  };
 
   const handleUpload = () => {
     if (!title.trim()) {
@@ -75,19 +128,6 @@ export function WebVideoPreviewModal({
     onUpload(title.trim(), thumbnailData, thumbnailOption);
   };
 
-  // Handle custom thumbnail generation
-  const handleThumbnailGenerated = (frameData: FrameCaptureResult, timeSeconds: number) => {
-    setCustomThumbnailData({ frameData, timeSeconds });
-    setThumbnailOption('custom');
-    setShowThumbnailGenerator(false);
-  };
-
-  // Handle no thumbnail selection
-  const handleNoThumbnail = () => {
-    setCustomThumbnailData(null);
-    setThumbnailOption('none');
-    setShowThumbnailGenerator(false);
-  };
 
   if (!asset) return null;
 
@@ -116,34 +156,26 @@ export function WebVideoPreviewModal({
         </View>
 
         <View style={styles.content}>
-          <View style={styles.videoContainer}>
-            {/* Web-compatible video player */}
-            <video
-              src={asset.uri}
-              controls
-              style={styles.video}
-              poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDMyMCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE2MCIgeT0iOTAiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiI+VmlkZW8gUHJldmlldzwvdGV4dD4KPC9zdmc+"
-            />
-          </View>
-
-          <View style={styles.form}>
-            <Text style={styles.label}>Video Title</Text>
+          {/* TikTok-Style Layout: Title -> Thumbnail -> AI Summary */}
+          
+          {/* 1. Video Title Section */}
+          <View style={styles.titleSection}>
             <TextInput
               ref={titleInputRef}
               style={styles.titleInput}
               value={title}
               onChangeText={setTitle}
-              placeholder="Enter video title..."
+              placeholder="Add description..."
               placeholderTextColor="#666"
               maxLength={100}
               editable={!uploading}
               selectTextOnFocus={true}
               autoFocus={true}
+              multiline={true}
+              numberOfLines={2}
               onFocus={() => {
-                // Ensure text is selected when focused
                 setTimeout(() => {
                   if (titleInputRef.current && title === 'title') {
-                    // Use React Native compatible selection
                     if (titleInputRef.current.setNativeProps) {
                       titleInputRef.current.setNativeProps({
                         selection: { start: 0, end: 5 }
@@ -153,129 +185,220 @@ export function WebVideoPreviewModal({
                 }, 50);
               }}
             />
+          </View>
 
-            {/* Thumbnail Selection */}
-            <View style={styles.thumbnailSection}>
-              <Text style={styles.label}>Thumbnail</Text>
-              <View style={styles.thumbnailOptions}>
-                <TouchableOpacity
-                  style={[
-                    styles.thumbnailOption,
-                    thumbnailOption === 'first' && styles.thumbnailOptionSelected
-                  ]}
-                  onPress={() => setThumbnailOption('first')}
-                  disabled={uploading}
-                >
-                  <ImageIcon size={16} color={thumbnailOption === 'first' ? '#007AFF' : '#666'} />
-                  <Text style={[
-                    styles.thumbnailOptionText,
-                    thumbnailOption === 'first' && styles.thumbnailOptionTextSelected
-                  ]}>
-                    First Frame
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.thumbnailOption,
-                    thumbnailOption === 'custom' && styles.thumbnailOptionSelected
-                  ]}
-                  onPress={() => setShowThumbnailGenerator(true)}
-                  disabled={uploading}
-                >
-                  <Camera size={16} color={thumbnailOption === 'custom' ? '#007AFF' : '#666'} />
-                  <Text style={[
-                    styles.thumbnailOptionText,
-                    thumbnailOption === 'custom' && styles.thumbnailOptionTextSelected
-                  ]}>
-                    Custom Frame
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.thumbnailOption,
-                    thumbnailOption === 'none' && styles.thumbnailOptionSelected
-                  ]}
-                  onPress={() => setThumbnailOption('none')}
-                  disabled={uploading}
-                >
-                  <Trash2 size={16} color={thumbnailOption === 'none' ? '#007AFF' : '#666'} />
-                  <Text style={[
-                    styles.thumbnailOptionText,
-                    thumbnailOption === 'none' && styles.thumbnailOptionTextSelected
-                  ]}>
-                    No Thumbnail
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              {thumbnailOption === 'custom' && customThumbnailData && (
-                <Text style={styles.thumbnailPreview}>
-                  ✓ Custom frame selected at {Math.floor(customThumbnailData.timeSeconds)}s
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.metadata}>
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Duration:</Text>
-                <Text style={styles.metadataValue}>
-                  {formatDuration(asset.duration)}
+          {/* 2. Thumbnail Selection Section (TikTok-style) */}
+          <View style={styles.thumbnailSection}>
+            <View style={styles.thumbnailRow}>
+              <View style={styles.thumbnailInfo}>
+                <Text style={styles.thumbnailLabel}>Select cover</Text>
+                <Text style={styles.thumbnailSubtitle}>
+                  {thumbnailOption === 'first' ? 'Using first frame' : 
+                   thumbnailOption === 'custom' ? 'Custom frame selected' : 
+                   'No thumbnail'}
                 </Text>
               </View>
               
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Size:</Text>
-                <Text style={styles.metadataValue}>
-                  {formatFileSize(asset.fileSize)}
-                </Text>
-              </View>
-
-              {asset.width && asset.height && (
-                <View style={styles.metadataRow}>
-                  <Text style={styles.metadataLabel}>Resolution:</Text>
-                  <Text style={styles.metadataValue}>
-                    {asset.width} × {asset.height}
-                  </Text>
+              <View style={styles.thumbnailPreviewContainer}>
+                <View style={styles.thumbnailPreview}>
+                  {/* Hidden video element for frame capture */}
+                  <video
+                    ref={videoRef}
+                    src={asset.uri}
+                    style={styles.hiddenVideo}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    onLoadedMetadata={handleVideoLoaded}
+                  />
+                  
+                  {/* Thumbnail preview image */}
+                  {thumbnailPreview ? (
+                    <img 
+                      src={thumbnailPreview} 
+                      style={styles.thumbnailImage}
+                      alt="Video thumbnail"
+                    />
+                  ) : (
+                    <View style={styles.thumbnailPlaceholder}>
+                      <ImageIcon size={24} color="#666" />
+                    </View>
+                  )}
+                  
+                  <TouchableOpacity 
+                    style={styles.editCoverButton}
+                    onPress={() => setShowThumbnailEditor(!showThumbnailEditor)}
+                    disabled={uploading}
+                  >
+                    <Text style={styles.editCoverText}>Edit cover</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-
-              <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Format:</Text>
-                <Text style={styles.metadataValue}>
-                  {asset.file.type || 'Unknown'}
-                </Text>
+                
+                {/* Expand/Collapse indicator */}
+                <TouchableOpacity 
+                  style={styles.expandButton}
+                  onPress={() => setShowThumbnailEditor(!showThumbnailEditor)}
+                  disabled={uploading}
+                >
+                  {showThumbnailEditor ? (
+                    <ChevronUp size={20} color="#666" />
+                  ) : (
+                    <ChevronDown size={20} color="#666" />
+                  )}
+                </TouchableOpacity>
               </View>
+            </View>
+            
+            {/* Inline Thumbnail Editor (Expandable) */}
+            {showThumbnailEditor && (
+              <View style={styles.thumbnailEditor}>
+                <Text style={styles.editorTitle}>Choose a cover for your video</Text>
+                
+                {/* Thumbnail options */}
+                <View style={styles.thumbnailOptions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.thumbnailOptionCard,
+                      thumbnailOption === 'first' && styles.thumbnailOptionSelected
+                    ]}
+                    onPress={() => {
+                      setThumbnailOption('first');
+                      generateThumbnailPreview(); // Regenerate first frame
+                    }}
+                    disabled={uploading}
+                  >
+                    <View style={styles.optionPreview}>
+                      {thumbnailPreview && (
+                        <img src={thumbnailPreview} style={styles.optionImage} alt="First frame" />
+                      )}
+                    </View>
+                    <Text style={styles.optionLabel}>First frame</Text>
+                    {thumbnailOption === 'first' && (
+                      <View style={styles.selectedIndicator} />
+                    )}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.thumbnailOptionCard,
+                      thumbnailOption === 'custom' && styles.thumbnailOptionSelected
+                    ]}
+                    onPress={() => {
+                      setThumbnailOption('custom');
+                      setCurrentTime(0);
+                      generateThumbnailPreview(0);
+                    }}
+                    disabled={uploading}
+                  >
+                    <View style={styles.optionPreview}>
+                      {thumbnailOption === 'custom' && customThumbnailData ? (
+                        <img src={customThumbnailData.frameData.dataUrl} style={styles.optionImage} alt="Custom frame" />
+                      ) : (
+                        <Camera size={20} color="#666" />
+                      )}
+                    </View>
+                    <Text style={styles.optionLabel}>Custom</Text>
+                    {thumbnailOption === 'custom' && (
+                      <View style={styles.selectedIndicator} />
+                    )}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.thumbnailOptionCard,
+                      thumbnailOption === 'none' && styles.thumbnailOptionSelected
+                    ]}
+                    onPress={() => {
+                      setThumbnailOption('none');
+                      setThumbnailPreview(null);
+                    }}
+                    disabled={uploading}
+                  >
+                    <View style={styles.optionPreview}>
+                      <Trash2 size={20} color="#666" />
+                    </View>
+                    <Text style={styles.optionLabel}>None</Text>
+                    {thumbnailOption === 'none' && (
+                      <View style={styles.selectedIndicator} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Video Scrubber for Custom Frame Selection */}
+                {thumbnailOption === 'custom' && isVideoLoaded && (
+                  <View style={styles.videoScrubber}>
+                    <Text style={styles.scrubberTitle}>Select frame</Text>
+                    
+                    {/* Video preview for scrubbing */}
+                    <View style={styles.scrubberVideoContainer}>
+                      <View style={styles.scrubberPreview}>
+                        {isCapturingFrame ? (
+                          <View style={styles.capturingIndicator}>
+                            <Text style={styles.capturingText}>Capturing...</Text>
+                          </View>
+                        ) : thumbnailPreview ? (
+                          <img src={thumbnailPreview} style={styles.scrubberImage} alt="Frame preview" />
+                        ) : (
+                          <View style={styles.scrubberPlaceholder}>
+                            <Camera size={32} color="#666" />
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    
+                    {/* Timeline scrubber */}
+                    <View style={styles.timelineContainer}>
+                      <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+                      <View style={styles.timeline}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={videoDuration}
+                          step={0.1}
+                          value={currentTime}
+                          onChange={(e) => handleTimeChange(parseFloat(e.target.value))}
+                          style={styles.scrubberSlider}
+                          disabled={uploading || isCapturingFrame}
+                        />
+                      </View>
+                      <Text style={styles.timeText}>{formatTime(videoDuration)}</Text>
+                    </View>
+                    
+                    {customThumbnailData && (
+                      <Text style={styles.selectedFrameText}>
+                        ✓ Frame selected at {formatTime(customThumbnailData.timeSeconds)}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* 3. AI Summary Section (Placeholder) */}
+          <View style={styles.aiSummarySection}>
+            <Text style={styles.aiSummaryTitle}>AI Summary</Text>
+            <View style={styles.aiSummaryContent}>
+              <Text style={styles.aiSummaryPlaceholder}>
+                AI-generated summary will appear here automatically after upload.
+              </Text>
             </View>
           </View>
         </View>
       </View>
 
-      {/* Thumbnail Generator Modal */}
-      <ThumbnailGenerator
-        visible={showThumbnailGenerator}
-        video={{
-          id: 'temp',
-          title: title || 'Preview Video',
-          user_id: 'temp',
-          status: 'ready' as const,
-          storage_path: '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          source_type: 'device' as const,
-        }}
-        videoUrl={asset?.uri || ''}
-        onClose={() => setShowThumbnailGenerator(false)}
-        onThumbnailGenerated={handleThumbnailGenerated}
-        onThumbnailRemoved={handleNoThumbnail}
-      />
     </Modal>
   );
 }
 
 function formatDuration(seconds?: number): string {
   if (!seconds) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -311,10 +434,12 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#007AFF',
     fontSize: 16,
+    ...getInterFontConfig('200'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    ...getInterFontConfig('300'),
     color: '#fff',
   },
   uploadButton: {
@@ -330,105 +455,303 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'),
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  videoContainer: {
-    aspectRatio: 16/9,
+  
+  // 1. Title Section (TikTok-style)
+  titleSection: {
+    marginBottom: 24,
+  },
+  titleInput: {
+    fontSize: 18,
+    ...getInterFontConfigForInputs('200'),
+    color: '#fff',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    textAlignVertical: 'top',
+    minHeight: 50,
+  },
+  
+  // 2. Thumbnail Section (TikTok-style)
+  thumbnailSection: {
+    marginBottom: 24,
+  },
+  thumbnailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  thumbnailInfo: {
+    flex: 1,
+  },
+  thumbnailLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 4,
+  },
+  thumbnailSubtitle: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#888',
+  },
+  thumbnailPreviewContainer: {
+    marginLeft: 16,
+  },
+  thumbnailPreview: {
+    width: 80,
+    height: 120,
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-  } as any,
-  form: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
-    color: '#fff',
-    marginBottom: 8,
-  },
-  titleInput: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
-    color: '#fff',
+    position: 'relative',
     borderWidth: 1,
     borderColor: '#333',
-    marginBottom: 24,
   },
-  metadata: {
+  hiddenVideo: {
+    position: 'absolute',
+    top: -9999,
+    left: -9999,
+    width: 1,
+    height: 1,
+    opacity: 0,
+  } as any,
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  } as any,
+  thumbnailPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#333',
+  },
+  expandButton: {
+    marginTop: 8,
+    padding: 4,
+    alignItems: 'center',
+  },
+  editCoverButton: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backdropFilter: 'blur(10px)',
+  },
+  editCoverText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '500',
+    ...getInterFontConfig('200'),
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  
+  // Inline Thumbnail Editor
+  thumbnailEditor: {
+    marginTop: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  editorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  editorContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  editorPlaceholder: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#666',
+    textAlign: 'center',
+  },
+  
+  // Inline Thumbnail Options
+  thumbnailOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  thumbnailOptionCard: {
+    width: 80,
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#2a2a2a',
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  thumbnailOptionSelected: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderColor: '#007AFF',
+    transform: [{ scale: 1.02 }],
+  },
+  optionPreview: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  optionImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  } as any,
+  optionLabel: {
+    fontSize: 12,
+    ...getInterFontConfig('200'),
+    color: '#fff',
+    textAlign: 'center',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#007AFF',
+  },
+  
+  // Video Scrubber Styles
+  videoScrubber: {
+    marginTop: 20,
+    padding: 18,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
+  },
+  scrubberTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  scrubberVideoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  scrubberPreview: {
+    width: 120,
+    height: 180,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  scrubberImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  } as any,
+  scrubberPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  capturingIndicator: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  capturingText: {
+    fontSize: 12,
+    ...getInterFontConfig('200'),
+    color: '#007AFF',
+  },
+  timelineContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeText: {
+    fontSize: 12,
+    ...getInterFontConfig('200'),
+    color: '#fff',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  timeline: {
+    flex: 1,
+  },
+  scrubberSlider: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    outline: 'none',
+    appearance: 'none',
+    cursor: 'pointer',
+  } as any,
+  selectedFrameText: {
+    fontSize: 12,
+    ...getInterFontConfig('200'),
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  
+  // 3. AI Summary Section
+  aiSummarySection: {
+    flex: 1,
+    marginBottom: 20,
+  },
+  aiSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 12,
+  },
+  aiSummaryContent: {
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: 16,
-  },
-  metadataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  metadataLabel: {
-    fontSize: 14,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
-    color: '#888',
-  },
-  metadataValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
-    color: '#fff',
-  },
-  thumbnailSection: {
-    marginTop: 20,
-  },
-  thumbnailOptions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  thumbnailOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 100,
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    gap: 6,
   },
-  thumbnailOptionSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-  },
-  thumbnailOptionText: {
-    fontSize: 12,
+  aiSummaryPlaceholder: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
     color: '#666',
-    fontWeight: '500',
     textAlign: 'center',
-  },
-  thumbnailOptionTextSelected: {
-    color: '#007AFF',
-  },
-  thumbnailPreview: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#007AFF',
-    textAlign: 'center',
+    lineHeight: 20,
   },
 });
