@@ -155,52 +155,54 @@ export function WebVideoPreviewModal({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>
-          {/* TikTok-Style Layout: Title -> Thumbnail -> AI Summary */}
+        <TouchableOpacity 
+          style={styles.content}
+          activeOpacity={1}
+          onPress={() => setShowThumbnailEditor(false)}
+        >
+          {/* Updated Layout: Title Input | Thumbnail Preview */}
           
-          {/* 1. Video Title Section */}
-          <View style={styles.titleSection}>
-            <TextInput
-              ref={titleInputRef}
-              style={styles.titleInput}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Add description..."
-              placeholderTextColor="#666"
-              maxLength={100}
-              editable={!uploading}
-              selectTextOnFocus={true}
-              autoFocus={true}
-              multiline={true}
-              numberOfLines={2}
-              onFocus={() => {
-                setTimeout(() => {
-                  if (titleInputRef.current && title === 'title') {
-                    if (titleInputRef.current.setNativeProps) {
-                      titleInputRef.current.setNativeProps({
-                        selection: { start: 0, end: 5 }
-                      });
+          {/* 1. Combined Title and Thumbnail Section */}
+          <View style={styles.titleThumbnailSection}>
+            {/* Title Input (Left Side) */}
+            <View style={styles.titleContainer}>
+              <TextInput
+                ref={titleInputRef}
+                style={styles.titleInput}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Add description..."
+                placeholderTextColor="#666"
+                maxLength={100}
+                editable={!uploading}
+                selectTextOnFocus={true}
+                autoFocus={true}
+                multiline={true}
+                numberOfLines={2}
+                onFocus={() => {
+                  setTimeout(() => {
+                    if (titleInputRef.current && title === 'title') {
+                      if (titleInputRef.current.setNativeProps) {
+                        titleInputRef.current.setNativeProps({
+                          selection: { start: 0, end: 5 }
+                        });
+                      }
                     }
-                  }
-                }, 50);
+                  }, 50);
+                }}
+              />
+            </View>
+            
+            {/* Thumbnail Preview (Right Side) */}
+            <TouchableOpacity 
+              style={styles.thumbnailPreviewContainer}
+              activeOpacity={1}
+              onPress={(e) => {
+                e.stopPropagation();
+                setShowThumbnailEditor(!showThumbnailEditor);
               }}
-            />
-          </View>
-
-          {/* 2. Thumbnail Selection Section (TikTok-style) */}
-          <View style={styles.thumbnailSection}>
-            <View style={styles.thumbnailRow}>
-              <View style={styles.thumbnailInfo}>
-                <Text style={styles.thumbnailLabel}>Select cover</Text>
-                <Text style={styles.thumbnailSubtitle}>
-                  {thumbnailOption === 'first' ? 'Using first frame' : 
-                   thumbnailOption === 'custom' ? 'Custom frame selected' : 
-                   'No thumbnail'}
-                </Text>
-              </View>
-              
-              <View style={styles.thumbnailPreviewContainer}>
-                <View style={styles.thumbnailPreview}>
+            >
+              <View style={styles.thumbnailPreview}>
                   {/* Hidden video element for frame capture */}
                   <video
                     ref={videoRef}
@@ -237,7 +239,10 @@ export function WebVideoPreviewModal({
                 {/* Expand/Collapse indicator */}
                 <TouchableOpacity 
                   style={styles.expandButton}
-                  onPress={() => setShowThumbnailEditor(!showThumbnailEditor)}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setShowThumbnailEditor(!showThumbnailEditor);
+                  }}
                   disabled={uploading}
                 >
                   {showThumbnailEditor ? (
@@ -246,12 +251,16 @@ export function WebVideoPreviewModal({
                     <ChevronDown size={20} color="#666" />
                   )}
                 </TouchableOpacity>
-              </View>
-            </View>
+            </TouchableOpacity>
+          </View>
             
-            {/* Inline Thumbnail Editor (Expandable) */}
-            {showThumbnailEditor && (
-              <View style={styles.thumbnailEditor}>
+          {/* 2. Inline Thumbnail Editor (Expandable) */}
+          {showThumbnailEditor && (
+            <TouchableOpacity 
+              style={styles.thumbnailEditor}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
                 <Text style={styles.editorTitle}>Choose a cover for your video</Text>
                 
                 {/* Thumbnail options */}
@@ -371,9 +380,8 @@ export function WebVideoPreviewModal({
                     )}
                   </View>
                 )}
-              </View>
-            )}
-          </View>
+            </TouchableOpacity>
+          )}
 
           {/* 3. AI Summary Section (Placeholder) */}
           <View style={styles.aiSummarySection}>
@@ -464,46 +472,32 @@ const styles = StyleSheet.create({
   },
   
   // 1. Title Section (TikTok-style)
-  titleSection: {
-    marginBottom: 24,
-  },
-  titleInput: {
-    fontSize: 18,
-    ...getInterFontConfigForInputs('200'),
-    color: '#fff',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-    textAlignVertical: 'top',
-    minHeight: 50,
-  },
-  
-  // 2. Thumbnail Section (TikTok-style)
-  thumbnailSection: {
-    marginBottom: 24,
-  },
-  thumbnailRow: {
+  // 1. Combined Title and Thumbnail Section
+  titleThumbnailSection: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+    gap: 16,
   },
-  thumbnailInfo: {
+  titleContainer: {
     flex: 1,
   },
-  thumbnailLabel: {
+  titleInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    fontWeight: '600',
-    ...getInterFontConfig('300'),
+    ...getInterFontConfigForInputs('200'),
     color: '#fff',
-    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#333',
+    textAlignVertical: 'top',
+    minHeight: 80,
   },
-  thumbnailSubtitle: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: '#888',
-  },
+  
+  // Thumbnail Preview (Right Side)
   thumbnailPreviewContainer: {
-    marginLeft: 16,
+    alignItems: 'center',
   },
   thumbnailPreview: {
     width: 80,
@@ -514,6 +508,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderWidth: 1,
     borderColor: '#333',
+    alignSelf: 'flex-start',
   },
   hiddenVideo: {
     position: 'absolute',
@@ -539,6 +534,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 4,
     alignItems: 'center',
+    alignSelf: 'center',
   },
   editCoverButton: {
     position: 'absolute',
@@ -730,7 +726,6 @@ const styles = StyleSheet.create({
   
   // 3. AI Summary Section
   aiSummarySection: {
-    flex: 1,
     marginBottom: 20,
   },
   aiSummaryTitle: {
