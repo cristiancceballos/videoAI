@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
+    ...getInterFontConfig('200'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 8,
   },
