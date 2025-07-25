@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { getInterFontConfig } from '../utils/fontUtils';
 
@@ -58,7 +57,6 @@ export function ProfileTabNavigator({ activeTab, onTabPress, postCount }: Profil
   );
 }
 
-const { width: screenWidth } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -89,7 +87,7 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#fff',
     fontWeight: '500', // Medium weight for cleaner appearance
-    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
+    ...getInterFontConfig('200'), // Same spacing as inactive to prevent squishing
   },
   activeIndicator: {
     position: 'absolute',
