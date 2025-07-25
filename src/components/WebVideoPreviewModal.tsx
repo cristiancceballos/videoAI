@@ -39,6 +39,8 @@ export function WebVideoPreviewModal({
   
   // Single video reference for all thumbnail operations
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  // Canvas reference for alternative video processing
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   
   // Cleanup blob URL when component unmounts
   React.useEffect(() => {
@@ -77,9 +79,111 @@ export function WebVideoPreviewModal({
     return isSupported;
   };
 
+  // Comprehensive blob URL validation
+  const validateBlobUrl = async (blobUrl: string): Promise<boolean> => {
+    try {
+      console.log('🔍 [BLOB DEBUG] Validating blob URL:', blobUrl.substring(0, 100) + '...');
+      
+      // Test 1: Check if blob URL is properly formatted
+      if (!blobUrl.startsWith('blob:')) {
+        console.error('❌ [BLOB DEBUG] Invalid blob URL format - not a blob URL');
+        return false;
+      }
+      
+      // Test 2: Try to fetch the blob to see if it's accessible  
+      const response = await fetch(blobUrl, { method: 'HEAD' });
+      if (!response.ok) {
+        console.error('❌ [BLOB DEBUG] Blob URL fetch failed:', response.status, response.statusText);
+        return false;
+      }
+      
+      console.log('✅ [BLOB DEBUG] Blob URL is valid and accessible');
+      console.log('📊 [BLOB DEBUG] Blob info:', {
+        size: response.headers.get('Content-Length'),
+        type: response.headers.get('Content-Type'),
+        status: response.status
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('❌ [BLOB DEBUG] Blob URL validation failed:', error);
+      return false;
+    }
+  };
+
+  // Canvas-based video loading as fallback
+  const loadVideoWithCanvas = async (blobUrl: string): Promise<boolean> => {
+    try {
+      console.log('🎨 [CANVAS DEBUG] Attempting canvas-based video loading...');
+      
+      // Create a new video element specifically for canvas processing
+      const tempVideo = document.createElement('video');
+      tempVideo.crossOrigin = 'anonymous';
+      tempVideo.muted = true;
+      tempVideo.playsInline = true;
+      tempVideo.preload = 'metadata';
+      
+      return new Promise<boolean>((resolve) => {
+        const handleCanvasLoad = () => {
+          console.log('✅ [CANVAS DEBUG] Canvas video loaded successfully');
+          
+          // Copy successful loading state to main video element
+          if (videoRef.current && tempVideo.duration > 0) {
+            setVideoDuration(tempVideo.duration);
+            setCurrentTime(0);
+            setIsVideoLoaded(true);
+            
+            // Try to set the main video element source
+            videoRef.current.src = blobUrl;
+            
+            console.log('🎯 [CANVAS DEBUG] Canvas approach succeeded - video ready for thumbnails');
+            resolve(true);
+          } else {
+            console.error('❌ [CANVAS DEBUG] Canvas loaded but main video ref not available');
+            resolve(false);
+          }
+          
+          // Cleanup temp video
+          tempVideo.remove();
+        };
+        
+        const handleCanvasError = (error: any) => {
+          console.error('❌ [CANVAS DEBUG] Canvas video loading failed:', error);
+          tempVideo.remove();
+          resolve(false);
+        };
+        
+        tempVideo.addEventListener('loadedmetadata', handleCanvasLoad);
+        tempVideo.addEventListener('error', handleCanvasError);
+        
+        // Set timeout for canvas loading
+        setTimeout(() => {
+          tempVideo.removeEventListener('loadedmetadata', handleCanvasLoad);
+          tempVideo.removeEventListener('error', handleCanvasError);
+          tempVideo.remove();
+          console.warn('⏰ [CANVAS DEBUG] Canvas loading timeout');
+          resolve(false);
+        }, 10000);
+        
+        tempVideo.src = blobUrl;
+        tempVideo.load();
+      });
+      
+    } catch (error) {
+      console.error('❌ [CANVAS DEBUG] Canvas loading exception:', error);
+      return false;
+    }
+  };
+
   React.useEffect(() => {
     if (asset?.filename) {
       console.log('🎬 [INIT DEBUG] Initializing WebVideoPreviewModal for:', asset.filename);
+      console.log('📊 [INIT DEBUG] Asset details:', {
+        filename: asset.filename,
+        fileSize: asset.fileSize,
+        duration: asset.duration,
+        uri: asset.uri?.substring(0, 100) + '...'
+      });
       
       // Validate video format
       if (!validateVideoFormat(asset)) {
@@ -101,13 +205,24 @@ export function WebVideoPreviewModal({
         }
       }, 100);
       
+      // Comprehensive blob URL validation
+      if (asset.uri) {
+        validateBlobUrl(asset.uri).then(isValid => {
+          if (isValid) {
+            console.log('✅ [INIT DEBUG] Blob URL validation passed - ready for video loading');
+          } else {
+            console.error('❌ [INIT DEBUG] Blob URL validation failed - video loading may fail');
+          }
+        });
+      }
+      
       // Don't generate initial thumbnail here - wait for video to load properly
       console.log('⏳ [INIT DEBUG] Waiting for video to load before generating thumbnail');
     }
   }, [asset, visible]);
   
   // Handle video metadata loaded
-  const handleVideoLoaded = () => {
+  const handleVideoLoaded = async () => {
     if (videoRef.current) {
       const duration = videoRef.current.duration;
       const videoWidth = videoRef.current.videoWidth;
@@ -135,7 +250,19 @@ export function WebVideoPreviewModal({
           setTimeout(() => generateThumbnailPreview(0), 200);
         }
       } else {
-        console.error('❌ [VIDEO DEBUG] Invalid video metadata:', { duration, videoWidth, videoHeight });
+        console.error('❌ [VIDEO DEBUG] Invalid video metadata, trying canvas fallback...', { duration, videoWidth, videoHeight });
+        
+        // Try canvas-based loading as fallback
+        if (asset?.uri) {
+          console.log('🎨 [VIDEO DEBUG] Attempting canvas-based fallback loading...');
+          const canvasSuccess = await loadVideoWithCanvas(asset.uri);
+          if (canvasSuccess) {
+            console.log('✅ [VIDEO DEBUG] Canvas fallback succeeded!');
+            return;
+          }
+        }
+        
+        console.error('❌ [VIDEO DEBUG] All fallback methods failed');
         setIsVideoLoaded(false);
       }
     } else {
@@ -444,9 +571,25 @@ export function WebVideoPreviewModal({
                               playsInline
                               preload="metadata"
                               onLoadedMetadata={handleVideoLoaded}
-                              onError={(e) => {
+                              onError={async (e) => {
                                 console.error('❌ [VIDEO DEBUG] Video element error:', e);
                                 console.error('❌ [VIDEO DEBUG] Video src:', asset.uri?.substring(0, 50) + '...');
+                                
+                                if (videoRef.current?.error) {
+                                  console.error('❌ [VIDEO DEBUG] HTMLMediaElement error:', {
+                                    code: videoRef.current.error.code,
+                                    message: videoRef.current.error.message
+                                  });
+                                }
+                                
+                                // Try canvas fallback on video error
+                                if (asset?.uri) {
+                                  console.log('🎨 [VIDEO DEBUG] Error triggered - attempting canvas fallback...');
+                                  const canvasSuccess = await loadVideoWithCanvas(asset.uri);
+                                  if (!canvasSuccess) {
+                                    console.error('❌ [VIDEO DEBUG] Canvas fallback also failed');
+                                  }
+                                }
                               }}
                               onLoadStart={() => {
                                 console.log('🎬 [VIDEO DEBUG] Video loading started');
@@ -455,6 +598,14 @@ export function WebVideoPreviewModal({
                                 console.log('✅ [VIDEO DEBUG] Video can play');
                               }}
                               poster={thumbnailPreview || undefined}
+                            />
+                            
+                            {/* Hidden canvas for video processing fallback */}
+                            <canvas
+                              ref={canvasRef}
+                              style={{ display: 'none' }}
+                              width={400}
+                              height={225}
                             />
                             
                             {/* Play button overlay */}
