@@ -32,7 +32,7 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
     case 'normal':
       // Regular text uses ExtraLight 200 Italic for elegance
       interVariant = 'Inter_200ExtraLight_Italic';
-      letterSpacing = -1.0; // Tighter spacing for premium feel like Notion/Apple
+      letterSpacing = -.75; // Tighter spacing for premium feel like Notion/Apple
       break;
     case '300':
     case 'light':
