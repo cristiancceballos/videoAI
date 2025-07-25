@@ -18,7 +18,7 @@ interface WebVideoPreviewModalProps {
   visible: boolean;
   asset: WebMediaAsset | null;
   onClose: () => void;
-  onUpload: (title: string, thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null) => void;
+  onUpload: (title: string, thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null, thumbnailOption?: 'first' | 'custom' | 'none') => void;
   uploading: boolean;
 }
 
@@ -72,7 +72,7 @@ export function WebVideoPreviewModal({
     }
     // For 'first' option, we'll generate it from first frame during upload
 
-    onUpload(title.trim(), thumbnailData);
+    onUpload(title.trim(), thumbnailData, thumbnailOption);
   };
 
   // Handle custom thumbnail generation

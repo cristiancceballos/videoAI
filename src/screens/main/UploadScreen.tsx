@@ -61,7 +61,7 @@ export function UploadScreen() {
   };
 
 
-  const handleUploadAsset = async (title: string, thumbnailData?: any) => {
+  const handleUploadAsset = async (title: string, thumbnailData?: any, thumbnailOption?: 'first' | 'custom' | 'none') => {
     if (!selectedAsset || !user) return;
 
     setUploading(true);
@@ -69,9 +69,10 @@ export function UploadScreen() {
     setShowProgress(true);
 
     try {
-      // TODO: Implement thumbnail generation during upload based on thumbnailData
-      // For now, just upload the video normally
-      console.log('📤 Upload starting with thumbnail option:', thumbnailData ? 'Custom/First frame' : 'No thumbnail');
+      console.log('📤 Upload starting with thumbnail option:', thumbnailOption);
+      
+      // Determine if we should generate first frame thumbnail
+      const generateFirstFrame = thumbnailOption === 'first';
       
       const result = await webUploadService.uploadWebVideo(
         selectedAsset,
@@ -79,7 +80,9 @@ export function UploadScreen() {
         title,
         (progress) => {
           setUploadProgress(progress);
-        }
+        },
+        thumbnailData,
+        generateFirstFrame
       );
 
       setUploading(false);

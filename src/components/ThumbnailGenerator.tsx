@@ -37,9 +37,10 @@ export function ThumbnailGenerator({
   const [isLoading, setIsLoading] = useState(false);
   const [previewFrame, setPreviewFrame] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoLoadTimeout, setVideoLoadTimeout] = useState<NodeJS.Timeout | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const progressRef = useRef<View>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -49,17 +50,53 @@ export function ThumbnailGenerator({
       setPreviewFrame(null);
       setIsCapturing(false);
       setIsLoading(true);
+      setVideoError(null);
+      
+      // Set up a timeout for video loading
+      const timeout = setTimeout(() => {
+        setIsLoading(false);
+        setVideoError('Video failed to load. Please try again.');
+      }, 10000); // 10 second timeout
+      
+      setVideoLoadTimeout(timeout);
+    } else {
+      // Clear timeout when modal closes
+      if (videoLoadTimeout) {
+        clearTimeout(videoLoadTimeout);
+        setVideoLoadTimeout(null);
+      }
     }
   }, [visible]);
 
   // Handle video metadata load
   const handleVideoLoad = () => {
     if (videoRef.current) {
+      // Clear the loading timeout since video loaded successfully
+      if (videoLoadTimeout) {
+        clearTimeout(videoLoadTimeout);
+        setVideoLoadTimeout(null);
+      }
+      
       setDuration(videoRef.current.duration);
       setCurrentTime(0);
       setIsLoading(false);
+      setVideoError(null);
       console.log('📹 Thumbnail generator video loaded, duration:', videoRef.current.duration);
+      
+      // Generate initial preview at time 0
+      generatePreview(0);
     }
+  };
+  
+  // Handle video loading errors
+  const handleVideoError = (error: any) => {
+    console.error('❌ Thumbnail generator video error:', error);
+    if (videoLoadTimeout) {
+      clearTimeout(videoLoadTimeout);
+      setVideoLoadTimeout(null);
+    }
+    setIsLoading(false);
+    setVideoError('Failed to load video. The video format may not be supported.');
   };
 
   // Handle time update during scrubbing
@@ -114,6 +151,8 @@ export function ThumbnailGenerator({
       setPreviewFrame(frameData.dataUrl);
     } catch (error) {
       console.error('Failed to generate preview:', error);
+      // Don't show error for preview failures, just log them
+      // The user can still use the "Use This Frame" button
     } finally {
       setIsCapturing(false);
     }
@@ -133,7 +172,8 @@ export function ThumbnailGenerator({
       onClose();
     } catch (error) {
       console.error('Failed to capture frame:', error);
-      // TODO: Show error to user
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setVideoError(`Failed to capture thumbnail: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -185,10 +225,31 @@ export function ThumbnailGenerator({
             style={styles.video}
             onLoadedMetadata={handleVideoLoad}
             onTimeUpdate={handleTimeUpdate}
+            onError={handleVideoError}
             muted
             playsInline
             controls={false}
+            preload="metadata"
           />
+          
+          {/* Video Error Display */}
+          {videoError && (
+            <View style={styles.errorOverlay}>
+              <Text style={styles.errorText}>{videoError}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => {
+                  setVideoError(null);
+                  setIsLoading(true);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                  }
+                }}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Preview Frame */}
@@ -225,9 +286,11 @@ export function ThumbnailGenerator({
         </View>
 
         {/* Instructions */}
-        <Text style={styles.instructions}>
-          Drag the progress bar to select a frame, then tap "Use This Frame" to create your thumbnail.
-        </Text>
+        {!videoError && (
+          <Text style={styles.instructions}>
+            Drag the progress bar to select a frame, then tap "Use This Frame" to create your thumbnail.
+          </Text>
+        )}
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
@@ -241,9 +304,9 @@ export function ThumbnailGenerator({
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.button, styles.captureButton, isLoading && styles.buttonDisabled]}
+            style={[styles.button, styles.captureButton, (isLoading || videoError || duration === 0) && styles.buttonDisabled]}
             onPress={handleCaptureFrame}
-            disabled={isLoading || duration === 0}
+            disabled={isLoading || videoError !== null || duration === 0}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#000" />
@@ -260,7 +323,7 @@ export function ThumbnailGenerator({
   );
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -415,5 +478,36 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  errorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    zIndex: 2,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    ...getInterFontConfig('200'),
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
   },
 });

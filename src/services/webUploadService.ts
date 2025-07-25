@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { WebMediaAsset } from './webMediaService';
+import { captureVideoFrame, FrameCaptureResult } from '../utils/frameCapture';
 
 export interface UploadProgress {
   loaded: number;
@@ -199,12 +200,65 @@ class WebUploadService {
     }
   }
 
+  // Generate first frame thumbnail
+  async generateFirstFrameThumbnail(
+    videoUrl: string,
+    userId: string,
+    videoId: string
+  ): Promise<string | null> {
+    try {
+      console.log('🖼️ Generating first frame thumbnail for video:', videoId);
+      
+      // Capture first frame (at time 0)
+      const frameData = await captureVideoFrame(videoUrl, 0, {
+        width: 400,
+        height: 225, // 16:9 aspect ratio
+        quality: 0.8,
+        format: 'jpeg'
+      });
+      
+      // Generate thumbnail filename
+      const thumbnailFilename = `${videoId}_thumbnail.jpg`;
+      
+      // Generate presigned URL for thumbnail upload
+      const uploadUrl = await this.generatePresignedUrl(userId, thumbnailFilename, 'thumbnails');
+      if (!uploadUrl) {
+        console.error('❌ Failed to generate presigned URL for thumbnail');
+        return null;
+      }
+      
+      // Upload thumbnail blob
+      const xhr = new XMLHttpRequest();
+      const uploadPromise = new Promise<boolean>((resolve) => {
+        xhr.onload = () => resolve(xhr.status === 200);
+        xhr.onerror = () => resolve(false);
+        xhr.open('PUT', uploadUrl.url);
+        xhr.setRequestHeader('Content-Type', 'image/jpeg');
+        xhr.send(frameData.blob);
+      });
+      
+      const uploadSuccess = await uploadPromise;
+      if (!uploadSuccess) {
+        console.error('❌ Failed to upload thumbnail to storage');
+        return null;
+      }
+      
+      console.log('✅ First frame thumbnail generated and uploaded successfully');
+      return uploadUrl.path;
+    } catch (error) {
+      console.error('❌ Error generating first frame thumbnail:', error);
+      return null;
+    }
+  }
+
   // Upload device video (complete flow for web)
   async uploadWebVideo(
     asset: WebMediaAsset,
     userId: string,
     title: string,
-    onProgress?: (progress: UploadProgress) => void
+    onProgress?: (progress: UploadProgress) => void,
+    thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null,
+    generateFirstFrame: boolean = false
   ): Promise<UploadResult> {
     try {
       // 1. Validate video file
@@ -248,9 +302,26 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Update status to ready (for now, will be 'processing' in Phase 3)
+      // 5. Handle thumbnail generation
+      let thumbnailPath: string | null = null;
+      
+      if (generateFirstFrame) {
+        console.log('🖼️ Generating first frame thumbnail...');
+        thumbnailPath = await this.generateFirstFrameThumbnail(asset.uri, userId, videoId);
+        if (!thumbnailPath) {
+          console.warn('⚠️ First frame thumbnail generation failed, continuing without thumbnail');
+        }
+      } else if (thumbnailData) {
+        console.log('🖼️ Uploading custom thumbnail...');
+        thumbnailPath = await this.uploadCustomThumbnail(thumbnailData, userId, videoId);
+        if (!thumbnailPath) {
+          console.warn('⚠️ Custom thumbnail upload failed, continuing without thumbnail');
+        }
+      }
+      
+      // 6. Update status to ready with thumbnail path
       console.log('🎯 Updating video status to ready...');
-      const statusUpdated = await this.updateVideoStatus(videoId, 'ready');
+      const statusUpdated = await this.updateVideoStatus(videoId, 'ready', thumbnailPath || undefined);
       
       if (!statusUpdated) {
         console.error('❌ Failed to update video status to ready');
@@ -259,13 +330,57 @@ class WebUploadService {
       
       console.log('✅ Video fully processed and ready!');
 
-      // 6. Clean up object URL
+      // 7. Clean up object URL
       URL.revokeObjectURL(asset.uri);
 
       return { success: true, videoId };
     } catch (error) {
       console.error('Upload web video error:', error);
       return { success: false, error: 'Unexpected error during upload' };
+    }
+  }
+
+  // Upload custom thumbnail
+  async uploadCustomThumbnail(
+    thumbnailData: { frameData: FrameCaptureResult; timeSeconds: number },
+    userId: string,
+    videoId: string
+  ): Promise<string | null> {
+    try {
+      console.log('🖼️ Uploading custom thumbnail for video:', videoId, 'at time:', thumbnailData.timeSeconds);
+      
+      // Generate thumbnail filename with timestamp
+      const timestamp = Math.floor(thumbnailData.timeSeconds * 1000);
+      const thumbnailFilename = `${videoId}_custom_${timestamp}.jpg`;
+      
+      // Generate presigned URL for thumbnail upload
+      const uploadUrl = await this.generatePresignedUrl(userId, thumbnailFilename, 'thumbnails');
+      if (!uploadUrl) {
+        console.error('❌ Failed to generate presigned URL for custom thumbnail');
+        return null;
+      }
+      
+      // Upload thumbnail blob
+      const xhr = new XMLHttpRequest();
+      const uploadPromise = new Promise<boolean>((resolve) => {
+        xhr.onload = () => resolve(xhr.status === 200);
+        xhr.onerror = () => resolve(false);
+        xhr.open('PUT', uploadUrl.url);
+        xhr.setRequestHeader('Content-Type', 'image/jpeg');
+        xhr.send(thumbnailData.frameData.blob);
+      });
+      
+      const uploadSuccess = await uploadPromise;
+      if (!uploadSuccess) {
+        console.error('❌ Failed to upload custom thumbnail to storage');
+        return null;
+      }
+      
+      console.log('✅ Custom thumbnail uploaded successfully');
+      return uploadUrl.path;
+    } catch (error) {
+      console.error('❌ Error uploading custom thumbnail:', error);
+      return null;
     }
   }
 

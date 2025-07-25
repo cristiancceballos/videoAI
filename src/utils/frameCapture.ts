@@ -37,6 +37,12 @@ export async function captureVideoFrame(
   } = options;
 
   return new Promise((resolve, reject) => {
+    // Set up timeout for the entire operation (15 seconds)
+    const operationTimeout = setTimeout(() => {
+      console.error('❌ Frame capture timed out after 15 seconds');
+      video.remove();
+      reject(new Error('Frame capture timed out. Please try again.'));
+    }, 15000);
     // Create video element
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -60,8 +66,16 @@ export async function captureVideoFrame(
     const handleLoadedMetadata = () => {
       console.log('📹 Video metadata loaded, duration:', video.duration);
       
+      if (!video.duration || video.duration === 0) {
+        clearTimeout(operationTimeout);
+        video.remove();
+        reject(new Error('Video duration is invalid. Please check the video file.'));
+        return;
+      }
+      
       // Ensure time is within video bounds
       const clampedTime = Math.max(0, Math.min(timeSeconds, video.duration));
+      console.log('🎯 Setting video time to:', clampedTime);
       video.currentTime = clampedTime;
     };
 
@@ -69,19 +83,43 @@ export async function captureVideoFrame(
       console.log('🎯 Video seeked to time:', video.currentTime);
       
       try {
+        // Verify video dimensions
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          clearTimeout(operationTimeout);
+          video.remove();
+          reject(new Error('Video has no valid dimensions. The video may be corrupted.'));
+          return;
+        }
+        
+        console.log('🖼️ Drawing video frame:', {
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          canvasWidth: width,
+          canvasHeight: height
+        });
+        
         // Draw video frame to canvas
         ctx.drawImage(video, 0, 0, width, height);
         
         // Convert canvas to blob
         canvas.toBlob(
           (blob) => {
+            clearTimeout(operationTimeout);
+            
             if (!blob) {
-              reject(new Error('Failed to create blob from canvas'));
+              video.remove();
+              reject(new Error('Failed to create image from video frame. Please try again.'));
               return;
             }
 
             // Also create data URL for preview
             const dataUrl = canvas.toDataURL(`image/${format}`, quality);
+            
+            console.log('✅ Frame captured successfully:', {
+              blobSize: blob.size,
+              format,
+              quality
+            });
 
             resolve({
               blob,
@@ -97,13 +135,29 @@ export async function captureVideoFrame(
           quality
         );
       } catch (error) {
+        clearTimeout(operationTimeout);
+        video.remove();
         reject(new Error(`Failed to capture frame: ${error}`));
       }
     };
 
     const handleError = (error: any) => {
+      clearTimeout(operationTimeout);
       console.error('❌ Video load error:', error);
-      reject(new Error(`Failed to load video: ${error}`));
+      video.remove();
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Failed to load video for thumbnail generation.';
+      
+      if (error.target?.error?.code === 4) {
+        errorMessage = 'Video format not supported. Please try a different video.';
+      } else if (error.target?.error?.code === 3) {
+        errorMessage = 'Video file is corrupted or incomplete.';
+      } else if (error.target?.error?.code === 2) {
+        errorMessage = 'Network error while loading video. Please check your connection.';
+      }
+      
+      reject(new Error(errorMessage));
     };
 
     // Set up event listeners
@@ -112,9 +166,16 @@ export async function captureVideoFrame(
     video.addEventListener('error', handleError);
 
     // Start loading video
-    console.log('📥 Loading video for frame capture:', videoUrl);
-    video.src = videoUrl;
-    video.load();
+    console.log('📥 Loading video for frame capture:', videoUrl.substring(0, 50) + '...');
+    
+    try {
+      video.src = videoUrl;
+      video.load();
+    } catch (error) {
+      clearTimeout(operationTimeout);
+      video.remove();
+      reject(new Error(`Failed to initialize video: ${error}`));
+    }
   });
 }
 
