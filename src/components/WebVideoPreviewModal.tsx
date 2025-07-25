@@ -392,19 +392,13 @@ export function WebVideoPreviewModal({
               </Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
     </Modal>
   );
 }
 
-function formatDuration(seconds?: number): string {
-  if (!seconds) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -412,13 +406,6 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  if (bytes === 0) return '0 Bytes';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -545,7 +532,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backdropFilter: 'blur(10px)',
   },
   editCoverText: {
     color: '#fff',
