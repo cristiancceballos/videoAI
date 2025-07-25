@@ -143,18 +143,34 @@ export async function captureVideoFrame(
 
     const handleError = (error: any) => {
       clearTimeout(operationTimeout);
-      console.error('❌ Video load error:', error);
+      console.error('❌ [FRAME CAPTURE DEBUG] Video load error:', error);
+      console.error('❌ [FRAME CAPTURE DEBUG] Video URL:', videoUrl?.substring(0, 100) + '...');
+      
+      if (error.target?.error) {
+        console.error('❌ [FRAME CAPTURE DEBUG] Media error code:', error.target.error.code);
+        console.error('❌ [FRAME CAPTURE DEBUG] Media error message:', error.target.error.message);
+      }
+      
       video.remove();
       
       // Provide more specific error messages based on error type
       let errorMessage = 'Failed to load video for thumbnail generation.';
       
       if (error.target?.error?.code === 4) {
-        errorMessage = 'Video format not supported. Please try a different video.';
+        errorMessage = 'Video format not supported. Please try a different video format (MP4, WebM, or MOV recommended).';
+        console.error('❌ [FRAME CAPTURE DEBUG] MEDIA_ELEMENT_ERROR: Format not supported');
       } else if (error.target?.error?.code === 3) {
-        errorMessage = 'Video file is corrupted or incomplete.';
+        errorMessage = 'Video file is corrupted or incomplete. Please try re-uploading the video.';
+        console.error('❌ [FRAME CAPTURE DEBUG] MEDIA_ELEMENT_ERROR: Decode error');
       } else if (error.target?.error?.code === 2) {
-        errorMessage = 'Network error while loading video. Please check your connection.';
+        errorMessage = 'Network error while loading video. Please check your connection and try again.';
+        console.error('❌ [FRAME CAPTURE DEBUG] MEDIA_ELEMENT_ERROR: Network error');
+      } else if (error.target?.error?.code === 1) {
+        errorMessage = 'Video loading was aborted. Please try again.';
+        console.error('❌ [FRAME CAPTURE DEBUG] MEDIA_ELEMENT_ERROR: Aborted');
+      } else if (videoUrl?.startsWith('blob:')) {
+        errorMessage = 'Video blob URL is no longer valid. Please try uploading the video again.';
+        console.error('❌ [FRAME CAPTURE DEBUG] Blob URL may have been revoked prematurely');
       }
       
       reject(new Error(errorMessage));

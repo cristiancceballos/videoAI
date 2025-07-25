@@ -349,8 +349,8 @@ class WebUploadService {
       
       console.log('✅ Video fully processed and ready!');
 
-      // 7. Clean up object URL
-      URL.revokeObjectURL(asset.uri);
+      // Note: Blob URL cleanup is handled by the WebVideoPreviewModal component
+      // to prevent premature revocation during thumbnail generation
 
       return { success: true, videoId };
     } catch (error) {

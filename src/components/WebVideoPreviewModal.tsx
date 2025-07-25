@@ -37,8 +37,18 @@ export function WebVideoPreviewModal({
   const [customThumbnailData, setCustomThumbnailData] = React.useState<{ frameData: FrameCaptureResult; timeSeconds: number } | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = React.useState<string | null>(null);
   
-  // Video reference for inline thumbnail generation
+  // Single video reference for all thumbnail operations
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  
+  // Cleanup blob URL when component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (asset?.uri) {
+        console.log('🧹 [CLEANUP DEBUG] Cleaning up blob URL on component unmount');
+        URL.revokeObjectURL(asset.uri);
+      }
+    };
+  }, [asset?.uri]);
   
   // Video scrubber state
   const [videoDuration, setVideoDuration] = React.useState(0);
@@ -46,8 +56,36 @@ export function WebVideoPreviewModal({
   const [isVideoLoaded, setIsVideoLoaded] = React.useState(false);
   const [isCapturingFrame, setIsCapturingFrame] = React.useState(false);
 
+  // Video format validation
+  const validateVideoFormat = (asset: WebMediaAsset): boolean => {
+    if (!asset?.file?.type) {
+      console.warn('⚠️ [FORMAT DEBUG] No file type available for validation');
+      return true; // Allow if we can't determine type
+    }
+    
+    const supportedFormats = [
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime', // .mov files
+      'video/x-msvideo', // .avi files
+    ];
+    
+    const isSupported = supportedFormats.includes(asset.file.type);
+    console.log(`📋 [FORMAT DEBUG] Video format: ${asset.file.type}, Supported: ${isSupported}`);
+    
+    return isSupported;
+  };
+
   React.useEffect(() => {
     if (asset?.filename) {
+      console.log('🎬 [INIT DEBUG] Initializing WebVideoPreviewModal for:', asset.filename);
+      
+      // Validate video format
+      if (!validateVideoFormat(asset)) {
+        console.warn('⚠️ [INIT DEBUG] Potentially unsupported video format detected');
+      }
+      
       // Set default title to simple 'title' for easy editing
       setTitle('title');
       // Select all text after a short delay to ensure input is rendered
@@ -63,41 +101,95 @@ export function WebVideoPreviewModal({
         }
       }, 100);
       
-      // Generate initial thumbnail preview (first frame)
-      generateThumbnailPreview();
+      // Don't generate initial thumbnail here - wait for video to load properly
+      console.log('⏳ [INIT DEBUG] Waiting for video to load before generating thumbnail');
     }
   }, [asset, visible]);
   
   // Handle video metadata loaded
   const handleVideoLoaded = () => {
     if (videoRef.current) {
-      setVideoDuration(videoRef.current.duration);
-      setCurrentTime(0);
-      setIsVideoLoaded(true);
-      console.log('📹 Video loaded for thumbnail generation, duration:', videoRef.current.duration);
+      const duration = videoRef.current.duration;
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
+      
+      console.log('📹 [VIDEO DEBUG] Video metadata loaded:', {
+        duration,
+        videoWidth,
+        videoHeight,
+        readyState: videoRef.current.readyState,
+        src: asset?.uri?.substring(0, 50) + '...'
+      });
+      
+      // Validate video has proper dimensions and duration
+      if (duration > 0 && videoWidth > 0 && videoHeight > 0) {
+        setVideoDuration(duration);
+        setCurrentTime(0);
+        setIsVideoLoaded(true);
+        
+        console.log('✅ [VIDEO DEBUG] Video successfully loaded and ready for thumbnail generation');
+        
+        // Generate initial thumbnail preview for first frame option
+        if (thumbnailOption === 'first') {
+          console.log('🎬 [VIDEO DEBUG] Auto-generating first frame thumbnail');
+          setTimeout(() => generateThumbnailPreview(0), 200);
+        }
+      } else {
+        console.error('❌ [VIDEO DEBUG] Invalid video metadata:', { duration, videoWidth, videoHeight });
+        setIsVideoLoaded(false);
+      }
+    } else {
+      console.error('❌ [VIDEO DEBUG] Video ref not available in handleVideoLoaded');
     }
   };
   
   // Generate thumbnail preview at specific time
   const generateThumbnailPreview = async (timeSeconds: number = 0) => {
-    if (!asset?.uri) return;
+    if (!asset?.uri) {
+      console.warn('🚫 [THUMBNAIL DEBUG] No asset URI available for thumbnail generation');
+      return;
+    }
+    
+    // Wait for video to be loaded before attempting frame capture
+    if (!isVideoLoaded || !videoRef.current) {
+      console.warn('⏳ [THUMBNAIL DEBUG] Video not loaded yet, skipping thumbnail generation');
+      return;
+    }
     
     try {
+      console.log(`🎬 [THUMBNAIL DEBUG] Starting thumbnail generation at time: ${timeSeconds}s`);
       setIsCapturingFrame(true);
+      
+      // Ensure video is at the correct time before capture
+      if (videoRef.current.currentTime !== timeSeconds) {
+        console.log(`⏭️ [THUMBNAIL DEBUG] Setting video time from ${videoRef.current.currentTime}s to ${timeSeconds}s`);
+        videoRef.current.currentTime = timeSeconds;
+        
+        // Wait a brief moment for the video to seek to the new time
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       // Capture frame at specified time
       const frameData = await captureVideoFrame(asset.uri, timeSeconds, {
         width: 160,
         height: 240, // 2:3 aspect ratio for mobile-style thumbnail
         quality: 0.7,
       });
+      
+      console.log('✅ [THUMBNAIL DEBUG] Thumbnail preview generated successfully');
       setThumbnailPreview(frameData.dataUrl);
       
       // If this is for custom thumbnail, save the data
       if (thumbnailOption === 'custom') {
+        console.log('💾 [THUMBNAIL DEBUG] Saving custom thumbnail data');
         setCustomThumbnailData({ frameData, timeSeconds });
       }
     } catch (error) {
-      console.error('Failed to generate thumbnail preview:', error);
+      console.error('❌ [THUMBNAIL DEBUG] Failed to generate thumbnail preview:', error);
+      if (error instanceof Error) {
+        console.error('❌ [THUMBNAIL DEBUG] Error details:', error.message);
+      }
+      // Don't show user error for preview failures, they can still upload
     } finally {
       setIsCapturingFrame(false);
     }
@@ -209,17 +301,6 @@ export function WebVideoPreviewModal({
               }}
             >
               <View style={styles.thumbnailPreview}>
-                  {/* Hidden video element for frame capture */}
-                  <video
-                    ref={videoRef}
-                    src={asset.uri}
-                    style={styles.hiddenVideo}
-                    muted
-                    playsInline
-                    preload="metadata"
-                    onLoadedMetadata={handleVideoLoaded}
-                  />
-                  
                   {/* Thumbnail preview image */}
                   {thumbnailPreview ? (
                     <img 
@@ -354,7 +435,7 @@ export function WebVideoPreviewModal({
                           </View>
                         ) : (
                           <>
-                            {/* Actual video element for preview */}
+                            {/* Single video element for all operations */}
                             <video
                               ref={videoRef}
                               src={asset.uri}
@@ -363,6 +444,16 @@ export function WebVideoPreviewModal({
                               playsInline
                               preload="metadata"
                               onLoadedMetadata={handleVideoLoaded}
+                              onError={(e) => {
+                                console.error('❌ [VIDEO DEBUG] Video element error:', e);
+                                console.error('❌ [VIDEO DEBUG] Video src:', asset.uri?.substring(0, 50) + '...');
+                              }}
+                              onLoadStart={() => {
+                                console.log('🎬 [VIDEO DEBUG] Video loading started');
+                              }}
+                              onCanPlay={() => {
+                                console.log('✅ [VIDEO DEBUG] Video can play');
+                              }}
                               poster={thumbnailPreview || undefined}
                             />
                             
@@ -523,14 +614,6 @@ const styles = StyleSheet.create({
     borderColor: '#333',
     alignSelf: 'flex-start',
   },
-  hiddenVideo: {
-    position: 'absolute',
-    top: -9999,
-    left: -9999,
-    width: 1,
-    height: 1,
-    opacity: 0,
-  } as any,
   thumbnailImage: {
     width: '100%',
     height: '100%',
