@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Video, Play, X } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface VideoGridItemProps {
   video: VideoWithMetadata;
@@ -193,6 +194,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   deleteButton: {
     position: 'absolute',
@@ -228,11 +230,13 @@ const styles = StyleSheet.create({
   deletingText: {
     color: '#FF3B30',
     fontSize: 10,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     marginTop: 4,
   },
   // Optional title styling (currently commented out)
   title: {
     fontSize: 11,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#fff',
     marginTop: 4,
     marginHorizontal: 2,

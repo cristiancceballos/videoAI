@@ -16,6 +16,7 @@ import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { Volume2, VolumeX, AlertTriangle } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { VideoDetailsSheet } from './VideoDetailsSheet';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface TikTokVideoPlayerProps {
   visible: boolean;
@@ -619,6 +620,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#fff',
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     marginTop: 12,
   },
   errorContainer: {
@@ -633,6 +635,7 @@ const styles = StyleSheet.create({
   errorMessage: {
     color: '#FF3B30',
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 22,
@@ -647,6 +650,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   muteButton: {
     position: 'absolute',
@@ -688,6 +692,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   progressTimeContainer: {
     position: 'absolute',
@@ -720,6 +725,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     paddingHorizontal: 10,
     paddingVertical: 6,

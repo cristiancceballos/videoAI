@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { supabase } from './src/services/supabase';
+import { getInterFontConfig } from './src/utils/fontUtils';
 
 export default function TestApp() {
   const [user, setUser] = useState<any>(null);
@@ -244,6 +245,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     textAlign: 'center',
     marginBottom: 30,
@@ -257,6 +259,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 12,
   },
@@ -266,6 +269,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 16,
     color: '#fff',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     fontFamily: 'monospace',
   },
   errorsSection: {
@@ -280,6 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FF9999',
     marginBottom: 4,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     fontFamily: 'monospace',
   },
   buttonsSection: {
@@ -301,6 +306,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   instructionsSection: {
     backgroundColor: '#1a1a1a',
@@ -314,5 +320,6 @@ const styles = StyleSheet.create({
     color: '#ccc',
     marginBottom: 8,
     lineHeight: 20,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
 });

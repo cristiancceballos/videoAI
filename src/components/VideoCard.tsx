@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Video, Smartphone, Monitor, Trash2, Search, Music } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface VideoCardProps {
   video: VideoWithMetadata;
@@ -257,6 +258,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isVerySmallScreen ? 10 : 12,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   sourceBadge: {
     position: 'absolute',
@@ -276,6 +278,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 8,
     lineHeight: isSmallScreen ? 20 : 22,
@@ -288,6 +291,7 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: isVerySmallScreen ? 12 : 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
   },
   statusContainer: {
@@ -301,8 +305,8 @@ const styles = StyleSheet.create({
   },
   deleteHint: {
     fontSize: 10,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#666',
-    fontStyle: 'italic',
   },
   deleting: {
     opacity: 0.5,
@@ -313,6 +317,7 @@ const styles = StyleSheet.create({
   },
   deletingText: {
     fontSize: 10,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#FF3B30',
     marginLeft: 4,
   },
@@ -339,6 +344,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: isVerySmallScreen ? 11 : 12,
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   statusSpinner: {
     marginLeft: 6,

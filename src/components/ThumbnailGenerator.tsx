@@ -13,6 +13,7 @@ import {
 import { X, Camera, Trash2 } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { captureVideoFrame, FrameCaptureResult } from '../utils/frameCapture';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface ThumbnailGeneratorProps {
   visible: boolean;
@@ -277,6 +278,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
   },
   closeButton: {
@@ -312,6 +314,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 12,
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   previewContainer: {
     alignItems: 'center',
@@ -320,6 +323,7 @@ const styles = StyleSheet.create({
   previewLabel: {
     color: '#fff',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     marginBottom: 8,
   },
   previewFrame: {
@@ -345,6 +349,7 @@ const styles = StyleSheet.create({
   timeText: {
     color: '#fff',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     minWidth: 40,
     textAlign: 'center',
   },
@@ -367,6 +372,7 @@ const styles = StyleSheet.create({
   instructions: {
     color: '#888',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     textAlign: 'center',
     marginHorizontal: 20,
     marginBottom: 20,
@@ -396,6 +402,7 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   captureButton: {
     backgroundColor: '#fff',
@@ -404,6 +411,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   buttonDisabled: {
     opacity: 0.5,

@@ -10,6 +10,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { VideoWithMetadata } from '../services/videoService';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -235,6 +236,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginTop: 12,
     marginBottom: 8,
@@ -242,6 +244,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#8e8e93',
     marginBottom: 24,
   },
@@ -251,12 +254,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 16,
   },
   aiPlaceholder: {
     fontSize: 18,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     textAlign: 'center',
     paddingVertical: 20,
@@ -271,12 +276,14 @@ const styles = StyleSheet.create({
   },
   metadataLabel: {
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#8e8e93',
   },
   metadataValue: {
     fontSize: 16,
-    color: '#fff',
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#fff',
   },
   bottomSpacer: {
     height: 40,

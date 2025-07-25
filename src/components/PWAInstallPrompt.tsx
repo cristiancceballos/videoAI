@@ -15,6 +15,7 @@ import {
   isIOSSafari, 
   isMobile 
 } from '../utils/pwaUtils';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface PWAInstallPromptProps {
   onInstallSuccess?: () => void;
@@ -226,18 +227,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
     textAlign: 'center',
     marginBottom: 20,
   },
   description: {
     fontSize: isSmallScreen ? 14 : 15,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#ccc',
     lineHeight: 22,
     marginBottom: 24,
@@ -247,6 +251,7 @@ const styles = StyleSheet.create({
   },
   instructionStep: {
     fontSize: isSmallScreen ? 14 : 15,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#ccc',
     lineHeight: 24,
     marginBottom: 8,
@@ -272,6 +277,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   dismissButton: {
     flex: 1,
@@ -284,5 +290,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
 });

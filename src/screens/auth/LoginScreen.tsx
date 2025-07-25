@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -0.75 letterSpacing
     color: '#888',
     textAlign: 'center',
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#007AFF',
     fontSize: isSmallScreen ? 13 : 14,
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -0.75 letterSpacing
     textAlign: 'center',
   },
 });

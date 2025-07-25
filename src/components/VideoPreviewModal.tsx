@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { MediaAsset } from '../services/mediaService';
+import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 
 interface VideoPreviewModalProps {
   visible: boolean;
@@ -167,10 +168,12 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#007AFF',
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
   },
   uploadButton: {
@@ -186,6 +189,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   content: {
     flex: 1,
@@ -207,6 +211,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 8,
   },
@@ -215,6 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -232,11 +238,13 @@ const styles = StyleSheet.create({
   },
   metadataLabel: {
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
   },
   metadataValue: {
     fontSize: 14,
     color: '#fff',
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
 });

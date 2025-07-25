@@ -65,7 +65,7 @@ export function SignUpScreen({ navigation }: any) {
         <View style={styles.form}>
           <View style={styles.header}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join GrowthOfWisdom</Text>
+            <Text style={styles.subtitle}>Welcome</Text>
           </View>
 
           <View style={styles.inputContainer}>

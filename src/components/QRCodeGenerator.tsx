@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Lightbulb, Smartphone } from 'lucide-react-native';
+import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 
 interface QRCodeGeneratorProps {
   appUrl?: string;
@@ -193,11 +194,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isSmallScreen ? 20 : 24,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: isSmallScreen ? 14 : 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
     marginBottom: 24,
   },
@@ -209,12 +212,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 8,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   input: {
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: isSmallScreen ? 14 : 16,
     fontSize: isSmallScreen ? 15 : 16,
+    ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
@@ -235,6 +240,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   copyButton: {
     flex: 1,
@@ -247,6 +253,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   qrContainer: {
     alignItems: 'center',
@@ -275,9 +282,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   instructions: {
     fontSize: isSmallScreen ? 13 : 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
     textAlign: 'center',
   },
@@ -297,6 +306,7 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 15 : 16,
     color: '#fff',
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     marginBottom: 12,
   },
   tipIcon: {
@@ -305,6 +315,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: isSmallScreen ? 13 : 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#ccc',
     marginBottom: 6,
     lineHeight: 20,

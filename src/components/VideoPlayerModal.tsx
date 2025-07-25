@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { AlertTriangle, Clipboard, Search } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface VideoPlayerModalProps {
   visible: boolean;
@@ -261,6 +262,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   headerInfo: {
     flex: 1,
@@ -269,11 +271,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     marginBottom: 2,
   },
   videoMeta: {
     color: '#888',
     fontSize: 12,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   videoContainer: {
     flex: 1,
@@ -293,6 +297,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#fff',
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     marginTop: 12,
   },
   errorContainer: {
@@ -307,6 +312,7 @@ const styles = StyleSheet.create({
   errorMessage: {
     color: '#FF3B30',
     fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 22,
@@ -321,6 +327,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   debugContainer: {
     marginVertical: 16,
@@ -332,6 +339,7 @@ const styles = StyleSheet.create({
   debugInfo: {
     color: '#888',
     fontSize: 12,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     marginBottom: 8,
   },
   debugUrl: {
@@ -350,6 +358,7 @@ const styles = StyleSheet.create({
   debugButtonText: {
     color: '#fff',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     textAlign: 'center',
   },
   infoContainer: {
@@ -366,10 +375,12 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: '#888',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   infoValue: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
 });

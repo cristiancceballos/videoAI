@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { UploadProgress } from '../services/uploadService';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface UploadProgressModalProps {
   visible: boolean;
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
   },
   cancelButton: {
@@ -130,6 +132,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#fff',
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
   },
   progressContainer: {
     marginBottom: 16,
@@ -149,6 +152,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
     textAlign: 'center',
   },
@@ -159,6 +163,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#888',
   },
   spinner: {
@@ -174,6 +179,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   closeButton: {
     backgroundColor: '#007AFF',
@@ -186,6 +192,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     textAlign: 'center',
   },
 });

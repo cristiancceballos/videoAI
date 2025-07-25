@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Check, Wifi } from 'lucide-react-native';
 import { getNetworkStatus, onNetworkChange } from '../utils/pwaUtils';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 interface NetworkStatusProps {
   onNetworkChange?: (isOnline: boolean) => void;
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '600',
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     textAlign: 'center',
     flex: 1,
   },

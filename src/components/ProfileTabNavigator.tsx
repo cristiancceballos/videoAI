@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { getInterFontConfig } from '../utils/fontUtils';
 
 export type ProfileTab = 'posts' | 'search' | 'select';
 
@@ -82,11 +83,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     fontWeight: '400',
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     textAlign: 'center',
   },
   activeTabText: {
     color: '#fff',
     fontWeight: '500', // Medium weight for cleaner appearance
+    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   activeIndicator: {
     position: 'absolute',
