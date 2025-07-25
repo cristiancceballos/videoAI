@@ -118,10 +118,16 @@ export function WebVideoPreviewModal({
     // Prepare thumbnail data based on selection
     let thumbnailData: { frameData: FrameCaptureResult; timeSeconds: number } | null = null;
     
+    console.log('🚀 [UPLOAD DEBUG] Starting upload with thumbnail option:', thumbnailOption);
+    
     if (thumbnailOption === 'custom' && customThumbnailData) {
       thumbnailData = customThumbnailData;
+      console.log('🖼️ [UPLOAD DEBUG] Using custom thumbnail at time:', customThumbnailData.timeSeconds);
     } else if (thumbnailOption === 'none') {
       thumbnailData = null;
+      console.log('🚫 [UPLOAD DEBUG] No thumbnail selected');
+    } else if (thumbnailOption === 'first') {
+      console.log('🎬 [UPLOAD DEBUG] Will generate first frame thumbnail during upload');
     }
     // For 'first' option, we'll generate it from first frame during upload
 
@@ -271,6 +277,7 @@ export function WebVideoPreviewModal({
                       thumbnailOption === 'first' && styles.thumbnailOptionSelected
                     ]}
                     onPress={() => {
+                      console.log('🎯 [UI DEBUG] User selected "First frame" thumbnail option');
                       setThumbnailOption('first');
                       generateThumbnailPreview(); // Regenerate first frame
                     }}
@@ -333,32 +340,48 @@ export function WebVideoPreviewModal({
                   </TouchableOpacity>
                 </View>
                 
-                {/* Video Scrubber for Custom Frame Selection */}
+                {/* Full Video Player Interface for Custom Frame Selection */}
                 {thumbnailOption === 'custom' && isVideoLoaded && (
-                  <View style={styles.videoScrubber}>
-                    <Text style={styles.scrubberTitle}>Select frame</Text>
+                  <View style={styles.fullVideoScrubber}>
+                    <Text style={styles.videoScrubberTitle}>Select your thumbnail frame</Text>
                     
-                    {/* Video preview for scrubbing */}
-                    <View style={styles.scrubberVideoContainer}>
-                      <View style={styles.scrubberPreview}>
+                    {/* Large Video Preview */}
+                    <View style={styles.largeVideoContainer}>
+                      <View style={styles.largeVideoPreview}>
                         {isCapturingFrame ? (
-                          <View style={styles.capturingIndicator}>
-                            <Text style={styles.capturingText}>Capturing...</Text>
+                          <View style={styles.loadingOverlay}>
+                            <Text style={styles.loadingText}>Capturing frame...</Text>
                           </View>
-                        ) : thumbnailPreview ? (
-                          <img src={thumbnailPreview} style={styles.scrubberImage} alt="Frame preview" />
                         ) : (
-                          <View style={styles.scrubberPlaceholder}>
-                            <Camera size={32} color="#666" />
-                          </View>
+                          <>
+                            {/* Actual video element for preview */}
+                            <video
+                              ref={videoRef}
+                              src={asset.uri}
+                              style={styles.fullVideo}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              onLoadedMetadata={handleVideoLoaded}
+                              poster={thumbnailPreview || undefined}
+                            />
+                            
+                            {/* Play button overlay */}
+                            <View style={styles.videoOverlay}>
+                              <View style={styles.playButtonContainer}>
+                                <Camera size={48} color="rgba(255, 255, 255, 0.9)" />
+                                <Text style={styles.playButtonText}>Drag to select frame</Text>
+                              </View>
+                            </View>
+                          </>
                         )}
                       </View>
                     </View>
                     
-                    {/* Timeline scrubber */}
-                    <View style={styles.timelineContainer}>
-                      <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
-                      <View style={styles.timeline}>
+                    {/* Prominent Timeline Scrubber */}
+                    <View style={styles.prominentTimelineContainer}>
+                      <Text style={styles.prominentTimeText}>{formatTime(currentTime)}</Text>
+                      <View style={styles.prominentTimeline}>
                         <input
                           type="range"
                           min={0}
@@ -366,17 +389,20 @@ export function WebVideoPreviewModal({
                           step={0.1}
                           value={currentTime}
                           onChange={(e) => handleTimeChange(parseFloat(e.target.value))}
-                          style={styles.scrubberSlider}
+                          style={styles.prominentSlider}
                           disabled={uploading || isCapturingFrame}
                         />
                       </View>
-                      <Text style={styles.timeText}>{formatTime(videoDuration)}</Text>
+                      <Text style={styles.prominentTimeText}>{formatTime(videoDuration)}</Text>
                     </View>
                     
+                    {/* Selection Confirmation */}
                     {customThumbnailData && (
-                      <Text style={styles.selectedFrameText}>
-                        ✓ Frame selected at {formatTime(customThumbnailData.timeSeconds)}
-                      </Text>
+                      <View style={styles.selectionConfirmation}>
+                        <Text style={styles.confirmationText}>
+                          ✓ Frame selected at {formatTime(customThumbnailData.timeSeconds)}
+                        </Text>
+                      </View>
                     )}
                   </View>
                 )}
@@ -624,90 +650,121 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   
-  // Video Scrubber Styles
-  videoScrubber: {
+  // Full Video Player Interface Styles
+  fullVideoScrubber: {
     marginTop: 20,
-    padding: 18,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 16,
+    backgroundColor: '#000',
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: '#333',
   },
-  scrubberTitle: {
-    fontSize: 14,
+  videoScrubberTitle: {
+    fontSize: 16,
     fontWeight: '600',
     ...getInterFontConfig('300'),
     color: '#fff',
-    marginBottom: 12,
+    padding: 20,
+    paddingBottom: 16,
     textAlign: 'center',
   },
-  scrubberVideoContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  scrubberPreview: {
-    width: 120,
-    height: 180,
+  largeVideoContainer: {
+    aspectRatio: 16/9,
     backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'relative',
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#333',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
-  scrubberImage: {
+  largeVideoPreview: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  fullVideo: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
   } as any,
-  scrubberPlaceholder: {
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  capturingIndicator: {
-    justifyContent: 'center',
+  playButtonContainer: {
     alignItems: 'center',
+    padding: 20,
   },
-  capturingText: {
-    fontSize: 12,
+  playButtonText: {
+    fontSize: 14,
     ...getInterFontConfig('200'),
-    color: '#007AFF',
-  },
-  timelineContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  timeText: {
-    fontSize: 12,
-    ...getInterFontConfig('200'),
-    color: '#fff',
-    minWidth: 40,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 8,
     textAlign: 'center',
   },
-  timeline: {
-    flex: 1,
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    zIndex: 1,
   },
-  scrubberSlider: {
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    ...getInterFontConfig('200'),
+  },
+  // Prominent Timeline Controls
+  prominentTimelineContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 16,
+    gap: 16,
+    backgroundColor: '#1a1a1a',
+  },
+  prominentTimeText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#fff',
+    minWidth: 45,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  prominentTimeline: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+  },
+  prominentSlider: {
     width: '100%',
-    height: 4,
+    height: 6,
     backgroundColor: '#333',
-    borderRadius: 2,
+    borderRadius: 3,
     outline: 'none',
     appearance: 'none',
     cursor: 'pointer',
+    accentColor: '#007AFF',
   } as any,
-  selectedFrameText: {
-    fontSize: 12,
+  selectionConfirmation: {
+    padding: 16,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderTopWidth: 1,
+    borderTopColor: '#007AFF',
+  },
+  confirmationText: {
+    fontSize: 14,
     ...getInterFontConfig('200'),
     color: '#007AFF',
     textAlign: 'center',
-    marginTop: 8,
+    fontWeight: '500',
   },
   
   // 3. AI Summary Section

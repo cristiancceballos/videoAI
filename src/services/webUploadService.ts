@@ -174,12 +174,17 @@ class WebUploadService {
     thumbnailPath?: string
   ): Promise<boolean> {
     try {
-      console.log(`Updating video ${videoId} status to: ${status}`);
+      console.log(`📊 [DATABASE DEBUG] Updating video ${videoId} status to: ${status}`);
       
       const updateData: any = { status };
       if (thumbnailPath) {
         updateData.thumbnail_path = thumbnailPath;
+        console.log(`🖼️ [DATABASE DEBUG] Adding thumbnail path to update:`, thumbnailPath);
+      } else if (status === 'ready') {
+        console.log(`⚠️ [DATABASE DEBUG] Setting status to ready but no thumbnail path provided`);
       }
+
+      console.log(`💾 [DATABASE DEBUG] Update data:`, updateData);
 
       const { data, error } = await supabase
         .from('videos')
@@ -188,14 +193,23 @@ class WebUploadService {
         .select('*');
 
       if (error) {
-        console.error('Error updating video status:', error);
+        console.error('❌ [DATABASE DEBUG] Error updating video status:', error);
         return false;
       }
 
-      console.log('Video status updated successfully:', data);
+      console.log('✅ [DATABASE DEBUG] Video status updated successfully in database:');
+      console.log('📄 [DATABASE DEBUG] Updated record:', JSON.stringify(data[0], null, 2));
+      
+      // Specifically log thumbnail information
+      if (data[0] && data[0].thumbnail_path) {
+        console.log(`🎯 [DATABASE DEBUG] Thumbnail path successfully stored: ${data[0].thumbnail_path}`);
+      } else if (status === 'ready') {
+        console.log(`⚠️ [DATABASE DEBUG] Video marked as ready but no thumbnail_path in database`);
+      }
+      
       return true;
     } catch (error) {
-      console.error('Exception updating video status:', error);
+      console.error('💥 [DATABASE DEBUG] Exception updating video status:', error);
       return false;
     }
   }
@@ -243,10 +257,15 @@ class WebUploadService {
         return null;
       }
       
-      console.log('✅ First frame thumbnail generated and uploaded successfully');
+      console.log('🎉 [FIRST FRAME DEBUG] First frame thumbnail generated and uploaded successfully!');
+      console.log('📍 [FIRST FRAME DEBUG] Final thumbnail path:', uploadUrl.path);
       return uploadUrl.path;
     } catch (error) {
-      console.error('❌ Error generating first frame thumbnail:', error);
+      console.error('💥 [FIRST FRAME DEBUG] Failed to generate first frame thumbnail:', error);
+      if (error instanceof Error) {
+        console.error('💥 [FIRST FRAME DEBUG] Error message:', error.message);
+        console.error('💥 [FIRST FRAME DEBUG] Error stack:', error.stack);
+      }
       return null;
     }
   }
