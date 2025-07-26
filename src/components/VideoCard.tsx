@@ -140,11 +140,22 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             source={{ uri: video.thumbnailUrl }} 
             style={styles.thumbnail}
             resizeMode="cover"
+            onLoad={() => console.log('✅ [THUMBNAIL DEBUG] Image loaded successfully for:', video.title.substring(0, 20))}
+            onError={(error) => console.error('❌ [THUMBNAIL DEBUG] Image load failed for:', video.title.substring(0, 20), error.nativeEvent)}
           />
         ) : (
-          <View style={styles.placeholderThumbnail}>
-            <Video size={24} color="#666" />
-          </View>
+          <>
+            <View style={styles.placeholderThumbnail}>
+              <Video size={24} color="#666" />
+            </View>
+            {console.log('⚠️ [THUMBNAIL DEBUG] No thumbnailUrl for video:', {
+              title: video.title.substring(0, 20),
+              id: video.id.substring(0, 8),
+              status: video.status,
+              hasThumbnailPath: !!video.thumbnail_path,
+              thumbnailPath: video.thumbnail_path
+            })}
+          </>
         )}
         
         {/* Duration overlay */}

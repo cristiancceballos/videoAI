@@ -65,7 +65,27 @@ export function HomeScreen() {
       console.log('Loading videos for user:', user.id);
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
-      console.log('📹 Loaded videos:', userVideos.length, userVideos.map(v => ({id: v.id.substring(0,8), title: v.title, status: v.status})));
+      console.log('📹 Loaded videos:', userVideos.length, userVideos.map(v => ({
+        id: v.id.substring(0,8), 
+        title: v.title.substring(0, 20), 
+        status: v.status,
+        hasThumbnailPath: !!v.thumbnail_path,
+        hasThumbnailUrl: !!v.thumbnailUrl,
+        thumbnailPath: v.thumbnail_path?.substring(0, 30) + '...'
+      })));
+      
+      // Debug recent video details
+      if (userVideos.length > 0) {
+        const recentVideo = userVideos[0];
+        console.log('🔍 [HOME SCREEN DEBUG] Most recent video details:', {
+          id: recentVideo.id,
+          title: recentVideo.title,
+          status: recentVideo.status,
+          thumbnail_path: recentVideo.thumbnail_path,
+          thumbnailUrl: recentVideo.thumbnailUrl,
+          created_at: recentVideo.created_at
+        });
+      }
     } catch (error) {
       console.error('Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');
