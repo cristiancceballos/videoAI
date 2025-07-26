@@ -425,13 +425,36 @@ class WebUploadService {
         });
         
         const startTime = Date.now();
-        const thumbnails = await generateStandardThumbnails(asset.uri, assetDuration);
+        
+        console.log('🎬 [FRAME EXTRACTION DEBUG] About to call generateStandardThumbnails with:', {
+          assetUri: asset.uri?.substring(0, 100) + '...',
+          assetDuration: assetDuration,
+          uriType: typeof asset.uri,
+          isDataUrl: asset.uri?.startsWith('data:'),
+          isBlobUrl: asset.uri?.startsWith('blob:')
+        });
+        
+        let thumbnails;
+        try {
+          thumbnails = await generateStandardThumbnails(asset.uri, assetDuration);
+          console.log('✅ [FRAME EXTRACTION DEBUG] generateStandardThumbnails completed successfully');
+        } catch (extractionError) {
+          console.error('❌ [FRAME EXTRACTION DEBUG] generateStandardThumbnails failed:', extractionError);
+          console.error('❌ [FRAME EXTRACTION DEBUG] Error details:', {
+            name: extractionError.name,
+            message: extractionError.message,
+            stack: extractionError.stack?.substring(0, 500) + '...'
+          });
+          throw extractionError; // Re-throw to trigger fallback
+        }
+        
         const extractionTime = Date.now() - startTime;
         
         console.log('📊 [CLIENT THUMBNAIL DEBUG] Frame extraction completed:', {
           thumbnailCount: thumbnails.length,
           extractionTimeMs: extractionTime,
-          positions: thumbnails.map(t => t.position)
+          positions: thumbnails.map(t => t.position),
+          actualThumbnails: thumbnails.length > 0
         });
         
         if (thumbnails.length > 0) {

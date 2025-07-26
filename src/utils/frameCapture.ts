@@ -85,11 +85,20 @@ export async function captureVideoFrame(
     try {
       processedVideoUrl = await blobUrlToDataUrl(videoUrl);
       console.log('✅ [FRAME CAPTURE DEBUG] Successfully converted blob URL to data URL');
+      console.log('🔍 [FRAME CAPTURE DEBUG] Data URL details:', {
+        length: processedVideoUrl.length,
+        prefix: processedVideoUrl.substring(0, 100) + '...',
+        isValidDataUrl: processedVideoUrl.startsWith('data:video/')
+      });
     } catch (error) {
       console.error('❌ [FRAME CAPTURE DEBUG] Failed to convert blob URL:', error);
       // Continue with original blob URL as fallback
       console.log('🔄 [FRAME CAPTURE DEBUG] Continuing with original blob URL as fallback');
     }
+  } else if (videoUrl.startsWith('data:')) {
+    console.log('✅ [FRAME CAPTURE DEBUG] Already a data URL, using directly');
+  } else {
+    console.log('🔍 [FRAME CAPTURE DEBUG] Unknown URL type:', videoUrl.substring(0, 50) + '...');
   }
 
   return new Promise((resolve, reject) => {
@@ -208,13 +217,28 @@ export async function captureVideoFrame(
 
     const handleError = (error: any) => {
       clearTimeout(operationTimeout);
-      console.error('❌ [FRAME CAPTURE DEBUG] Video load error:', error);
+      console.error('❌ [FRAME CAPTURE DEBUG] Video load error occurred!');
+      console.error('❌ [FRAME CAPTURE DEBUG] Error object:', error);
+      console.error('❌ [FRAME CAPTURE DEBUG] Video element state:', {
+        readyState: video.readyState,
+        networkState: video.networkState,
+        currentSrc: video.currentSrc?.substring(0, 100) + '...',
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        duration: video.duration
+      });
       console.error('❌ [FRAME CAPTURE DEBUG] Video URL type:', processedVideoUrl.startsWith('data:') ? 'data URL' : processedVideoUrl.startsWith('blob:') ? 'blob URL' : 'other');
       console.error('❌ [FRAME CAPTURE DEBUG] Video URL prefix:', processedVideoUrl?.substring(0, 100) + '...');
       
       if (error.target?.error) {
-        console.error('❌ [FRAME CAPTURE DEBUG] Media error code:', error.target.error.code);
-        console.error('❌ [FRAME CAPTURE DEBUG] Media error message:', error.target.error.message);
+        console.error('❌ [FRAME CAPTURE DEBUG] Media error details:', {
+          code: error.target.error.code,
+          message: error.target.error.message,
+          MEDIA_ERR_ABORTED: error.target.error.code === 1,
+          MEDIA_ERR_NETWORK: error.target.error.code === 2,
+          MEDIA_ERR_DECODE: error.target.error.code === 3,
+          MEDIA_ERR_SRC_NOT_SUPPORTED: error.target.error.code === 4
+        });
       }
       
       video.remove();
