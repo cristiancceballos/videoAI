@@ -104,19 +104,31 @@ serve(async (req: Request) => {
     const uploadedThumbnails = []
     for (let i = 0; i < thumbnailOptions.length; i++) {
       const thumbnail = thumbnailOptions[i]
-      const filename = `${videoId}_thumbnail_${thumbnail.position}.jpg`
+      const filename = `${videoId}_thumbnail_${thumbnail.position}.svg`
       
       console.log(`📤 [EDGE DEBUG] Uploading thumbnail ${i + 1}/${thumbnailOptions.length}: ${filename}`)
+      console.log(`📊 [EDGE DEBUG] Upload details:`, {
+        bucket: 'thumbnails',
+        path: `${userId}/${filename}`,
+        blobSize: thumbnail.blob.size,
+        blobType: thumbnail.blob.type,
+        contentType: 'image/svg+xml',
+        userId: userId,
+        filename: filename
+      })
       
       const { data: uploadData, error: uploadError } = await supabaseClient.storage
         .from('thumbnails')
         .upload(`${userId}/${filename}`, thumbnail.blob, {
-          contentType: 'image/jpeg',
+          contentType: 'image/svg+xml',
           upsert: true
         })
 
       if (uploadError) {
         console.error(`❌ [EDGE DEBUG] Failed to upload thumbnail ${i + 1}:`, uploadError)
+        console.error(`❌ [EDGE DEBUG] Upload error details:`, JSON.stringify(uploadError, null, 2))
+        console.error(`❌ [EDGE DEBUG] Upload error message:`, uploadError.message)
+        console.error(`❌ [EDGE DEBUG] Upload path attempted:`, `${userId}/${filename}`)
         continue
       }
 

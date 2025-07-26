@@ -50,6 +50,14 @@ FOR DELETE USING (
   auth.uid()::text = (storage.foldername(name))[1]
 );
 
+-- Service role policies for Edge Functions
+-- Edge Functions use service role which needs special permissions
+CREATE POLICY IF NOT EXISTS "Service role can manage all thumbnails" ON storage.objects
+FOR ALL USING (bucket_id = 'thumbnails' AND auth.role() = 'service_role');
+
+CREATE POLICY IF NOT EXISTS "Service role can manage all videos" ON storage.objects  
+FOR ALL USING (bucket_id = 'videos' AND auth.role() = 'service_role');
+
 -- Verify policies were created
 SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
 FROM pg_policies 
