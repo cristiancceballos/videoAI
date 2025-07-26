@@ -407,6 +407,14 @@ class WebUploadService {
           
           if (thumbnailResult.success) {
             console.log('✅ [CLIENT THUMBNAIL DEBUG] Real thumbnails uploaded successfully');
+            console.log('🔍 [PATH DEBUG] Complete path being stored in database:', {
+              videoId: videoId,
+              firstThumbnailPath: thumbnailResult.firstThumbnailPath,
+              pathLength: thumbnailResult.firstThumbnailPath?.length || 0,
+              pathParts: thumbnailResult.firstThumbnailPath?.split('/') || [],
+              hasFileExtension: thumbnailResult.firstThumbnailPath?.includes('.jpg') || false
+            });
+            
             // Update video with first thumbnail path and set status to ready
             await this.updateVideoStatus(videoId, 'ready', thumbnailResult.firstThumbnailPath);
           } else {
@@ -634,6 +642,11 @@ class WebUploadService {
         }
         
         console.log(`📤 [REAL THUMBNAIL DEBUG] Uploading ${filename}...`);
+        console.log(`🔍 [PATH DEBUG] Upload URL details:`, {
+          filename: filename,
+          uploadUrlPath: uploadUrl.path,
+          uploadUrlFullLength: uploadUrl.url?.length || 0
+        });
         
         // Upload real thumbnail image
         const uploadSuccess = await this.uploadFileWithProgress(
@@ -648,6 +661,7 @@ class WebUploadService {
             filename: filename
           });
           console.log(`✅ [REAL THUMBNAIL DEBUG] Successfully uploaded ${filename}`);
+          console.log(`🔍 [PATH DEBUG] Stored path for ${filename}:`, uploadUrl.path);
         } else {
           console.error(`❌ [REAL THUMBNAIL DEBUG] Failed to upload ${filename}`);
         }
@@ -655,6 +669,10 @@ class WebUploadService {
       
       if (uploadedThumbnails.length > 0) {
         console.log(`🎉 [REAL THUMBNAIL DEBUG] Successfully uploaded ${uploadedThumbnails.length} real thumbnails`);
+        console.log(`🔍 [PATH DEBUG] Returning first thumbnail path:`, {
+          firstThumbnailPath: uploadedThumbnails[0].path,
+          allPaths: uploadedThumbnails.map(t => ({ position: t.position, path: t.path }))
+        });
         return { 
           success: true, 
           firstThumbnailPath: uploadedThumbnails[0].path 

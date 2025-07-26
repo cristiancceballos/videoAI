@@ -41,24 +41,17 @@ class VideoService {
       
       const videosWithThumbnails = await Promise.all(
         data.map(async (video, index) => {
-          console.log(`🖼️ [VIDEO SERVICE DEBUG] Processing video ${index + 1}/${data.length}:`, {
-            videoId: video.id,
-            title: video.title,
-            status: video.status,
-            thumbnail_path: video.thumbnail_path,
-            hasThumbnailPath: !!video.thumbnail_path
-          });
-          
           const thumbnailUrl = video.thumbnail_path 
             ? await this.getFileUrl('thumbnails', video.thumbnail_path)
             : undefined;
 
-          console.log(`🔍 [VIDEO SERVICE DEBUG] Thumbnail URL result for video ${video.id}:`, {
-            thumbnail_path: video.thumbnail_path,
-            thumbnailUrl: thumbnailUrl,
-            urlLength: thumbnailUrl?.length || 0,
-            urlPreview: thumbnailUrl?.substring(0, 100) + (thumbnailUrl?.length > 100 ? '...' : '')
-          });
+          // Only log if there's an issue
+          if (video.thumbnail_path && !thumbnailUrl) {
+            console.warn(`⚠️ [VIDEO SERVICE DEBUG] Failed to get thumbnail URL for video ${video.id}:`, {
+              thumbnail_path: video.thumbnail_path,
+              title: video.title.substring(0, 20) + '...'
+            });
+          }
 
           return {
             ...video,
@@ -117,93 +110,53 @@ class VideoService {
   // Legacy public URL method (for thumbnails if needed)
   async getFileUrl(bucket: string, path: string): Promise<string | null> {
     try {
-      console.log('🔍 [THUMBNAIL URL DEBUG] Getting public URL from bucket:', bucket, 'path:', path);
+      console.log('🔍 [THUMBNAIL URL DEBUG] Looking for file:', path);
       
-      // First, check if the file exists in storage
-      console.log('🔍 [THUMBNAIL URL DEBUG] Checking if file exists in storage...');
+      // Check if the file exists in storage
       const { data: listData, error: listError } = await supabase.storage
         .from(bucket)
         .list(path.split('/').slice(0, -1).join('/') || '', {
           search: path.split('/').pop()
         });
       
-      console.log('🔍 [THUMBNAIL URL DEBUG] File existence check:', {
-        searchPath: path.split('/').slice(0, -1).join('/') || '',
-        searchFile: path.split('/').pop(),
-        filesFound: listData?.length || 0,
-        files: listData?.map(f => f.name) || [],
-        listError: listError
-      });
-      
-      if (listError) {
-        console.error('❌ [THUMBNAIL URL DEBUG] Error checking file existence:', listError);
-      }
-      
-      if (!listData || listData.length === 0) {
-        console.error('❌ [THUMBNAIL URL DEBUG] File not found in storage:', path);
-        // Try to list the directory to see what files are there
+      if (listError || !listData || listData.length === 0) {
+        console.error('❌ [THUMBNAIL URL DEBUG] File not found:', path);
+        
+        // Show directory contents to help debug
         const directoryPath = path.split('/').slice(0, -1).join('/');
         const { data: dirData } = await supabase.storage
           .from(bucket)
           .list(directoryPath || '');
-        console.log('🔍 [THUMBNAIL URL DEBUG] Directory contents:', {
-          directory: directoryPath,
-          files: dirData?.map(f => f.name) || []
+        console.log('📂 [THUMBNAIL URL DEBUG] Directory contents:', {
+          searchedFor: path,
+          directory: directoryPath || '(root)',
+          actualFiles: dirData?.map(f => f.name) || []
         });
         return null;
       }
-      
-      console.log('✅ [THUMBNAIL URL DEBUG] File exists, generating public URL...');
       
       const { data } = supabase.storage
         .from(bucket)
         .getPublicUrl(path);
 
-      console.log('🔍 [THUMBNAIL URL DEBUG] Supabase getPublicUrl response:', {
-        publicUrl: data.publicUrl,
-        fullPath: data.fullPath,
-        urlLength: data.publicUrl?.length || 0
-      });
-      
-      // Test if the URL is actually accessible
+      // Quick accessibility test
       if (data.publicUrl) {
-        console.log('🌐 [THUMBNAIL URL DEBUG] Testing URL accessibility...');
         try {
           const testResponse = await fetch(data.publicUrl, { method: 'HEAD' });
-          console.log('🔍 [THUMBNAIL URL DEBUG] URL accessibility test:', {
-            status: testResponse.status,
-            ok: testResponse.ok,
-            statusText: testResponse.statusText,
-            contentType: testResponse.headers.get('content-type'),
-            contentLength: testResponse.headers.get('content-length')
-          });
-          
           if (!testResponse.ok) {
-            console.error('❌ [THUMBNAIL URL DEBUG] URL not accessible:', {
-              status: testResponse.status,
-              statusText: testResponse.statusText,
-              url: data.publicUrl.substring(0, 100) + '...'
-            });
+            console.error('❌ [THUMBNAIL URL DEBUG] URL returns', testResponse.status, 'for:', path);
             return null;
           }
-          
-          console.log('✅ [THUMBNAIL URL DEBUG] URL is accessible, returning public URL');
+          console.log('✅ [THUMBNAIL URL DEBUG] URL accessible for:', path);
         } catch (fetchError) {
-          console.error('❌ [THUMBNAIL URL DEBUG] URL fetch test failed:', fetchError);
-          console.error('❌ [THUMBNAIL URL DEBUG] This might be a CORS or permissions issue');
-          // Return URL anyway, the fetch test might fail due to CORS but the image might still work
+          console.warn('⚠️ [THUMBNAIL URL DEBUG] URL test failed (might be CORS):', path);
+          // Return URL anyway, CORS might block HEAD but image might still work
         }
       }
 
       return data.publicUrl;
     } catch (error) {
-      console.error('💥 [THUMBNAIL URL DEBUG] Exception getting file URL:', error);
-      console.error('💥 [THUMBNAIL URL DEBUG] Error details:', {
-        name: error.name,
-        message: error.message,
-        bucket: bucket,
-        path: path
-      });
+      console.error('💥 [THUMBNAIL URL DEBUG] Exception for path:', path, error.message);
       return null;
     }
   }
