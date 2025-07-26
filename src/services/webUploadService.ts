@@ -329,14 +329,70 @@ class WebUploadService {
       console.log('🎬 [CLIENT THUMBNAIL DEBUG] Starting client-side thumbnail generation...');
       
       try {
+        console.log('🔍 [CLIENT THUMBNAIL DEBUG] Starting detailed thumbnail generation process...');
+        console.log('📊 [CLIENT THUMBNAIL DEBUG] Asset details:', {
+          uri: asset.uri?.substring(0, 100) + '...',
+          filename: asset.filename,
+          fileSize: asset.fileSize,
+          duration: asset.duration,
+          uriType: typeof asset.uri,
+          uriValid: asset.uri?.startsWith('blob:')
+        });
+        
+        // Test blob URL accessibility before frame extraction
+        console.log('🌐 [CLIENT THUMBNAIL DEBUG] Testing blob URL accessibility...');
+        try {
+          const testResponse = await fetch(asset.uri, { method: 'HEAD' });
+          console.log('✅ [CLIENT THUMBNAIL DEBUG] Blob URL test result:', {
+            status: testResponse.status,
+            ok: testResponse.ok,
+            headers: Object.fromEntries(testResponse.headers.entries())
+          });
+          
+          if (!testResponse.ok) {
+            throw new Error(`Blob URL not accessible: ${testResponse.status} ${testResponse.statusText}`);
+          }
+        } catch (fetchError) {
+          console.error('❌ [CLIENT THUMBNAIL DEBUG] Blob URL accessibility test failed:', fetchError);
+          throw new Error(`Blob URL fetch failed: ${fetchError.message}`);
+        }
+        
         // Generate standard thumbnails from video frames
+        console.log('🎬 [CLIENT THUMBNAIL DEBUG] Blob URL accessible, starting frame extraction...');
+        const startTime = Date.now();
         const thumbnails = await generateStandardThumbnails(asset.uri);
+        const extractionTime = Date.now() - startTime;
+        
+        console.log('📊 [CLIENT THUMBNAIL DEBUG] Frame extraction completed:', {
+          thumbnailCount: thumbnails.length,
+          extractionTimeMs: extractionTime,
+          positions: thumbnails.map(t => t.position)
+        });
         
         if (thumbnails.length > 0) {
           console.log(`✅ [CLIENT THUMBNAIL DEBUG] Generated ${thumbnails.length} real thumbnails`);
           
+          // Log thumbnail details
+          thumbnails.forEach((thumb, index) => {
+            console.log(`🖼️ [CLIENT THUMBNAIL DEBUG] Thumbnail ${index + 1}:`, {
+              position: thumb.position,
+              positionPercent: thumb.positionPercent,
+              blobSize: thumb.frameData.blob.size,
+              width: thumb.frameData.width,
+              height: thumb.frameData.height
+            });
+          });
+          
           // Upload real thumbnails to server
+          const uploadStartTime = Date.now();
           const thumbnailResult = await this.uploadRealThumbnails(videoId, userId, thumbnails);
+          const uploadTime = Date.now() - uploadStartTime;
+          
+          console.log('📤 [CLIENT THUMBNAIL DEBUG] Thumbnail upload completed:', {
+            success: thumbnailResult.success,
+            uploadTimeMs: uploadTime,
+            error: thumbnailResult.error
+          });
           
           if (thumbnailResult.success) {
             console.log('✅ [CLIENT THUMBNAIL DEBUG] Real thumbnails uploaded successfully');
@@ -349,11 +405,35 @@ class WebUploadService {
           }
         } else {
           console.warn('⚠️ [CLIENT THUMBNAIL DEBUG] No thumbnails generated, using server fallback');
+          console.log('🔍 [CLIENT THUMBNAIL DEBUG] Empty result analysis:', {
+            assetUri: asset.uri?.substring(0, 50) + '...',
+            assetDuration: asset.duration,
+            extractionTime: extractionTime
+          });
           // Fallback to server-side placeholder generation
           await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
         }
       } catch (error) {
         console.error('❌ [CLIENT THUMBNAIL DEBUG] Exception during client thumbnail generation:', error);
+        console.error('❌ [CLIENT THUMBNAIL DEBUG] Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 500) + '...',
+          errorType: typeof error,
+          assetUri: asset.uri?.substring(0, 50) + '...'
+        });
+        
+        // Add specific error analysis
+        if (error.message?.includes('blob')) {
+          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Blob URL related error detected');
+        } else if (error.message?.includes('canvas')) {
+          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Canvas related error detected');
+        } else if (error.message?.includes('video')) {
+          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Video element related error detected');
+        } else if (error.message?.includes('timeout')) {
+          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Timeout related error detected');
+        }
+        
         // Fallback to server-side placeholder generation
         await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
       }

@@ -271,55 +271,97 @@ export async function generateStandardThumbnails(
   frameData: FrameCaptureResult;
 }>> {
   console.log('🎬 [THUMBNAIL GENERATION] Starting standard thumbnail generation');
+  console.log('🔍 [THUMBNAIL GENERATION] Input details:', {
+    videoUrl: videoUrl?.substring(0, 100) + '...',
+    urlType: typeof videoUrl,
+    isBlob: videoUrl?.startsWith('blob:'),
+    optionsProvided: Object.keys(options)
+  });
   
-  // First, we need to get the video duration
-  const videoDuration = await getVideoDuration(videoUrl);
-  console.log('📊 [THUMBNAIL GENERATION] Video duration:', videoDuration);
-  
-  // Calculate time positions for each thumbnail
-  const positions = [
-    { percent: 0, label: '0pct' },
-    { percent: 0.25, label: '25pct' },
-    { percent: 0.5, label: '50pct' }, 
-    { percent: 0.75, label: '75pct' }
-  ];
-  
-  const timePositions = positions.map(pos => pos.percent * videoDuration);
-  console.log('⏰ [THUMBNAIL GENERATION] Time positions:', timePositions);
-  
-  const thumbnails = [];
-  
-  for (let i = 0; i < positions.length; i++) {
-    const position = positions[i];
-    const timeSeconds = timePositions[i];
+  try {
+    // First, we need to get the video duration
+    console.log('⏱️ [THUMBNAIL GENERATION] Getting video duration...');
+    const videoDuration = await getVideoDuration(videoUrl);
+    console.log('📊 [THUMBNAIL GENERATION] Video duration obtained:', videoDuration);
     
-    try {
-      console.log(`🖼️ [THUMBNAIL GENERATION] Capturing ${position.label} (${timeSeconds.toFixed(2)}s)`);
-      
-      const frameData = await captureVideoFrame(videoUrl, timeSeconds, {
-        width: 400,
-        height: 225, // 16:9 aspect ratio for thumbnails
-        quality: 0.8,
-        format: 'jpeg',
-        ...options
-      });
-      
-      thumbnails.push({
-        position: position.label,
-        positionPercent: position.percent,
-        frameData
-      });
-      
-      console.log(`✅ [THUMBNAIL GENERATION] Successfully captured ${position.label}`);
-      
-    } catch (error) {
-      console.error(`❌ [THUMBNAIL GENERATION] Failed to capture ${position.label}:`, error);
-      // Continue with other thumbnails even if one fails
+    if (!videoDuration || videoDuration <= 0) {
+      throw new Error(`Invalid video duration: ${videoDuration}`);
     }
+    
+    // Calculate time positions for each thumbnail
+    const positions = [
+      { percent: 0, label: '0pct' },
+      { percent: 0.25, label: '25pct' },
+      { percent: 0.5, label: '50pct' }, 
+      { percent: 0.75, label: '75pct' }
+    ];
+    
+    const timePositions = positions.map(pos => pos.percent * videoDuration);
+    console.log('⏰ [THUMBNAIL GENERATION] Time positions calculated:', timePositions);
+    
+    const thumbnails = [];
+    
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+      const timeSeconds = timePositions[i];
+      
+      try {
+        console.log(`🖼️ [THUMBNAIL GENERATION] Capturing ${position.label} (${timeSeconds.toFixed(2)}s)`);
+        const captureStartTime = Date.now();
+        
+        const frameData = await captureVideoFrame(videoUrl, timeSeconds, {
+          width: 400,
+          height: 225, // 16:9 aspect ratio for thumbnails
+          quality: 0.8,
+          format: 'jpeg',
+          ...options
+        });
+        
+        const captureTime = Date.now() - captureStartTime;
+        
+        thumbnails.push({
+          position: position.label,
+          positionPercent: position.percent,
+          frameData
+        });
+        
+        console.log(`✅ [THUMBNAIL GENERATION] Successfully captured ${position.label}`, {
+          captureTimeMs: captureTime,
+          blobSize: frameData.blob.size,
+          dimensions: `${frameData.width}x${frameData.height}`
+        });
+        
+      } catch (error) {
+        console.error(`❌ [THUMBNAIL GENERATION] Failed to capture ${position.label}:`, error);
+        console.error(`❌ [THUMBNAIL GENERATION] Frame capture error details:`, {
+          position: position.label,
+          timeSeconds: timeSeconds,
+          errorName: error.name,
+          errorMessage: error.message,
+          videoUrl: videoUrl?.substring(0, 50) + '...'
+        });
+        // Continue with other thumbnails even if one fails
+      }
+    }
+    
+    console.log(`🎉 [THUMBNAIL GENERATION] Generated ${thumbnails.length}/4 thumbnails`);
+    
+    if (thumbnails.length === 0) {
+      throw new Error('No thumbnails were generated successfully');
+    }
+    
+    return thumbnails;
+    
+  } catch (error) {
+    console.error('💥 [THUMBNAIL GENERATION] Exception in generateStandardThumbnails:', error);
+    console.error('💥 [THUMBNAIL GENERATION] Exception details:', {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack?.substring(0, 300) + '...',
+      videoUrl: videoUrl?.substring(0, 50) + '...'
+    });
+    throw error; // Re-throw to be caught by upload service
   }
-  
-  console.log(`🎉 [THUMBNAIL GENERATION] Generated ${thumbnails.length}/4 thumbnails`);
-  return thumbnails;
 }
 
 /**
@@ -328,35 +370,75 @@ export async function generateStandardThumbnails(
  * @returns Promise that resolves to video duration in seconds
  */
 async function getVideoDuration(videoUrl: string): Promise<number> {
+  console.log('⏱️ [DURATION DEBUG] Starting video duration detection...');
+  
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
+    video.crossOrigin = 'anonymous';
     
+    console.log('🎥 [DURATION DEBUG] Created video element, setting up timeout...');
     const timeout = setTimeout(() => {
+      console.error('⏰ [DURATION DEBUG] Timeout (10s) getting video duration');
       video.remove();
-      reject(new Error('Timeout getting video duration'));
+      reject(new Error('Timeout getting video duration after 10 seconds'));
     }, 10000);
     
     video.addEventListener('loadedmetadata', () => {
+      console.log('📊 [DURATION DEBUG] Video metadata loaded');
       clearTimeout(timeout);
       const duration = video.duration;
+      
+      console.log('⏱️ [DURATION DEBUG] Duration detected:', {
+        duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        readyState: video.readyState
+      });
+      
       video.remove();
       
-      if (!duration || duration === 0) {
-        reject(new Error('Invalid video duration'));
+      if (!duration || duration === 0 || !isFinite(duration)) {
+        console.error('❌ [DURATION DEBUG] Invalid duration detected:', duration);
+        reject(new Error(`Invalid video duration: ${duration}`));
       } else {
+        console.log('✅ [DURATION DEBUG] Valid duration obtained:', duration);
         resolve(duration);
       }
     });
     
     video.addEventListener('error', (error) => {
+      console.error('❌ [DURATION DEBUG] Video error during duration detection:', error);
+      console.error('❌ [DURATION DEBUG] Video error details:', {
+        errorCode: video.error?.code,
+        errorMessage: video.error?.message,
+        networkState: video.networkState,
+        readyState: video.readyState
+      });
+      
       clearTimeout(timeout);
       video.remove();
-      reject(new Error('Failed to load video for duration check'));
+      reject(new Error(`Failed to load video for duration check: ${video.error?.message || 'Unknown error'}`));
     });
     
-    video.src = videoUrl;
-    video.load();
+    video.addEventListener('loadstart', () => {
+      console.log('📥 [DURATION DEBUG] Video loading started');
+    });
+    
+    video.addEventListener('progress', () => {
+      console.log('📊 [DURATION DEBUG] Video loading progress...');
+    });
+    
+    console.log('🔗 [DURATION DEBUG] Setting video src and starting load...');
+    try {
+      video.src = videoUrl;
+      video.load();
+    } catch (error) {
+      console.error('❌ [DURATION DEBUG] Exception setting video src:', error);
+      clearTimeout(timeout);
+      video.remove();
+      reject(new Error(`Failed to set video source: ${error.message}`));
+    }
   });
 }
