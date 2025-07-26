@@ -37,11 +37,28 @@ class VideoService {
       }
 
       // Add thumbnail URLs
+      console.log('🎬 [VIDEO SERVICE DEBUG] Processing thumbnail URLs for', data.length, 'videos');
+      
       const videosWithThumbnails = await Promise.all(
-        data.map(async (video) => {
+        data.map(async (video, index) => {
+          console.log(`🖼️ [VIDEO SERVICE DEBUG] Processing video ${index + 1}/${data.length}:`, {
+            videoId: video.id,
+            title: video.title,
+            status: video.status,
+            thumbnail_path: video.thumbnail_path,
+            hasThumbnailPath: !!video.thumbnail_path
+          });
+          
           const thumbnailUrl = video.thumbnail_path 
             ? await this.getFileUrl('thumbnails', video.thumbnail_path)
             : undefined;
+
+          console.log(`🔍 [VIDEO SERVICE DEBUG] Thumbnail URL result for video ${video.id}:`, {
+            thumbnail_path: video.thumbnail_path,
+            thumbnailUrl: thumbnailUrl,
+            urlLength: thumbnailUrl?.length || 0,
+            urlPreview: thumbnailUrl?.substring(0, 100) + (thumbnailUrl?.length > 100 ? '...' : '')
+          });
 
           return {
             ...video,
@@ -52,6 +69,19 @@ class VideoService {
 
       // Cache the results for offline use
       setOfflineData(cacheKey, videosWithThumbnails);
+
+      console.log('🎉 [VIDEO SERVICE DEBUG] Final videos with thumbnails:', {
+        totalVideos: videosWithThumbnails.length,
+        videosWithThumbnails: videosWithThumbnails.filter(v => v.thumbnailUrl).length,
+        videosWithoutThumbnails: videosWithThumbnails.filter(v => !v.thumbnailUrl).length,
+        summary: videosWithThumbnails.map(v => ({
+          id: v.id,
+          title: v.title.substring(0, 20) + '...',
+          status: v.status,
+          hasThumbnailPath: !!v.thumbnail_path,
+          hasThumbnailUrl: !!v.thumbnailUrl
+        }))
+      });
 
       return videosWithThumbnails;
     } catch (error) {
@@ -87,20 +117,93 @@ class VideoService {
   // Legacy public URL method (for thumbnails if needed)
   async getFileUrl(bucket: string, path: string): Promise<string | null> {
     try {
-      console.log('🪣 Getting public URL from bucket:', bucket, 'path:', path);
+      console.log('🔍 [THUMBNAIL URL DEBUG] Getting public URL from bucket:', bucket, 'path:', path);
+      
+      // First, check if the file exists in storage
+      console.log('🔍 [THUMBNAIL URL DEBUG] Checking if file exists in storage...');
+      const { data: listData, error: listError } = await supabase.storage
+        .from(bucket)
+        .list(path.split('/').slice(0, -1).join('/') || '', {
+          search: path.split('/').pop()
+        });
+      
+      console.log('🔍 [THUMBNAIL URL DEBUG] File existence check:', {
+        searchPath: path.split('/').slice(0, -1).join('/') || '',
+        searchFile: path.split('/').pop(),
+        filesFound: listData?.length || 0,
+        files: listData?.map(f => f.name) || [],
+        listError: listError
+      });
+      
+      if (listError) {
+        console.error('❌ [THUMBNAIL URL DEBUG] Error checking file existence:', listError);
+      }
+      
+      if (!listData || listData.length === 0) {
+        console.error('❌ [THUMBNAIL URL DEBUG] File not found in storage:', path);
+        // Try to list the directory to see what files are there
+        const directoryPath = path.split('/').slice(0, -1).join('/');
+        const { data: dirData } = await supabase.storage
+          .from(bucket)
+          .list(directoryPath || '');
+        console.log('🔍 [THUMBNAIL URL DEBUG] Directory contents:', {
+          directory: directoryPath,
+          files: dirData?.map(f => f.name) || []
+        });
+        return null;
+      }
+      
+      console.log('✅ [THUMBNAIL URL DEBUG] File exists, generating public URL...');
       
       const { data } = supabase.storage
         .from(bucket)
         .getPublicUrl(path);
 
-      console.log('Supabase getPublicUrl response:', {
+      console.log('🔍 [THUMBNAIL URL DEBUG] Supabase getPublicUrl response:', {
         publicUrl: data.publicUrl,
-        fullPath: data.fullPath
+        fullPath: data.fullPath,
+        urlLength: data.publicUrl?.length || 0
       });
+      
+      // Test if the URL is actually accessible
+      if (data.publicUrl) {
+        console.log('🌐 [THUMBNAIL URL DEBUG] Testing URL accessibility...');
+        try {
+          const testResponse = await fetch(data.publicUrl, { method: 'HEAD' });
+          console.log('🔍 [THUMBNAIL URL DEBUG] URL accessibility test:', {
+            status: testResponse.status,
+            ok: testResponse.ok,
+            statusText: testResponse.statusText,
+            contentType: testResponse.headers.get('content-type'),
+            contentLength: testResponse.headers.get('content-length')
+          });
+          
+          if (!testResponse.ok) {
+            console.error('❌ [THUMBNAIL URL DEBUG] URL not accessible:', {
+              status: testResponse.status,
+              statusText: testResponse.statusText,
+              url: data.publicUrl.substring(0, 100) + '...'
+            });
+            return null;
+          }
+          
+          console.log('✅ [THUMBNAIL URL DEBUG] URL is accessible, returning public URL');
+        } catch (fetchError) {
+          console.error('❌ [THUMBNAIL URL DEBUG] URL fetch test failed:', fetchError);
+          console.error('❌ [THUMBNAIL URL DEBUG] This might be a CORS or permissions issue');
+          // Return URL anyway, the fetch test might fail due to CORS but the image might still work
+        }
+      }
 
       return data.publicUrl;
     } catch (error) {
-      console.error('Error getting file URL:', error);
+      console.error('💥 [THUMBNAIL URL DEBUG] Exception getting file URL:', error);
+      console.error('💥 [THUMBNAIL URL DEBUG] Error details:', {
+        name: error.name,
+        message: error.message,
+        bucket: bucket,
+        path: path
+      });
       return null;
     }
   }
