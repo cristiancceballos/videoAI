@@ -18,6 +18,48 @@ export interface FrameCaptureResult {
 }
 
 /**
+ * Converts blob URL to data URL for better React Native Web compatibility
+ * @param blobUrl - Blob URL to convert
+ * @returns Promise that resolves to data URL
+ */
+async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
+  try {
+    console.log('🔄 [BLOB CONVERSION DEBUG] Converting blob URL to data URL...');
+    
+    const response = await fetch(blobUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob: ${response.status} ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    console.log('📊 [BLOB CONVERSION DEBUG] Blob details:', {
+      size: blob.size,
+      type: blob.type
+    });
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        console.log('✅ [BLOB CONVERSION DEBUG] Successfully converted to data URL:', {
+          dataUrlLength: dataUrl.length,
+          dataUrlPrefix: dataUrl.substring(0, 50) + '...'
+        });
+        resolve(dataUrl);
+      };
+      reader.onerror = () => {
+        console.error('❌ [BLOB CONVERSION DEBUG] FileReader error:', reader.error);
+        reject(new Error('Failed to convert blob to data URL'));
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('❌ [BLOB CONVERSION DEBUG] Exception during blob conversion:', error);
+    throw error;
+  }
+}
+
+/**
  * Captures a frame from a video at a specific time
  * @param videoUrl - URL of the video to capture from
  * @param timeSeconds - Time position in seconds to capture
@@ -36,6 +78,20 @@ export async function captureVideoFrame(
     format = 'jpeg'
   } = options;
 
+  // Convert blob URL to data URL if needed for React Native Web compatibility
+  let processedVideoUrl = videoUrl;
+  if (videoUrl.startsWith('blob:')) {
+    console.log('🔄 [FRAME CAPTURE DEBUG] Detected blob URL, converting to data URL for React Native Web compatibility');
+    try {
+      processedVideoUrl = await blobUrlToDataUrl(videoUrl);
+      console.log('✅ [FRAME CAPTURE DEBUG] Successfully converted blob URL to data URL');
+    } catch (error) {
+      console.error('❌ [FRAME CAPTURE DEBUG] Failed to convert blob URL:', error);
+      // Continue with original blob URL as fallback
+      console.log('🔄 [FRAME CAPTURE DEBUG] Continuing with original blob URL as fallback');
+    }
+  }
+
   return new Promise((resolve, reject) => {
     // Set up timeout for the entire operation (15 seconds)
     const operationTimeout = setTimeout(() => {
@@ -43,6 +99,7 @@ export async function captureVideoFrame(
       video.remove();
       reject(new Error('Frame capture timed out. Please try again.'));
     }, 15000);
+    
     // Create video element
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -54,6 +111,7 @@ export async function captureVideoFrame(
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
+      clearTimeout(operationTimeout);
       reject(new Error('Could not get canvas 2D context'));
       return;
     }
@@ -64,7 +122,12 @@ export async function captureVideoFrame(
 
     // Handle video load and seek
     const handleLoadedMetadata = () => {
-      console.log('📹 Video metadata loaded, duration:', video.duration);
+      console.log('📹 [FRAME CAPTURE DEBUG] Video metadata loaded:', {
+        duration: video.duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        readyState: video.readyState
+      });
       
       if (!video.duration || video.duration === 0) {
         clearTimeout(operationTimeout);
@@ -75,12 +138,12 @@ export async function captureVideoFrame(
       
       // Ensure time is within video bounds
       const clampedTime = Math.max(0, Math.min(timeSeconds, video.duration));
-      console.log('🎯 Setting video time to:', clampedTime);
+      console.log('🎯 [FRAME CAPTURE DEBUG] Setting video time to:', clampedTime);
       video.currentTime = clampedTime;
     };
 
     const handleSeeked = () => {
-      console.log('🎯 Video seeked to time:', video.currentTime);
+      console.log('🎯 [FRAME CAPTURE DEBUG] Video seeked to time:', video.currentTime);
       
       try {
         // Verify video dimensions
@@ -91,7 +154,7 @@ export async function captureVideoFrame(
           return;
         }
         
-        console.log('🖼️ Drawing video frame:', {
+        console.log('🖼️ [FRAME CAPTURE DEBUG] Drawing video frame:', {
           videoWidth: video.videoWidth,
           videoHeight: video.videoHeight,
           canvasWidth: width,
@@ -115,10 +178,12 @@ export async function captureVideoFrame(
             // Also create data URL for preview
             const dataUrl = canvas.toDataURL(`image/${format}`, quality);
             
-            console.log('✅ Frame captured successfully:', {
+            console.log('✅ [FRAME CAPTURE DEBUG] Frame captured successfully:', {
               blobSize: blob.size,
               format,
-              quality
+              quality,
+              canvasWidth: width,
+              canvasHeight: height
             });
 
             resolve({
@@ -144,7 +209,8 @@ export async function captureVideoFrame(
     const handleError = (error: any) => {
       clearTimeout(operationTimeout);
       console.error('❌ [FRAME CAPTURE DEBUG] Video load error:', error);
-      console.error('❌ [FRAME CAPTURE DEBUG] Video URL:', videoUrl?.substring(0, 100) + '...');
+      console.error('❌ [FRAME CAPTURE DEBUG] Video URL type:', processedVideoUrl.startsWith('data:') ? 'data URL' : processedVideoUrl.startsWith('blob:') ? 'blob URL' : 'other');
+      console.error('❌ [FRAME CAPTURE DEBUG] Video URL prefix:', processedVideoUrl?.substring(0, 100) + '...');
       
       if (error.target?.error) {
         console.error('❌ [FRAME CAPTURE DEBUG] Media error code:', error.target.error.code);
@@ -168,9 +234,12 @@ export async function captureVideoFrame(
       } else if (error.target?.error?.code === 1) {
         errorMessage = 'Video loading was aborted. Please try again.';
         console.error('❌ [FRAME CAPTURE DEBUG] MEDIA_ELEMENT_ERROR: Aborted');
-      } else if (videoUrl?.startsWith('blob:')) {
+      } else if (processedVideoUrl?.startsWith('blob:')) {
         errorMessage = 'Video blob URL is no longer valid. Please try uploading the video again.';
         console.error('❌ [FRAME CAPTURE DEBUG] Blob URL may have been revoked prematurely');
+      } else if (processedVideoUrl?.startsWith('data:')) {
+        errorMessage = 'Failed to process video data. The video file may be corrupted.';
+        console.error('❌ [FRAME CAPTURE DEBUG] Data URL processing failed');
       }
       
       reject(new Error(errorMessage));
@@ -181,11 +250,28 @@ export async function captureVideoFrame(
     video.addEventListener('seeked', handleSeeked);
     video.addEventListener('error', handleError);
 
+    // Additional event listeners for debugging
+    video.addEventListener('loadstart', () => {
+      console.log('📥 [FRAME CAPTURE DEBUG] Video load started');
+    });
+    
+    video.addEventListener('loadeddata', () => {
+      console.log('📊 [FRAME CAPTURE DEBUG] Video data loaded');
+    });
+    
+    video.addEventListener('canplay', () => {
+      console.log('🎬 [FRAME CAPTURE DEBUG] Video can start playing');
+    });
+
     // Start loading video
-    console.log('📥 Loading video for frame capture:', videoUrl.substring(0, 50) + '...');
+    console.log('📥 [FRAME CAPTURE DEBUG] Loading video for frame capture:', {
+      urlType: processedVideoUrl.startsWith('data:') ? 'data URL' : processedVideoUrl.startsWith('blob:') ? 'blob URL' : 'other',
+      urlPrefix: processedVideoUrl.substring(0, 50) + '...',
+      targetTime: timeSeconds
+    });
     
     try {
-      video.src = videoUrl;
+      video.src = processedVideoUrl;
       video.load();
     } catch (error) {
       clearTimeout(operationTimeout);
