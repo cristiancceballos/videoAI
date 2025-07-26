@@ -107,12 +107,12 @@ class VideoService {
     }
   }
 
-  // Legacy public URL method (for thumbnails if needed)
+  // Generate signed URL for reliable thumbnail access
   async getFileUrl(bucket: string, path: string): Promise<string | null> {
     try {
-      console.log('🔍 [THUMBNAIL URL DEBUG] Looking for file:', path);
+      console.log('🔍 [SIGNED URL DEBUG] Generating signed URL for file:', path);
       
-      // Check if the file exists in storage
+      // First, verify the file exists in storage
       const { data: listData, error: listError } = await supabase.storage
         .from(bucket)
         .list(path.split('/').slice(0, -1).join('/') || '', {
@@ -120,43 +120,49 @@ class VideoService {
         });
       
       if (listError || !listData || listData.length === 0) {
-        console.error('❌ [THUMBNAIL URL DEBUG] File not found:', path);
-        
-        // Show directory contents to help debug
-        const directoryPath = path.split('/').slice(0, -1).join('/');
-        const { data: dirData } = await supabase.storage
-          .from(bucket)
-          .list(directoryPath || '');
-        console.log('📂 [THUMBNAIL URL DEBUG] Directory contents:', {
-          searchedFor: path,
-          directory: directoryPath || '(root)',
-          actualFiles: dirData?.map(f => f.name) || []
-        });
+        console.error('❌ [SIGNED URL DEBUG] File not found:', path);
         return null;
       }
       
-      const { data } = supabase.storage
+      console.log('✅ [SIGNED URL DEBUG] File exists, generating signed URL...');
+      
+      // Generate signed URL (valid for 1 hour)
+      const { data, error } = await supabase.storage
         .from(bucket)
-        .getPublicUrl(path);
-
-      // Quick accessibility test
-      if (data.publicUrl) {
-        try {
-          const testResponse = await fetch(data.publicUrl, { method: 'HEAD' });
-          if (!testResponse.ok) {
-            console.error('❌ [THUMBNAIL URL DEBUG] URL returns', testResponse.status, 'for:', path);
-            return null;
-          }
-          console.log('✅ [THUMBNAIL URL DEBUG] URL accessible for:', path);
-        } catch (fetchError) {
-          console.warn('⚠️ [THUMBNAIL URL DEBUG] URL test failed (might be CORS):', path);
-          // Return URL anyway, CORS might block HEAD but image might still work
+        .createSignedUrl(path, 3600); // 1 hour expiry
+      
+      if (error) {
+        console.error('❌ [SIGNED URL DEBUG] Error generating signed URL:', error);
+        return null;
+      }
+      
+      if (!data?.signedUrl) {
+        console.error('❌ [SIGNED URL DEBUG] No signed URL returned');
+        return null;
+      }
+      
+      console.log('✅ [SIGNED URL DEBUG] Signed URL generated successfully for:', path);
+      
+      // Quick test of the signed URL
+      try {
+        const testResponse = await fetch(data.signedUrl, { method: 'HEAD' });
+        if (!testResponse.ok) {
+          console.warn('⚠️ [SIGNED URL DEBUG] Signed URL test returned:', testResponse.status);
+        } else {
+          console.log('✅ [SIGNED URL DEBUG] Signed URL accessible:', testResponse.status);
         }
+      } catch (testError) {
+        console.warn('⚠️ [SIGNED URL DEBUG] URL test failed (might be CORS):', testError.message);
+        // Continue anyway - CORS might block HEAD but image should still work
       }
 
-      return data.publicUrl;
+      return data.signedUrl;
     } catch (error) {
-      console.error('💥 [THUMBNAIL URL DEBUG] Exception for path:', path, error.message);
+      console.error('💥 [SIGNED URL DEBUG] Exception generating signed URL:', {
+        path: path,
+        bucket: bucket,
+        error: error.message
+      });
       return null;
     }
   }
