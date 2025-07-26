@@ -61,7 +61,7 @@ export function UploadScreen() {
   };
 
 
-  const handleUploadAsset = async (title: string, thumbnailData?: any, thumbnailOption?: 'first' | 'custom' | 'none') => {
+  const handleUploadAsset = async (title: string, thumbnailData?: any, thumbnailOption?: 'first' | 'custom' | 'none' | 'server') => {
     if (!selectedAsset || !user) return;
 
     setUploading(true);
@@ -71,9 +71,6 @@ export function UploadScreen() {
     try {
       console.log('📤 Upload starting with thumbnail option:', thumbnailOption);
       
-      // Determine if we should generate first frame thumbnail
-      const generateFirstFrame = thumbnailOption === 'first';
-      
       const result = await webUploadService.uploadWebVideo(
         selectedAsset,
         user.id,
@@ -82,7 +79,7 @@ export function UploadScreen() {
           setUploadProgress(progress);
         },
         thumbnailData,
-        generateFirstFrame
+        thumbnailOption || 'server'
       );
 
       setUploading(false);

@@ -277,7 +277,7 @@ class WebUploadService {
     title: string,
     onProgress?: (progress: UploadProgress) => void,
     thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null,
-    generateFirstFrame: boolean = false
+    thumbnailOption: string = 'server'
   ): Promise<UploadResult> {
     try {
       // 1. Validate video file
@@ -321,26 +321,26 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Handle thumbnail generation
-      let thumbnailPath: string | null = null;
+      // 5. Trigger server-side thumbnail generation
+      console.log('🖼️ [SERVER THUMBNAIL DEBUG] Triggering server-side thumbnail generation...');
       
-      if (generateFirstFrame) {
-        console.log('🖼️ Generating first frame thumbnail...');
-        thumbnailPath = await this.generateFirstFrameThumbnail(asset.uri, userId, videoId);
-        if (!thumbnailPath) {
-          console.warn('⚠️ First frame thumbnail generation failed, continuing without thumbnail');
+      try {
+        const thumbnailResult = await this.generateServerThumbnails(videoId, userId, uploadUrl.path);
+        
+        if (thumbnailResult.success) {
+          console.log('✅ [SERVER THUMBNAIL DEBUG] Server thumbnail generation initiated successfully');
+        } else {
+          console.warn('⚠️ [SERVER THUMBNAIL DEBUG] Server thumbnail generation failed:', thumbnailResult.error);
+          // Continue without thumbnails - video is still uploaded successfully
         }
-      } else if (thumbnailData) {
-        console.log('🖼️ Uploading custom thumbnail...');
-        thumbnailPath = await this.uploadCustomThumbnail(thumbnailData, userId, videoId);
-        if (!thumbnailPath) {
-          console.warn('⚠️ Custom thumbnail upload failed, continuing without thumbnail');
-        }
+      } catch (error) {
+        console.error('❌ [SERVER THUMBNAIL DEBUG] Exception during server thumbnail generation:', error);
+        // Continue without thumbnails - video is still uploaded successfully
       }
       
-      // 6. Update status to ready with thumbnail path
-      console.log('🎯 Updating video status to ready...');
-      const statusUpdated = await this.updateVideoStatus(videoId, 'ready', thumbnailPath || undefined);
+      // 6. Update status to ready (thumbnails will be added by Edge Function)
+      console.log('🎯 [DATABASE DEBUG] Updating video status to ready...');
+      const statusUpdated = await this.updateVideoStatus(videoId, 'ready');
       
       if (!statusUpdated) {
         console.error('❌ Failed to update video status to ready');
@@ -504,6 +504,48 @@ class WebUploadService {
     } catch (error) {
       console.error('URL upload error:', error);
       return { success: false, error: 'Failed to process video URL' };
+    }
+  }
+
+  // Generate server-side thumbnails using Supabase Edge Function
+  async generateServerThumbnails(
+    videoId: string, 
+    userId: string, 
+    storagePath: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🚀 [EDGE FUNCTION DEBUG] Calling generate-thumbnails Edge Function...');
+      console.log('📋 [EDGE FUNCTION DEBUG] Parameters:', { videoId, userId, storagePath });
+
+      const { data, error } = await supabase.functions.invoke('generate-thumbnails', {
+        body: {
+          videoId,
+          userId,
+          storagePath
+        }
+      });
+
+      if (error) {
+        console.error('❌ [EDGE FUNCTION DEBUG] Edge Function error:', error);
+        return { success: false, error: error.message || 'Edge Function failed' };
+      }
+
+      if (!data || !data.success) {
+        console.error('❌ [EDGE FUNCTION DEBUG] Edge Function returned unsuccessful result:', data);
+        return { success: false, error: data?.error || 'Unknown Edge Function error' };
+      }
+
+      console.log('✅ [EDGE FUNCTION DEBUG] Edge Function completed successfully');
+      console.log('🖼️ [EDGE FUNCTION DEBUG] Generated thumbnails:', data.thumbnails?.length || 0);
+      
+      return { success: true };
+
+    } catch (error) {
+      console.error('💥 [EDGE FUNCTION DEBUG] Exception calling Edge Function:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
     }
   }
 }
