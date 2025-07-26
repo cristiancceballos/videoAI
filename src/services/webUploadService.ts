@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { WebMediaAsset } from './webMediaService';
-import { captureVideoFrame, FrameCaptureResult, generateStandardThumbnails } from '../utils/frameCapture';
+// Client-side frame capture removed - now using server-side FFmpeg extraction
 
 export interface UploadProgress {
   loaded: number;
@@ -268,70 +268,14 @@ class WebUploadService {
     }
   }
 
-  // Generate first frame thumbnail
-  async generateFirstFrameThumbnail(
-    videoUrl: string,
-    userId: string,
-    videoId: string
-  ): Promise<string | null> {
-    try {
-      console.log('🖼️ Generating first frame thumbnail for video:', videoId);
-      
-      // Capture first frame (at time 0)
-      const frameData = await captureVideoFrame(videoUrl, 0, {
-        width: 400,
-        height: 225, // 16:9 aspect ratio
-        quality: 0.8,
-        format: 'jpeg'
-      });
-      
-      // Generate thumbnail filename
-      const thumbnailFilename = `${videoId}_thumbnail.jpg`;
-      
-      // Generate presigned URL for thumbnail upload
-      const uploadUrl = await this.generatePresignedUrl(userId, thumbnailFilename, 'thumbnails');
-      if (!uploadUrl) {
-        console.error('❌ Failed to generate presigned URL for thumbnail');
-        return null;
-      }
-      
-      // Upload thumbnail blob
-      const xhr = new XMLHttpRequest();
-      const uploadPromise = new Promise<boolean>((resolve) => {
-        xhr.onload = () => resolve(xhr.status === 200);
-        xhr.onerror = () => resolve(false);
-        xhr.open('PUT', uploadUrl.url);
-        xhr.setRequestHeader('Content-Type', 'image/jpeg');
-        xhr.send(frameData.blob);
-      });
-      
-      const uploadSuccess = await uploadPromise;
-      if (!uploadSuccess) {
-        console.error('❌ Failed to upload thumbnail to storage');
-        return null;
-      }
-      
-      console.log('🎉 [FIRST FRAME DEBUG] First frame thumbnail generated and uploaded successfully!');
-      console.log('📍 [FIRST FRAME DEBUG] Final thumbnail path:', uploadUrl.path);
-      return uploadUrl.path;
-    } catch (error) {
-      console.error('💥 [FIRST FRAME DEBUG] Failed to generate first frame thumbnail:', error);
-      if (error instanceof Error) {
-        console.error('💥 [FIRST FRAME DEBUG] Error message:', error.message);
-        console.error('💥 [FIRST FRAME DEBUG] Error stack:', error.stack);
-      }
-      return null;
-    }
-  }
+  // First frame thumbnail generation moved to server-side FFmpeg
 
   // Upload device video (complete flow for web)
   async uploadWebVideo(
     asset: WebMediaAsset,
     userId: string,
     title: string,
-    onProgress?: (progress: UploadProgress) => void,
-    thumbnailData?: { frameData: FrameCaptureResult; timeSeconds: number } | null,
-    thumbnailOption: string = 'server'
+    onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadResult> {
     try {
       // 1. Validate video file
@@ -379,159 +323,40 @@ class WebUploadService {
       console.log('🎯 [DATABASE DEBUG] Setting video status to processing...');
       await this.updateVideoStatus(videoId, 'processing');
       
-      // 6. Generate real video thumbnails on client-side
-      console.log('🎬 [CLIENT THUMBNAIL DEBUG] Starting client-side thumbnail generation...');
+      // 6. Generate real video thumbnails using server-side FFmpeg
+      console.log('🎬 [SERVER THUMBNAIL DEBUG] Starting server-side FFmpeg thumbnail generation...');
       
       try {
-        console.log('🔍 [CLIENT THUMBNAIL DEBUG] Starting detailed thumbnail generation process...');
-        console.log('📊 [CLIENT THUMBNAIL DEBUG] Asset details:', {
-          uri: asset.uri?.substring(0, 100) + '...',
-          filename: asset.filename,
-          fileSize: asset.fileSize,
-          duration: asset.duration,
-          uriType: typeof asset.uri,
-          uriValid: asset.uri?.startsWith('blob:')
-        });
-        
-        // Test blob URL accessibility before frame extraction
-        console.log('🌐 [CLIENT THUMBNAIL DEBUG] Testing blob URL accessibility...');
-        try {
-          const testResponse = await fetch(asset.uri, { method: 'HEAD' });
-          console.log('✅ [CLIENT THUMBNAIL DEBUG] Blob URL test result:', {
-            status: testResponse.status,
-            ok: testResponse.ok,
-            headers: Object.fromEntries(testResponse.headers.entries())
-          });
-          
-          if (!testResponse.ok) {
-            throw new Error(`Blob URL not accessible: ${testResponse.status} ${testResponse.statusText}`);
+        // Call the Edge Function to generate real video thumbnails
+        console.log('📤 [SERVER THUMBNAIL DEBUG] Calling generate-thumbnails Edge Function...');
+        const response = await supabase.functions.invoke('generate-thumbnails', {
+          body: {
+            videoId: videoId,
+            userId: userId,
+            storagePath: uploadUrl.path
           }
-        } catch (fetchError) {
-          console.error('❌ [CLIENT THUMBNAIL DEBUG] Blob URL accessibility test failed:', fetchError);
-          throw new Error(`Blob URL fetch failed: ${fetchError.message}`);
+        });
+
+        if (response.error) {
+          console.error('❌ [SERVER THUMBNAIL DEBUG] Edge Function error:', response.error);
+          throw new Error(`Edge Function failed: ${response.error.message}`);
         }
+
+        console.log('✅ [SERVER THUMBNAIL DEBUG] FFmpeg thumbnail generation completed:', response.data);
         
-        // Generate standard thumbnails from video frames
-        console.log('🎬 [CLIENT THUMBNAIL DEBUG] Blob URL accessible, starting frame extraction...');
-        
-        // Validate and prepare duration
-        const assetDuration = asset.duration;
-        console.log('⏱️ [CLIENT THUMBNAIL DEBUG] Asset duration analysis:', {
-          rawDuration: assetDuration,
-          isNumber: typeof assetDuration === 'number',
-          isFinite: Number.isFinite(assetDuration),
-          isPositive: assetDuration > 0,
-          durationSeconds: assetDuration
-        });
-        
-        const startTime = Date.now();
-        
-        console.log('🎬 [FRAME EXTRACTION DEBUG] About to call generateStandardThumbnails with:', {
-          assetUri: asset.uri?.substring(0, 100) + '...',
-          assetDuration: assetDuration,
-          uriType: typeof asset.uri,
-          isDataUrl: asset.uri?.startsWith('data:'),
-          isBlobUrl: asset.uri?.startsWith('blob:')
-        });
-        
-        let thumbnails;
-        try {
-          thumbnails = await generateStandardThumbnails(asset.uri, assetDuration);
-          console.log('✅ [FRAME EXTRACTION DEBUG] generateStandardThumbnails completed successfully');
-        } catch (extractionError) {
-          console.error('❌ [FRAME EXTRACTION DEBUG] generateStandardThumbnails failed:', extractionError);
-          console.error('❌ [FRAME EXTRACTION DEBUG] Error details:', {
-            name: extractionError.name,
-            message: extractionError.message,
-            stack: extractionError.stack?.substring(0, 500) + '...'
-          });
-          throw extractionError; // Re-throw to trigger fallback
-        }
-        
-        const extractionTime = Date.now() - startTime;
-        
-        console.log('📊 [CLIENT THUMBNAIL DEBUG] Frame extraction completed:', {
-          thumbnailCount: thumbnails.length,
-          extractionTimeMs: extractionTime,
-          positions: thumbnails.map(t => t.position),
-          actualThumbnails: thumbnails.length > 0
-        });
-        
-        if (thumbnails.length > 0) {
-          console.log(`✅ [CLIENT THUMBNAIL DEBUG] Generated ${thumbnails.length} real thumbnails`);
-          
-          // Log thumbnail details
-          thumbnails.forEach((thumb, index) => {
-            console.log(`🖼️ [CLIENT THUMBNAIL DEBUG] Thumbnail ${index + 1}:`, {
-              position: thumb.position,
-              positionPercent: thumb.positionPercent,
-              blobSize: thumb.frameData.blob.size,
-              width: thumb.frameData.width,
-              height: thumb.frameData.height
-            });
-          });
-          
-          // Upload real thumbnails to server
-          const uploadStartTime = Date.now();
-          const thumbnailResult = await this.uploadRealThumbnails(videoId, userId, thumbnails);
-          const uploadTime = Date.now() - uploadStartTime;
-          
-          console.log('📤 [CLIENT THUMBNAIL DEBUG] Thumbnail upload completed:', {
-            success: thumbnailResult.success,
-            uploadTimeMs: uploadTime,
-            error: thumbnailResult.error
-          });
-          
-          if (thumbnailResult.success) {
-            console.log('✅ [CLIENT THUMBNAIL DEBUG] Real thumbnails uploaded successfully');
-            console.log('🔍 [PATH DEBUG] Complete path being stored in database:', {
-              videoId: videoId,
-              firstThumbnailPath: thumbnailResult.firstThumbnailPath,
-              pathLength: thumbnailResult.firstThumbnailPath?.length || 0,
-              pathParts: thumbnailResult.firstThumbnailPath?.split('/') || [],
-              hasFileExtension: thumbnailResult.firstThumbnailPath?.includes('.jpg') || false
-            });
-            
-            // Update video with first thumbnail path and set status to ready
-            await this.updateVideoStatus(videoId, 'ready', thumbnailResult.firstThumbnailPath);
-          } else {
-            console.warn('⚠️ [CLIENT THUMBNAIL DEBUG] Real thumbnail upload failed:', thumbnailResult.error);
-            // Fallback to server-side placeholder generation
-            await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
-          }
+        if (response.data?.success && response.data?.thumbnails?.length > 0) {
+          console.log('🎉 [SERVER THUMBNAIL DEBUG] Real video thumbnails generated successfully!');
+          console.log('📊 [SERVER THUMBNAIL DEBUG] Generated thumbnails:', response.data.thumbnails);
         } else {
-          console.warn('⚠️ [CLIENT THUMBNAIL DEBUG] No thumbnails generated, using server fallback');
-          console.log('🔍 [CLIENT THUMBNAIL DEBUG] Empty result analysis:', {
-            assetUri: asset.uri?.substring(0, 50) + '...',
-            assetDuration: asset.duration,
-            extractionTime: extractionTime
-          });
-          // Fallback to server-side placeholder generation
-          await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
+          console.warn('⚠️ [SERVER THUMBNAIL DEBUG] No thumbnails generated or incomplete response');
         }
+        
       } catch (error) {
-        console.error('❌ [CLIENT THUMBNAIL DEBUG] Exception during client thumbnail generation:', error);
-        console.error('❌ [CLIENT THUMBNAIL DEBUG] Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack?.substring(0, 500) + '...',
-          errorType: typeof error,
-          assetUri: asset.uri?.substring(0, 50) + '...'
-        });
+        console.error('❌ [SERVER THUMBNAIL DEBUG] Failed to generate server-side thumbnails:', error);
         
-        // Add specific error analysis
-        if (error.message?.includes('blob')) {
-          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Blob URL related error detected');
-        } else if (error.message?.includes('canvas')) {
-          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Canvas related error detected');
-        } else if (error.message?.includes('video')) {
-          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Video element related error detected');
-        } else if (error.message?.includes('timeout')) {
-          console.error('🔍 [CLIENT THUMBNAIL DEBUG] Timeout related error detected');
-        }
-        
-        // Fallback to server-side placeholder generation
-        await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
+        // Update video status to ready without thumbnails (better than error state)
+        console.log('🔄 [SERVER THUMBNAIL DEBUG] Setting video status to ready without thumbnails');
+        await this.updateVideoStatus(videoId, 'ready');
       }
       
       console.log('✅ Video fully processed and ready!');
@@ -546,49 +371,7 @@ class WebUploadService {
     }
   }
 
-  // Upload custom thumbnail
-  async uploadCustomThumbnail(
-    thumbnailData: { frameData: FrameCaptureResult; timeSeconds: number },
-    userId: string,
-    videoId: string
-  ): Promise<string | null> {
-    try {
-      console.log('🖼️ Uploading custom thumbnail for video:', videoId, 'at time:', thumbnailData.timeSeconds);
-      
-      // Generate thumbnail filename with timestamp
-      const timestamp = Math.floor(thumbnailData.timeSeconds * 1000);
-      const thumbnailFilename = `${videoId}_custom_${timestamp}.jpg`;
-      
-      // Generate presigned URL for thumbnail upload
-      const uploadUrl = await this.generatePresignedUrl(userId, thumbnailFilename, 'thumbnails');
-      if (!uploadUrl) {
-        console.error('❌ Failed to generate presigned URL for custom thumbnail');
-        return null;
-      }
-      
-      // Upload thumbnail blob
-      const xhr = new XMLHttpRequest();
-      const uploadPromise = new Promise<boolean>((resolve) => {
-        xhr.onload = () => resolve(xhr.status === 200);
-        xhr.onerror = () => resolve(false);
-        xhr.open('PUT', uploadUrl.url);
-        xhr.setRequestHeader('Content-Type', 'image/jpeg');
-        xhr.send(thumbnailData.frameData.blob);
-      });
-      
-      const uploadSuccess = await uploadPromise;
-      if (!uploadSuccess) {
-        console.error('❌ Failed to upload custom thumbnail to storage');
-        return null;
-      }
-      
-      console.log('✅ Custom thumbnail uploaded successfully');
-      return uploadUrl.path;
-    } catch (error) {
-      console.error('❌ Error uploading custom thumbnail:', error);
-      return null;
-    }
-  }
+  // Custom thumbnail upload removed - now handled by server-side FFmpeg
 
   // Validate video file
   private validateVideoFile(asset: WebMediaAsset): { valid: boolean; error?: string } {
