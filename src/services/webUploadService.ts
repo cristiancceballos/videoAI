@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { WebMediaAsset } from './webMediaService';
-import { captureVideoFrame, FrameCaptureResult } from '../utils/frameCapture';
+import { captureVideoFrame, FrameCaptureResult, generateStandardThumbnails } from '../utils/frameCapture';
 
 export interface UploadProgress {
   loaded: number;
@@ -321,28 +321,41 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Update status to processing before triggering thumbnail generation
+      // 5. Update status to processing before thumbnail generation
       console.log('🎯 [DATABASE DEBUG] Setting video status to processing...');
       await this.updateVideoStatus(videoId, 'processing');
       
-      // 6. Trigger server-side thumbnail generation
-      console.log('🖼️ [SERVER THUMBNAIL DEBUG] Triggering server-side thumbnail generation...');
+      // 6. Generate real video thumbnails on client-side
+      console.log('🎬 [CLIENT THUMBNAIL DEBUG] Starting client-side thumbnail generation...');
       
       try {
-        const thumbnailResult = await this.generateServerThumbnails(videoId, userId, uploadUrl.path);
+        // Generate standard thumbnails from video frames
+        const thumbnails = await generateStandardThumbnails(asset.uri);
         
-        if (thumbnailResult.success) {
-          console.log('✅ [SERVER THUMBNAIL DEBUG] Server thumbnail generation completed successfully');
-          // Edge Function will update status to 'ready' and add thumbnail_path
+        if (thumbnails.length > 0) {
+          console.log(`✅ [CLIENT THUMBNAIL DEBUG] Generated ${thumbnails.length} real thumbnails`);
+          
+          // Upload real thumbnails to server
+          const thumbnailResult = await this.uploadRealThumbnails(videoId, userId, thumbnails);
+          
+          if (thumbnailResult.success) {
+            console.log('✅ [CLIENT THUMBNAIL DEBUG] Real thumbnails uploaded successfully');
+            // Update video with first thumbnail path and set status to ready
+            await this.updateVideoStatus(videoId, 'ready', thumbnailResult.firstThumbnailPath);
+          } else {
+            console.warn('⚠️ [CLIENT THUMBNAIL DEBUG] Real thumbnail upload failed:', thumbnailResult.error);
+            // Fallback to server-side placeholder generation
+            await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
+          }
         } else {
-          console.warn('⚠️ [SERVER THUMBNAIL DEBUG] Server thumbnail generation failed:', thumbnailResult.error);
-          // Set status to ready without thumbnails 
-          await this.updateVideoStatus(videoId, 'ready');
+          console.warn('⚠️ [CLIENT THUMBNAIL DEBUG] No thumbnails generated, using server fallback');
+          // Fallback to server-side placeholder generation
+          await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
         }
       } catch (error) {
-        console.error('❌ [SERVER THUMBNAIL DEBUG] Exception during server thumbnail generation:', error);
-        // Set status to ready without thumbnails
-        await this.updateVideoStatus(videoId, 'ready');
+        console.error('❌ [CLIENT THUMBNAIL DEBUG] Exception during client thumbnail generation:', error);
+        // Fallback to server-side placeholder generation
+        await this.fallbackToServerThumbnails(videoId, userId, uploadUrl.path);
       }
       
       console.log('✅ Video fully processed and ready!');
@@ -505,7 +518,96 @@ class WebUploadService {
     }
   }
 
-  // Generate server-side thumbnails using Supabase Edge Function
+  // Upload real thumbnails directly to storage
+  async uploadRealThumbnails(
+    videoId: string,
+    userId: string, 
+    thumbnails: Array<{
+      position: string;
+      positionPercent: number;
+      frameData: FrameCaptureResult;
+    }>
+  ): Promise<{ success: boolean; error?: string; firstThumbnailPath?: string }> {
+    try {
+      console.log('📤 [REAL THUMBNAIL DEBUG] Uploading real thumbnails to storage...');
+      
+      const uploadedThumbnails = [];
+      
+      for (const thumbnail of thumbnails) {
+        const filename = `${videoId}_thumbnail_${thumbnail.position}.jpg`;
+        const uploadUrl = await this.generatePresignedUrl(userId, filename, 'thumbnails');
+        
+        if (!uploadUrl) {
+          console.error(`❌ [REAL THUMBNAIL DEBUG] Failed to generate upload URL for ${filename}`);
+          continue;
+        }
+        
+        console.log(`📤 [REAL THUMBNAIL DEBUG] Uploading ${filename}...`);
+        
+        // Upload real thumbnail image
+        const uploadSuccess = await this.uploadFileWithProgress(
+          new File([thumbnail.frameData.blob], filename, { type: 'image/jpeg' }),
+          uploadUrl.url
+        );
+        
+        if (uploadSuccess) {
+          uploadedThumbnails.push({
+            position: thumbnail.position,
+            path: uploadUrl.path,
+            filename: filename
+          });
+          console.log(`✅ [REAL THUMBNAIL DEBUG] Successfully uploaded ${filename}`);
+        } else {
+          console.error(`❌ [REAL THUMBNAIL DEBUG] Failed to upload ${filename}`);
+        }
+      }
+      
+      if (uploadedThumbnails.length > 0) {
+        console.log(`🎉 [REAL THUMBNAIL DEBUG] Successfully uploaded ${uploadedThumbnails.length} real thumbnails`);
+        return { 
+          success: true, 
+          firstThumbnailPath: uploadedThumbnails[0].path 
+        };
+      } else {
+        return { success: false, error: 'No thumbnails uploaded successfully' };
+      }
+      
+    } catch (error) {
+      console.error('💥 [REAL THUMBNAIL DEBUG] Exception uploading real thumbnails:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Fallback to server-side placeholder generation
+  async fallbackToServerThumbnails(
+    videoId: string,
+    userId: string,
+    storagePath: string
+  ): Promise<void> {
+    console.log('🔄 [FALLBACK DEBUG] Using server-side placeholder generation as fallback...');
+    
+    try {
+      const thumbnailResult = await this.generateServerThumbnails(videoId, userId, storagePath);
+      
+      if (thumbnailResult.success) {
+        console.log('✅ [FALLBACK DEBUG] Server placeholder generation completed successfully');
+        // Edge Function will update status to 'ready' and add thumbnail_path
+      } else {
+        console.warn('⚠️ [FALLBACK DEBUG] Server placeholder generation failed:', thumbnailResult.error);
+        // Set status to ready without thumbnails 
+        await this.updateVideoStatus(videoId, 'ready');
+      }
+    } catch (error) {
+      console.error('❌ [FALLBACK DEBUG] Exception during server placeholder generation:', error);
+      // Set status to ready without thumbnails
+      await this.updateVideoStatus(videoId, 'ready');
+    }
+  }
+
+  // Generate server-side thumbnails using Supabase Edge Function (fallback only)
   async generateServerThumbnails(
     videoId: string, 
     userId: string, 

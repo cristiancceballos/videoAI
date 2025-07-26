@@ -254,3 +254,109 @@ export function isFrameCaptureSupported(): boolean {
     return false;
   }
 }
+
+/**
+ * Generates standard thumbnail set for video upload
+ * Captures frames at 0%, 25%, 50%, 75% of video duration
+ * @param videoUrl - URL of the video to capture from
+ * @param options - Capture options
+ * @returns Promise that resolves to array of thumbnail data with position labels
+ */
+export async function generateStandardThumbnails(
+  videoUrl: string,
+  options: FrameCaptureOptions = {}
+): Promise<Array<{
+  position: string;
+  positionPercent: number;
+  frameData: FrameCaptureResult;
+}>> {
+  console.log('🎬 [THUMBNAIL GENERATION] Starting standard thumbnail generation');
+  
+  // First, we need to get the video duration
+  const videoDuration = await getVideoDuration(videoUrl);
+  console.log('📊 [THUMBNAIL GENERATION] Video duration:', videoDuration);
+  
+  // Calculate time positions for each thumbnail
+  const positions = [
+    { percent: 0, label: '0pct' },
+    { percent: 0.25, label: '25pct' },
+    { percent: 0.5, label: '50pct' }, 
+    { percent: 0.75, label: '75pct' }
+  ];
+  
+  const timePositions = positions.map(pos => pos.percent * videoDuration);
+  console.log('⏰ [THUMBNAIL GENERATION] Time positions:', timePositions);
+  
+  const thumbnails = [];
+  
+  for (let i = 0; i < positions.length; i++) {
+    const position = positions[i];
+    const timeSeconds = timePositions[i];
+    
+    try {
+      console.log(`🖼️ [THUMBNAIL GENERATION] Capturing ${position.label} (${timeSeconds.toFixed(2)}s)`);
+      
+      const frameData = await captureVideoFrame(videoUrl, timeSeconds, {
+        width: 400,
+        height: 225, // 16:9 aspect ratio for thumbnails
+        quality: 0.8,
+        format: 'jpeg',
+        ...options
+      });
+      
+      thumbnails.push({
+        position: position.label,
+        positionPercent: position.percent,
+        frameData
+      });
+      
+      console.log(`✅ [THUMBNAIL GENERATION] Successfully captured ${position.label}`);
+      
+    } catch (error) {
+      console.error(`❌ [THUMBNAIL GENERATION] Failed to capture ${position.label}:`, error);
+      // Continue with other thumbnails even if one fails
+    }
+  }
+  
+  console.log(`🎉 [THUMBNAIL GENERATION] Generated ${thumbnails.length}/4 thumbnails`);
+  return thumbnails;
+}
+
+/**
+ * Gets the duration of a video without loading the full video
+ * @param videoUrl - URL of the video
+ * @returns Promise that resolves to video duration in seconds
+ */
+async function getVideoDuration(videoUrl: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    
+    const timeout = setTimeout(() => {
+      video.remove();
+      reject(new Error('Timeout getting video duration'));
+    }, 10000);
+    
+    video.addEventListener('loadedmetadata', () => {
+      clearTimeout(timeout);
+      const duration = video.duration;
+      video.remove();
+      
+      if (!duration || duration === 0) {
+        reject(new Error('Invalid video duration'));
+      } else {
+        resolve(duration);
+      }
+    });
+    
+    video.addEventListener('error', (error) => {
+      clearTimeout(timeout);
+      video.remove();
+      reject(new Error('Failed to load video for duration check'));
+    });
+    
+    video.src = videoUrl;
+    video.load();
+  });
+}
