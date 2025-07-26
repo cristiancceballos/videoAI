@@ -684,16 +684,74 @@ class WebUploadService {
     try {
       console.log('📤 [REAL THUMBNAIL DEBUG] Uploading real thumbnails to storage...');
       
+      // Debug authentication context
+      console.log('🔍 [AUTH DEBUG] Checking user authentication context...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔍 [AUTH DEBUG] Session details:', {
+        hasSession: !!session,
+        sessionUserId: session?.user?.id,
+        providedUserId: userId,
+        userIdsMatch: session?.user?.id === userId,
+        sessionError: sessionError?.message
+      });
+      
+      if (!session) {
+        console.error('❌ [AUTH DEBUG] No active session found during upload');
+        return { success: false, error: 'User not authenticated' };
+      }
+      
+      if (session.user.id !== userId) {
+        console.warn('⚠️ [AUTH DEBUG] Session user ID does not match provided user ID');
+      }
+      
+      // Test bucket accessibility
+      console.log('🔍 [BUCKET DEBUG] Testing thumbnails bucket accessibility...');
+      const { data: bucketTest, error: bucketError } = await supabase.storage
+        .from('thumbnails')
+        .list('', { limit: 1 });
+      
+      console.log('🔍 [BUCKET DEBUG] Bucket accessibility test:', {
+        canAccess: !bucketError,
+        error: bucketError?.message,
+        bucketExists: !!bucketTest,
+        hasFiles: bucketTest?.length > 0
+      });
+      
+      if (bucketError) {
+        console.error('❌ [BUCKET DEBUG] Cannot access thumbnails bucket:', bucketError);
+        return { success: false, error: `Bucket access error: ${bucketError.message}` };
+      }
+      
       const uploadedThumbnails = [];
       
       for (const thumbnail of thumbnails) {
         const filename = `${videoId}_thumbnail_${thumbnail.position}.jpg`;
+        
+        // Debug path structure before generating presigned URL
+        console.log('🔍 [PATH STRUCTURE DEBUG] Analyzing path components:', {
+          userId: userId,
+          videoId: videoId,
+          filename: filename,
+          expectedPath: `${userId}/${Date.now()}_${filename}`,
+          policyExpectedFormat: 'userId/timestamp_filename.jpg'
+        });
+        
         const uploadUrl = await this.generatePresignedUrl(userId, filename, 'thumbnails');
         
         if (!uploadUrl) {
           console.error(`❌ [REAL THUMBNAIL DEBUG] Failed to generate upload URL for ${filename}`);
           continue;
         }
+        
+        // Debug the actual generated path vs policy expectations
+        console.log('🔍 [PATH STRUCTURE DEBUG] Generated path analysis:', {
+          actualPath: uploadUrl.path,
+          pathParts: uploadUrl.path.split('/'),
+          firstPart: uploadUrl.path.split('/')[0], // Should match userId for policy
+          userId: userId,
+          pathMatchesUserId: uploadUrl.path.split('/')[0] === userId,
+          bucket: 'thumbnails'
+        });
         
         // Test if the presigned URL is valid
         console.log(`🔍 [PRESIGNED URL DEBUG] Testing presigned URL for ${filename}...`);
@@ -730,6 +788,9 @@ class WebUploadService {
         if (uploadSuccess) {
           console.log(`✅ [REAL THUMBNAIL DEBUG] Upload reported successful for ${filename}`);
           
+          // Wait a moment for storage to sync
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
           // Verify the file actually exists in storage
           console.log(`🔍 [UPLOAD VERIFICATION] Checking if file exists in storage: ${uploadUrl.path}`);
           const { data: verifyData, error: verifyError } = await supabase.storage
@@ -738,10 +799,38 @@ class WebUploadService {
               search: uploadUrl.path.split('/').pop()
             });
           
+          console.log(`🔍 [UPLOAD VERIFICATION] Storage verification details:`, {
+            searchPath: uploadUrl.path.split('/').slice(0, -1).join('/') || '',
+            searchFile: uploadUrl.path.split('/').pop(),
+            verifyError: verifyError,
+            filesFound: verifyData?.length || 0,
+            actualFiles: verifyData?.map(f => f.name) || []
+          });
+          
           if (verifyError || !verifyData || verifyData.length === 0) {
             console.error(`❌ [UPLOAD VERIFICATION] File not found in storage after upload: ${uploadUrl.path}`);
             console.error(`❌ [UPLOAD VERIFICATION] Error:`, verifyError);
-            // Don't add to uploaded thumbnails if verification fails
+            
+            // Try alternative verification method - direct file access
+            console.log(`🔍 [ALTERNATIVE VERIFICATION] Trying direct file access...`);
+            try {
+              const { data: fileData, error: fileError } = await supabase.storage
+                .from('thumbnails')
+                .download(uploadUrl.path);
+                
+              if (fileError) {
+                console.error(`❌ [ALTERNATIVE VERIFICATION] Direct access also failed:`, fileError);
+              } else {
+                console.log(`✅ [ALTERNATIVE VERIFICATION] File accessible via direct download`);
+                uploadedThumbnails.push({
+                  position: thumbnail.position,
+                  path: uploadUrl.path,
+                  filename: filename
+                });
+              }
+            } catch (altError) {
+              console.error(`❌ [ALTERNATIVE VERIFICATION] Exception during direct access:`, altError);
+            }
           } else {
             console.log(`✅ [UPLOAD VERIFICATION] File confirmed in storage: ${filename}`);
             uploadedThumbnails.push({
