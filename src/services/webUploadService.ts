@@ -53,39 +53,93 @@ class WebUploadService {
     onProgress?: (progress: UploadProgress) => void
   ): Promise<boolean> {
     try {
+      console.log('🚀 [UPLOAD DEBUG] Starting file upload:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        urlPrefix: presignedUrl.substring(0, 100) + '...',
+        urlHost: new URL(presignedUrl).host
+      });
+
       const xhr = new XMLHttpRequest();
       
       return new Promise((resolve, reject) => {
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable && onProgress) {
-            onProgress({
+            const progress = {
               loaded: event.loaded,
               total: event.total,
               percentage: (event.loaded / event.total) * 100,
-            });
+            };
+            onProgress(progress);
+            console.log('📊 [UPLOAD DEBUG] Upload progress:', progress.percentage.toFixed(1) + '%');
           }
         };
 
         xhr.onload = () => {
-          if (xhr.status === 200) {
+          console.log('✅ [UPLOAD DEBUG] Upload completed with status:', {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            responseType: xhr.responseType,
+            responseLength: xhr.response?.length || 0,
+            responseHeaders: xhr.getAllResponseHeaders(),
+            fileName: file.name
+          });
+
+          if (xhr.status === 200 || xhr.status === 201) {
+            console.log('✅ [UPLOAD DEBUG] Upload reported as successful for:', file.name);
             resolve(true);
           } else {
-            console.error('Upload failed with status:', xhr.status);
+            console.error('❌ [UPLOAD DEBUG] Upload failed for:', file.name, 'with status:', xhr.status);
+            console.error('❌ [UPLOAD DEBUG] Response text:', xhr.responseText);
             resolve(false);
           }
         };
 
-        xhr.onerror = () => {
-          console.error('Upload error occurred');
+        xhr.onerror = (error) => {
+          console.error('💥 [UPLOAD DEBUG] Upload error occurred for:', file.name, error);
+          console.error('💥 [UPLOAD DEBUG] XHR error details:', {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            readyState: xhr.readyState,
+            responseText: xhr.responseText
+          });
           resolve(false);
         };
 
+        xhr.ontimeout = () => {
+          console.error('⏰ [UPLOAD DEBUG] Upload timeout for:', file.name);
+          resolve(false);
+        };
+
+        xhr.onabort = () => {
+          console.error('🛑 [UPLOAD DEBUG] Upload aborted for:', file.name);
+          resolve(false);
+        };
+
+        // Set timeout to 60 seconds
+        xhr.timeout = 60000;
+
+        console.log('📤 [UPLOAD DEBUG] Initiating XMLHttpRequest PUT for:', file.name);
         xhr.open('PUT', presignedUrl);
         xhr.setRequestHeader('Content-Type', file.type);
+        
+        // Log request headers
+        console.log('📋 [UPLOAD DEBUG] Request headers set:', {
+          'Content-Type': file.type,
+          method: 'PUT'
+        });
+        
         xhr.send(file);
+        console.log('🚀 [UPLOAD DEBUG] XHR request sent for:', file.name);
       });
     } catch (error) {
-      console.error('File upload error:', error);
+      console.error('💥 [UPLOAD DEBUG] Exception in uploadFileWithProgress:', error);
+      console.error('💥 [UPLOAD DEBUG] File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
       return false;
     }
   }
@@ -641,6 +695,25 @@ class WebUploadService {
           continue;
         }
         
+        // Test if the presigned URL is valid
+        console.log(`🔍 [PRESIGNED URL DEBUG] Testing presigned URL for ${filename}...`);
+        try {
+          const testResponse = await fetch(uploadUrl.url, { method: 'HEAD' });
+          console.log(`🔍 [PRESIGNED URL DEBUG] URL test result:`, {
+            filename: filename,
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            ok: testResponse.ok,
+            urlHost: new URL(uploadUrl.url).host
+          });
+          
+          if (!testResponse.ok && testResponse.status !== 404) {
+            console.warn(`⚠️ [PRESIGNED URL DEBUG] Presigned URL might be invalid for ${filename}: ${testResponse.status}`);
+          }
+        } catch (urlTestError) {
+          console.error(`❌ [PRESIGNED URL DEBUG] Failed to test presigned URL for ${filename}:`, urlTestError.message);
+        }
+        
         console.log(`📤 [REAL THUMBNAIL DEBUG] Uploading ${filename}...`);
         console.log(`🔍 [PATH DEBUG] Upload URL details:`, {
           filename: filename,
@@ -655,12 +728,29 @@ class WebUploadService {
         );
         
         if (uploadSuccess) {
-          uploadedThumbnails.push({
-            position: thumbnail.position,
-            path: uploadUrl.path,
-            filename: filename
-          });
-          console.log(`✅ [REAL THUMBNAIL DEBUG] Successfully uploaded ${filename}`);
+          console.log(`✅ [REAL THUMBNAIL DEBUG] Upload reported successful for ${filename}`);
+          
+          // Verify the file actually exists in storage
+          console.log(`🔍 [UPLOAD VERIFICATION] Checking if file exists in storage: ${uploadUrl.path}`);
+          const { data: verifyData, error: verifyError } = await supabase.storage
+            .from('thumbnails')
+            .list(uploadUrl.path.split('/').slice(0, -1).join('/') || '', {
+              search: uploadUrl.path.split('/').pop()
+            });
+          
+          if (verifyError || !verifyData || verifyData.length === 0) {
+            console.error(`❌ [UPLOAD VERIFICATION] File not found in storage after upload: ${uploadUrl.path}`);
+            console.error(`❌ [UPLOAD VERIFICATION] Error:`, verifyError);
+            // Don't add to uploaded thumbnails if verification fails
+          } else {
+            console.log(`✅ [UPLOAD VERIFICATION] File confirmed in storage: ${filename}`);
+            uploadedThumbnails.push({
+              position: thumbnail.position,
+              path: uploadUrl.path,
+              filename: filename
+            });
+          }
+          
           console.log(`🔍 [PATH DEBUG] Stored path for ${filename}:`, uploadUrl.path);
         } else {
           console.error(`❌ [REAL THUMBNAIL DEBUG] Failed to upload ${filename}`);
