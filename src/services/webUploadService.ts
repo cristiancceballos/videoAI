@@ -321,30 +321,28 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Trigger server-side thumbnail generation
+      // 5. Update status to processing before triggering thumbnail generation
+      console.log('🎯 [DATABASE DEBUG] Setting video status to processing...');
+      await this.updateVideoStatus(videoId, 'processing');
+      
+      // 6. Trigger server-side thumbnail generation
       console.log('🖼️ [SERVER THUMBNAIL DEBUG] Triggering server-side thumbnail generation...');
       
       try {
         const thumbnailResult = await this.generateServerThumbnails(videoId, userId, uploadUrl.path);
         
         if (thumbnailResult.success) {
-          console.log('✅ [SERVER THUMBNAIL DEBUG] Server thumbnail generation initiated successfully');
+          console.log('✅ [SERVER THUMBNAIL DEBUG] Server thumbnail generation completed successfully');
+          // Edge Function will update status to 'ready' and add thumbnail_path
         } else {
           console.warn('⚠️ [SERVER THUMBNAIL DEBUG] Server thumbnail generation failed:', thumbnailResult.error);
-          // Continue without thumbnails - video is still uploaded successfully
+          // Set status to ready without thumbnails 
+          await this.updateVideoStatus(videoId, 'ready');
         }
       } catch (error) {
         console.error('❌ [SERVER THUMBNAIL DEBUG] Exception during server thumbnail generation:', error);
-        // Continue without thumbnails - video is still uploaded successfully
-      }
-      
-      // 6. Update status to ready (thumbnails will be added by Edge Function)
-      console.log('🎯 [DATABASE DEBUG] Updating video status to ready...');
-      const statusUpdated = await this.updateVideoStatus(videoId, 'ready');
-      
-      if (!statusUpdated) {
-        console.error('❌ Failed to update video status to ready');
-        return { success: false, error: 'Failed to finalize video status' };
+        // Set status to ready without thumbnails
+        await this.updateVideoStatus(videoId, 'ready');
       }
       
       console.log('✅ Video fully processed and ready!');

@@ -128,19 +128,22 @@ serve(async (req: Request) => {
     }
 
     console.log('✅ [EDGE DEBUG] Successfully uploaded', uploadedThumbnails.length, 'thumbnails')
+    console.log('📋 [EDGE DEBUG] Thumbnail details:', uploadedThumbnails)
 
     // Update video record with thumbnail information
+    // Note: Only updating existing columns - thumbnail_path and status
+    console.log('💾 [EDGE DEBUG] Starting database update for video:', videoId)
     const { error: updateError } = await supabaseClient
       .from('videos')
       .update({
-        thumbnail_options: uploadedThumbnails,
-        thumbnail_path: uploadedThumbnails[0]?.path || null, // Default to first thumbnail
-        processing_status: 'thumbnails_ready'
+        thumbnail_path: uploadedThumbnails[0]?.path || null, // Default to first thumbnail (0% position)
+        status: 'ready' // Update status to ready since thumbnails are generated
       })
       .eq('id', videoId)
 
     if (updateError) {
       console.error('❌ [EDGE DEBUG] Failed to update video record:', updateError)
+      console.error('❌ [EDGE DEBUG] Update error details:', JSON.stringify(updateError, null, 2))
       return new Response(
         JSON.stringify({ error: 'Failed to update video record', details: updateError }),
         { 
@@ -149,6 +152,8 @@ serve(async (req: Request) => {
         }
       )
     }
+
+    console.log('✅ [EDGE DEBUG] Successfully updated video record in database')
 
     console.log('🎉 [EDGE DEBUG] Thumbnail generation completed successfully!')
 
