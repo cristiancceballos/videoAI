@@ -104,9 +104,12 @@ serve(async (req: Request) => {
     const uploadedThumbnails = []
     for (let i = 0; i < thumbnailOptions.length; i++) {
       const thumbnail = thumbnailOptions[i]
-      const filename = `${videoId}_thumbnail_${thumbnail.position}.svg`
+      // Create URL-safe filename - remove any potentially problematic characters
+      const safePosition = thumbnail.position.replace(/[^a-zA-Z0-9]/g, '')
+      const filename = `${videoId}_thumbnail_${safePosition}.svg`
       
       console.log(`📤 [EDGE DEBUG] Uploading thumbnail ${i + 1}/${thumbnailOptions.length}: ${filename}`)
+      console.log(`🔧 [VALIDATION DEBUG] Original position: ${thumbnail.position}, Safe position: ${safePosition}`)
       console.log(`📊 [EDGE DEBUG] Upload details:`, {
         bucket: 'thumbnails',
         path: `${userId}/${filename}`,
@@ -203,7 +206,8 @@ async function generateThumbnailOptions(videoData: Uint8Array, videoId: string) 
     
     // For now, we'll create placeholder thumbnails
     // In a full implementation, you would use FFmpeg WASM here
-    const positions = ['0%', '25%', '50%', '75%'] // First frame, quarter, half, three-quarter
+    // Using URL-safe position labels (% symbol not allowed in storage filenames)
+    const positions = ['0pct', '25pct', '50pct', '75pct'] // First frame, quarter, half, three-quarter
     const thumbnails = []
 
     for (const position of positions) {
@@ -231,29 +235,34 @@ async function generateThumbnailOptions(videoData: Uint8Array, videoId: string) 
 async function createPlaceholderThumbnail(videoId: string, position: string): Promise<Blob> {
   console.log(`🎨 [PLACEHOLDER DEBUG] Creating placeholder for position: ${position}`)
   
-  // Define colors based on position
-  let color1: string, color2: string
+  // Define colors and display labels based on position
+  let color1: string, color2: string, displayLabel: string
   
   switch (position) {
-    case '0%':
+    case '0pct':
       color1 = '#FF6B6B'
       color2 = '#FF8E8E'
+      displayLabel = '0% (First Frame)'
       break
-    case '25%':
+    case '25pct':
       color1 = '#4ECDC4'
       color2 = '#70D4CD'
+      displayLabel = '25% (Quarter)'
       break
-    case '50%':
+    case '50pct':
       color1 = '#45B7D1'
       color2 = '#67C5DA'
+      displayLabel = '50% (Midpoint)'
       break
-    case '75%':
+    case '75pct':
       color1 = '#F7D794'
       color2 = '#F9E2A7'
+      displayLabel = '75% (Three-Quarter)'
       break
     default:
       color1 = '#DDA0DD'
       color2 = '#E6B8E6'
+      displayLabel = 'Unknown Position'
   }
   
   // Create SVG string for the placeholder thumbnail
@@ -267,7 +276,7 @@ async function createPlaceholderThumbnail(videoId: string, position: string): Pr
       </defs>
       <rect width="400" height="225" fill="url(#grad)" />
       <text x="200" y="120" text-anchor="middle" fill="white" font-family="Arial" font-size="24">
-        Frame at ${position}
+        ${displayLabel}
       </text>
       <text x="200" y="150" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="14">
         Video ID: ${videoId.substring(0, 8)}...
