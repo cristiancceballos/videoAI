@@ -264,6 +264,7 @@ export function isFrameCaptureSupported(): boolean {
  */
 export async function generateStandardThumbnails(
   videoUrl: string,
+  videoDuration?: number,
   options: FrameCaptureOptions = {}
 ): Promise<Array<{
   position: string;
@@ -279,14 +280,29 @@ export async function generateStandardThumbnails(
   });
   
   try {
-    // First, we need to get the video duration
-    console.log('⏱️ [THUMBNAIL GENERATION] Getting video duration...');
-    const videoDuration = await getVideoDuration(videoUrl);
-    console.log('📊 [THUMBNAIL GENERATION] Video duration obtained:', videoDuration);
+    // Use provided duration or fallback to fixed positions
+    let finalDuration: number;
     
-    if (!videoDuration || videoDuration <= 0) {
-      throw new Error(`Invalid video duration: ${videoDuration}`);
+    if (videoDuration && videoDuration > 0 && Number.isFinite(videoDuration)) {
+      console.log('📊 [THUMBNAIL GENERATION] Using provided video duration:', videoDuration);
+      
+      // Handle edge cases for very short or very long videos
+      if (videoDuration < 2) {
+        console.log('⚠️ [THUMBNAIL GENERATION] Very short video (<2s), using minimal positions');
+        finalDuration = Math.max(videoDuration, 1); // Ensure at least 1 second
+      } else if (videoDuration > 300) { // 5 minutes
+        console.log('⚠️ [THUMBNAIL GENERATION] Very long video (>5min), capping at 5 minutes for thumbnails');
+        finalDuration = 300;
+      } else {
+        finalDuration = videoDuration;
+      }
+    } else {
+      console.log('⚠️ [THUMBNAIL GENERATION] No valid duration provided, using fixed time positions');
+      // Fallback: use fixed 12-second duration for consistent thumbnails
+      finalDuration = 12;
     }
+    
+    console.log('✅ [THUMBNAIL GENERATION] Final duration for calculations:', finalDuration);
     
     // Calculate time positions for each thumbnail
     const positions = [
@@ -296,7 +312,7 @@ export async function generateStandardThumbnails(
       { percent: 0.75, label: '75pct' }
     ];
     
-    const timePositions = positions.map(pos => pos.percent * videoDuration);
+    const timePositions = positions.map(pos => pos.percent * finalDuration);
     console.log('⏰ [THUMBNAIL GENERATION] Time positions calculated:', timePositions);
     
     const thumbnails = [];
@@ -364,81 +380,6 @@ export async function generateStandardThumbnails(
   }
 }
 
-/**
- * Gets the duration of a video without loading the full video
- * @param videoUrl - URL of the video
- * @returns Promise that resolves to video duration in seconds
- */
-async function getVideoDuration(videoUrl: string): Promise<number> {
-  console.log('⏱️ [DURATION DEBUG] Starting video duration detection...');
-  
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-    video.crossOrigin = 'anonymous';
-    
-    console.log('🎥 [DURATION DEBUG] Created video element, setting up timeout...');
-    const timeout = setTimeout(() => {
-      console.error('⏰ [DURATION DEBUG] Timeout (10s) getting video duration');
-      video.remove();
-      reject(new Error('Timeout getting video duration after 10 seconds'));
-    }, 10000);
-    
-    video.addEventListener('loadedmetadata', () => {
-      console.log('📊 [DURATION DEBUG] Video metadata loaded');
-      clearTimeout(timeout);
-      const duration = video.duration;
-      
-      console.log('⏱️ [DURATION DEBUG] Duration detected:', {
-        duration,
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight,
-        readyState: video.readyState
-      });
-      
-      video.remove();
-      
-      if (!duration || duration === 0 || !isFinite(duration)) {
-        console.error('❌ [DURATION DEBUG] Invalid duration detected:', duration);
-        reject(new Error(`Invalid video duration: ${duration}`));
-      } else {
-        console.log('✅ [DURATION DEBUG] Valid duration obtained:', duration);
-        resolve(duration);
-      }
-    });
-    
-    video.addEventListener('error', (error) => {
-      console.error('❌ [DURATION DEBUG] Video error during duration detection:', error);
-      console.error('❌ [DURATION DEBUG] Video error details:', {
-        errorCode: video.error?.code,
-        errorMessage: video.error?.message,
-        networkState: video.networkState,
-        readyState: video.readyState
-      });
-      
-      clearTimeout(timeout);
-      video.remove();
-      reject(new Error(`Failed to load video for duration check: ${video.error?.message || 'Unknown error'}`));
-    });
-    
-    video.addEventListener('loadstart', () => {
-      console.log('📥 [DURATION DEBUG] Video loading started');
-    });
-    
-    video.addEventListener('progress', () => {
-      console.log('📊 [DURATION DEBUG] Video loading progress...');
-    });
-    
-    console.log('🔗 [DURATION DEBUG] Setting video src and starting load...');
-    try {
-      video.src = videoUrl;
-      video.load();
-    } catch (error) {
-      console.error('❌ [DURATION DEBUG] Exception setting video src:', error);
-      clearTimeout(timeout);
-      video.remove();
-      reject(new Error(`Failed to set video source: ${error.message}`));
-    }
-  });
-}
+// NOTE: getVideoDuration() function removed - no longer needed
+// We now use asset.duration instead of detecting from video element
+// This eliminates the timeout issues with HTML5 video + blob URLs in React Native Web

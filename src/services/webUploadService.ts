@@ -359,8 +359,19 @@ class WebUploadService {
         
         // Generate standard thumbnails from video frames
         console.log('🎬 [CLIENT THUMBNAIL DEBUG] Blob URL accessible, starting frame extraction...');
+        
+        // Validate and prepare duration
+        const assetDuration = asset.duration;
+        console.log('⏱️ [CLIENT THUMBNAIL DEBUG] Asset duration analysis:', {
+          rawDuration: assetDuration,
+          isNumber: typeof assetDuration === 'number',
+          isFinite: Number.isFinite(assetDuration),
+          isPositive: assetDuration > 0,
+          durationSeconds: assetDuration
+        });
+        
         const startTime = Date.now();
-        const thumbnails = await generateStandardThumbnails(asset.uri);
+        const thumbnails = await generateStandardThumbnails(asset.uri, assetDuration);
         const extractionTime = Date.now() - startTime;
         
         console.log('📊 [CLIENT THUMBNAIL DEBUG] Frame extraction completed:', {
