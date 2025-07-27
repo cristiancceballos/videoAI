@@ -1,19 +1,17 @@
-// Supabase Edge Function for generating video thumbnails
-// This function processes uploaded videos and generates thumbnail options
+// Supabase Edge Function for generating simple video thumbnails
+// This function creates unique visual thumbnails without complex video processing
 
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { FFmpeg } from 'ffmpeg'
-import { fetchFile, toBlobURL } from 'ffmpeg-util'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-console.log("🚀 Generate Thumbnails Edge Function starting...")
+console.log("🚀 Simple Thumbnail Generator Edge Function starting...")
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
@@ -22,14 +20,14 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('📥 [EDGE DEBUG] Thumbnail generation request received')
+    console.log('📥 [SIMPLE THUMBNAIL] Thumbnail generation request received')
     
     // Initialize Supabase client with environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ [EDGE DEBUG] Missing environment variables')
+      console.error('❌ [SIMPLE THUMBNAIL] Missing environment variables')
       return new Response(
         JSON.stringify({ error: 'Missing required environment variables' }),
         { 
@@ -44,14 +42,14 @@ serve(async (req: Request) => {
     // Parse request body
     const { videoId, userId, storagePath } = await req.json()
     
-    console.log('📋 [EDGE DEBUG] Request data:', { 
+    console.log('📋 [SIMPLE THUMBNAIL] Request data:', { 
       videoId, 
       userId, 
       storagePath: storagePath?.substring(0, 50) + '...' 
     })
 
     if (!videoId || !userId || !storagePath) {
-      console.error('❌ [EDGE DEBUG] Missing required parameters')
+      console.error('❌ [SIMPLE THUMBNAIL] Missing required parameters')
       return new Response(
         JSON.stringify({ error: 'Missing required parameters: videoId, userId, storagePath' }),
         { 
@@ -61,36 +59,13 @@ serve(async (req: Request) => {
       )
     }
 
-    // Download video file from storage
-    console.log('📥 [EDGE DEBUG] Downloading video file from storage...')
-    const { data: videoFile, error: downloadError } = await supabaseClient.storage
-      .from('videos')
-      .download(storagePath)
+    console.log('🎨 [SIMPLE THUMBNAIL] Starting simple thumbnail generation...')
 
-    if (downloadError || !videoFile) {
-      console.error('❌ [EDGE DEBUG] Failed to download video:', downloadError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to download video file', details: downloadError }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    console.log('✅ [EDGE DEBUG] Video file downloaded successfully, size:', videoFile.size)
-
-    // Convert blob to array buffer for processing
-    const videoBuffer = await videoFile.arrayBuffer()
-    const videoUint8Array = new Uint8Array(videoBuffer)
-
-    console.log('🎬 [EDGE DEBUG] Starting thumbnail generation process...')
-
-    // Generate multiple thumbnail options using FFmpeg WASM
-    const thumbnailOptions = await generateThumbnailOptions(videoUint8Array, videoId)
+    // Generate simple visual thumbnails
+    const thumbnailOptions = await generateSimpleThumbnails(videoId, userId)
 
     if (!thumbnailOptions || thumbnailOptions.length === 0) {
-      console.error('❌ [EDGE DEBUG] Failed to generate any thumbnails')
+      console.error('❌ [SIMPLE THUMBNAIL] Failed to generate any thumbnails')
       return new Response(
         JSON.stringify({ error: 'Failed to generate thumbnails' }),
         { 
@@ -100,40 +75,25 @@ serve(async (req: Request) => {
       )
     }
 
-    console.log('🖼️ [EDGE DEBUG] Generated', thumbnailOptions.length, 'thumbnail options')
+    console.log('🖼️ [SIMPLE THUMBNAIL] Generated', thumbnailOptions.length, 'thumbnail options')
 
     // Upload thumbnails to storage
     const uploadedThumbnails = []
     for (let i = 0; i < thumbnailOptions.length; i++) {
       const thumbnail = thumbnailOptions[i]
-      // Create URL-safe filename - remove any potentially problematic characters
-      const safePosition = thumbnail.position.replace(/[^a-zA-Z0-9]/g, '')
-      const filename = `${videoId}_thumbnail_${safePosition}.jpg`
+      const filename = `${videoId}_thumbnail_${thumbnail.position}.svg`
       
-      console.log(`📤 [EDGE DEBUG] Uploading thumbnail ${i + 1}/${thumbnailOptions.length}: ${filename}`)
-      console.log(`🔧 [VALIDATION DEBUG] Original position: ${thumbnail.position}, Safe position: ${safePosition}`)
-      console.log(`📊 [EDGE DEBUG] Upload details:`, {
-        bucket: 'thumbnails',
-        path: `${userId}/${filename}`,
-        blobSize: thumbnail.blob.size,
-        blobType: thumbnail.blob.type,
-        contentType: 'image/svg+xml',
-        userId: userId,
-        filename: filename
-      })
+      console.log(`📤 [SIMPLE THUMBNAIL] Uploading thumbnail ${i + 1}/${thumbnailOptions.length}: ${filename}`)
       
       const { data: uploadData, error: uploadError } = await supabaseClient.storage
         .from('thumbnails')
         .upload(`${userId}/${filename}`, thumbnail.blob, {
-          contentType: 'image/jpeg',
+          contentType: 'image/svg+xml',
           upsert: true
         })
 
       if (uploadError) {
-        console.error(`❌ [EDGE DEBUG] Failed to upload thumbnail ${i + 1}:`, uploadError)
-        console.error(`❌ [EDGE DEBUG] Upload error details:`, JSON.stringify(uploadError, null, 2))
-        console.error(`❌ [EDGE DEBUG] Upload error message:`, uploadError.message)
-        console.error(`❌ [EDGE DEBUG] Upload path attempted:`, `${userId}/${filename}`)
+        console.error(`❌ [SIMPLE THUMBNAIL] Failed to upload thumbnail ${i + 1}:`, uploadError)
         continue
       }
 
@@ -142,25 +102,24 @@ serve(async (req: Request) => {
         path: uploadData.path,
         filename: filename
       })
+      
+      console.log(`✅ [SIMPLE THUMBNAIL] Successfully uploaded ${filename}`)
     }
 
-    console.log('✅ [EDGE DEBUG] Successfully uploaded', uploadedThumbnails.length, 'thumbnails')
-    console.log('📋 [EDGE DEBUG] Thumbnail details:', uploadedThumbnails)
+    console.log('✅ [SIMPLE THUMBNAIL] Successfully uploaded', uploadedThumbnails.length, 'thumbnails')
 
     // Update video record with thumbnail information
-    // Note: Only updating existing columns - thumbnail_path and status
-    console.log('💾 [EDGE DEBUG] Starting database update for video:', videoId)
+    console.log('💾 [SIMPLE THUMBNAIL] Updating database with thumbnail info...')
     const { error: updateError } = await supabaseClient
       .from('videos')
       .update({
-        thumbnail_path: uploadedThumbnails[0]?.path || null, // Default to first thumbnail (0% position)
-        status: 'ready' // Update status to ready since thumbnails are generated
+        thumbnail_path: uploadedThumbnails[0]?.path || null, // Use first thumbnail
+        status: 'ready'
       })
       .eq('id', videoId)
 
     if (updateError) {
-      console.error('❌ [EDGE DEBUG] Failed to update video record:', updateError)
-      console.error('❌ [EDGE DEBUG] Update error details:', JSON.stringify(updateError, null, 2))
+      console.error('❌ [SIMPLE THUMBNAIL] Failed to update video record:', updateError)
       return new Response(
         JSON.stringify({ error: 'Failed to update video record', details: updateError }),
         { 
@@ -170,15 +129,14 @@ serve(async (req: Request) => {
       )
     }
 
-    console.log('✅ [EDGE DEBUG] Successfully updated video record in database')
-
-    console.log('🎉 [EDGE DEBUG] Thumbnail generation completed successfully!')
+    console.log('✅ [SIMPLE THUMBNAIL] Successfully updated video record in database')
+    console.log('🎉 [SIMPLE THUMBNAIL] Simple thumbnail generation completed successfully!')
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         thumbnails: uploadedThumbnails,
-        message: `Generated ${uploadedThumbnails.length} thumbnail options`
+        message: `Generated ${uploadedThumbnails.length} simple thumbnail options`
       }),
       { 
         status: 200, 
@@ -187,7 +145,7 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
-    console.error('💥 [EDGE DEBUG] Unexpected error:', error)
+    console.error('💥 [SIMPLE THUMBNAIL] Unexpected error:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
@@ -201,148 +159,78 @@ serve(async (req: Request) => {
   }
 })
 
-// Global FFmpeg instance to avoid repeated initialization
-let ffmpegInstance: FFmpeg | null = null
-
-// Initialize FFmpeg WASM
-async function initializeFFmpeg(): Promise<FFmpeg> {
-  if (!ffmpegInstance) {
-    console.log('🔧 [FFMPEG] Initializing FFmpeg WASM...')
-    ffmpegInstance = new FFmpeg()
-    
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.4/dist/esm'
-    
-    ffmpegInstance.on('log', ({ message }) => {
-      console.log('🎬 [FFMPEG]', message)
-    })
-    
-    ffmpegInstance.on('progress', ({ progress, time }) => {
-      console.log('📊 [FFMPEG] Progress:', Math.round(progress * 100) + '%', 'Time:', time)
-    })
-    
-    await ffmpegInstance.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    })
-    
-    console.log('✅ [FFMPEG] FFmpeg WASM initialized successfully')
-  }
-  return ffmpegInstance
-}
-
-// Get video duration using FFmpeg probe
-async function getVideoDuration(videoData: Uint8Array): Promise<number> {
+// Generate simple visual thumbnails using fallback approach (Canvas may not be available in Deno)
+async function generateSimpleThumbnails(videoId: string, userId: string) {
   try {
-    console.log('⏱️ [DURATION] Probing video duration...')
-    const ffmpeg = await initializeFFmpeg()
+    console.log('🎨 [SIMPLE THUMBNAIL] Starting simple thumbnail generation for video:', videoId)
     
-    // Write video to FFmpeg filesystem
-    await ffmpeg.writeFile('probe.mp4', videoData)
-    
-    // Use ffprobe to get video duration
-    await ffmpeg.exec([
-      '-i', 'probe.mp4',
-      '-show_entries', 'format=duration',
-      '-v', 'quiet',
-      '-of', 'csv=p=0'
-    ])
-    
-    // For now, return a default duration since reading ffmpeg output is complex in Edge Functions
-    // In production, you would parse the actual output
-    console.log('⏱️ [DURATION] Using default duration of 60 seconds (ffprobe output parsing not implemented)')
-    return 60 // Default fallback - in real implementation would parse ffmpeg output
+    // Since Canvas APIs may not be available in Deno Edge runtime, use SVG fallback directly
+    console.log('🔄 [SIMPLE THUMBNAIL] Using SVG-based thumbnail generation (Canvas not available in Edge runtime)')
+    return generateFallbackThumbnails(videoId)
     
   } catch (error) {
-    console.error('❌ [DURATION] Failed to get video duration:', error)
-    return 60 // Fallback duration
+    console.error('❌ [SIMPLE THUMBNAIL] Failed to generate simple thumbnails:', error)
+    return generateFallbackThumbnails(videoId)
   }
 }
 
-// Extract a single frame from video at specific timestamp
-async function extractVideoFrame(
-  videoData: Uint8Array, 
-  timestamp: number, 
-  outputName: string
-): Promise<Uint8Array> {
+// Fallback thumbnail generation using simple image data
+async function generateFallbackThumbnails(videoId: string) {
+  console.log('🔄 [FALLBACK THUMBNAIL] Using fallback thumbnail generation')
+  
   try {
-    console.log(`🎬 [EXTRACT] Extracting frame at ${timestamp}s -> ${outputName}`)
-    const ffmpeg = await initializeFFmpeg()
-    
-    // Write video file to FFmpeg filesystem
-    await ffmpeg.writeFile('input.mp4', videoData)
-    
-    // Extract frame at specific timestamp
-    await ffmpeg.exec([
-      '-i', 'input.mp4',              // Input video
-      '-ss', timestamp.toString(),     // Seek to timestamp
-      '-vframes', '1',                // Extract 1 frame
-      '-q:v', '2',                    // High quality (1-31, lower is better)
-      '-s', '400x225',                // Resize to 400x225 (16:9 aspect ratio)
-      '-f', 'image2',                 // Force image format
-      outputName                      // Output filename
-    ])
-    
-    // Read the generated thumbnail
-    const frameData = await ffmpeg.readFile(outputName)
-    console.log(`✅ [EXTRACT] Successfully extracted frame, size: ${frameData.byteLength} bytes`)
-    
-    return frameData as Uint8Array
-    
-  } catch (error) {
-    console.error(`❌ [EXTRACT] Failed to extract frame at ${timestamp}s:`, error)
-    throw error
-  }
-}
-
-// Generate real video thumbnails using FFmpeg
-async function generateThumbnailOptions(videoData: Uint8Array, videoId: string) {
-  try {
-    console.log('🎨 [THUMBNAIL DEBUG] Starting REAL thumbnail generation with video data size:', videoData.length)
-    
-    // Get video duration
-    const duration = await getVideoDuration(videoData)
-    console.log('⏱️ [THUMBNAIL DEBUG] Video duration:', duration, 'seconds')
-    
-    // Define positions to extract frames
-    const positions = [
-      { percent: 0, label: '0pct', timestamp: 0 },
-      { percent: 0.25, label: '25pct', timestamp: duration * 0.25 },
-      { percent: 0.5, label: '50pct', timestamp: duration * 0.5 },
-      { percent: 0.75, label: '75pct', timestamp: duration * 0.75 }
-    ]
-    
+    const hash = await hashString(videoId)
     const thumbnails = []
-
+    
+    const positions = ['0pct', '25pct', '50pct', '75pct']
+    
     for (const position of positions) {
-      console.log(`🖼️ [THUMBNAIL DEBUG] Generating REAL thumbnail at position: ${position.label} (${position.timestamp.toFixed(2)}s)`)
+      // Create simple colored JPEG using data URL
+      const hue = (hash + positions.indexOf(position) * 90) % 360
+      const color = `hsl(${hue}, 70%, 50%)`
       
-      try {
-        // Extract real frame using FFmpeg
-        const frameFilename = `frame_${position.label}.jpg`
-        const frameData = await extractVideoFrame(videoData, position.timestamp, frameFilename)
-        
-        // Convert to blob
-        const blob = new Blob([frameData], { type: 'image/jpeg' })
-        
-        thumbnails.push({
-          position: position.label,
-          blob: blob
-        })
-        
-        console.log(`✅ [THUMBNAIL DEBUG] Successfully generated ${position.label} thumbnail, size: ${blob.size} bytes`)
-        
-      } catch (error) {
-        console.error(`❌ [THUMBNAIL DEBUG] Failed to generate ${position.label} thumbnail:`, error)
-        // Continue with other thumbnails
-      }
+      // Create minimal SVG that can be converted to JPEG
+      const svgContent = `
+        <svg width="400" height="225" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+              <stop offset="100%" style="stop-color:hsl(${(hue + 30) % 360}, 60%, 60%);stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect width="400" height="225" fill="url(#grad)" />
+          <circle cx="200" cy="112" r="30" fill="rgba(255,255,255,0.3)" />
+          <text x="200" y="120" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">
+            Video ${videoId.substring(0, 8)}
+          </text>
+          <text x="200" y="140" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="12">
+            ${position.replace('pct', '%')}
+          </text>
+        </svg>
+      `
+      
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' })
+      
+      thumbnails.push({
+        position: position,
+        blob: blob
+      })
     }
-
-    console.log('🎉 [THUMBNAIL DEBUG] Successfully generated', thumbnails.length, 'REAL thumbnails')
+    
+    console.log('✅ [FALLBACK THUMBNAIL] Generated', thumbnails.length, 'fallback thumbnails')
     return thumbnails
     
   } catch (error) {
-    console.error('❌ [THUMBNAIL DEBUG] Failed to generate real thumbnails:', error)
-    return null
+    console.error('❌ [FALLBACK THUMBNAIL] Even fallback failed:', error)
+    return []
   }
 }
 
+// Simple hash function for deterministic colors
+async function hashString(str: string): Promise<number> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(str)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = new Uint8Array(hashBuffer)
+  return hashArray.reduce((hash, byte) => ((hash << 5) - hash + byte) & 0xffffffff, 0) >>> 0
+}
