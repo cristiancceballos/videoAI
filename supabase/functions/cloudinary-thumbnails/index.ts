@@ -96,38 +96,27 @@ serve(async (req: Request) => {
     
     const publicId = `video_thumbnails/${videoId}`
     
-    try {
-      // Upload video to Cloudinary using simplified form upload
-      const uploadResult = await uploadVideoToCloudinarySimple(
-        videoUrl,
-        publicId,
-        cloudinaryCloudName,
-        cloudinaryApiKey,
-        cloudinaryApiSecret
-      )
-
-      if (!uploadResult.success) {
-        console.error('❌ [CLOUDINARY] Upload failed:', uploadResult.error)
-        await updateVideoError(supabaseClient, videoId, uploadResult.error)
-        return new Response(
-          JSON.stringify({ error: 'Failed to upload video to Cloudinary' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Generate clean thumbnail URL using standard Cloudinary format
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
-      
-      console.log('✅ [CLOUDINARY] Generated clean thumbnail URL:', thumbnailUrl)
-      
-    } catch (uploadError) {
-      console.error('❌ [CLOUDINARY] Upload exception:', uploadError)
-      await updateVideoError(supabaseClient, videoId, `Upload failed: ${uploadError.message}`)
-      return new Response(
-        JSON.stringify({ error: 'Failed to process video' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // Generate clean thumbnail URL immediately (optimistic)
+    const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+    
+    console.log('🎯 [CLOUDINARY] Generated optimistic thumbnail URL:', thumbnailUrl)
+    
+    // Start Cloudinary upload in fire-and-forget mode (don't wait)
+    console.log('🚀 [CLOUDINARY] Starting fire-and-forget upload...')
+    uploadVideoFireAndForget(
+      videoUrl,
+      publicId,
+      cloudinaryCloudName,
+      cloudinaryApiKey,
+      cloudinaryApiSecret,
+      supabaseClient,
+      videoId
+    ).catch((error) => {
+      console.error('❌ [CLOUDINARY] Background upload failed:', error)
+      // Don't fail the main function - this is background processing
+    })
+    
+    console.log('✅ [CLOUDINARY] Background upload started, continuing...')
 
     // Update video record with thumbnail information
     console.log('💾 [CLOUDINARY] Updating database with thumbnail info...')
@@ -173,23 +162,23 @@ serve(async (req: Request) => {
   }
 })
 
-// Simplified Cloudinary upload with timeout protection
-async function uploadVideoToCloudinarySimple(
+// Fire-and-forget Cloudinary upload (runs in background)
+async function uploadVideoFireAndForget(
   videoUrl: string,
   publicId: string,
   cloudName: string,
   apiKey: string,
-  apiSecret: string
+  apiSecret: string,
+  supabaseClient: any,
+  videoId: string
 ) {
   try {
-    console.log('📤 [CLOUDINARY SIMPLE] Starting simplified upload...')
+    console.log('🔥 [FIRE_AND_FORGET] Starting background upload...')
     
     // Create timestamp and signature
     const timestamp = Math.round(new Date().getTime() / 1000)
     const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}&resource_type=video`
     const signature = await generateSignature(paramsToSign, apiSecret)
-    
-    console.log('📋 [CLOUDINARY SIMPLE] Prepared upload parameters')
     
     // Create FormData
     const formData = new FormData()
@@ -201,56 +190,51 @@ async function uploadVideoToCloudinarySimple(
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
     
-    // Upload with timeout protection (15 seconds max)
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+    console.log('🚀 [FIRE_AND_FORGET] Sending upload request...')
     
-    console.log('🚀 [CLOUDINARY SIMPLE] Sending upload request with timeout...')
-    
-    try {
-      const uploadResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-        {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal
-        }
-      )
-      
-      clearTimeout(timeoutId)
-      
-      console.log('📊 [CLOUDINARY SIMPLE] Response received:', uploadResponse.status)
-      
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text()
-        console.error('❌ [CLOUDINARY SIMPLE] Upload failed:', errorText)
-        return { success: false, error: `Upload failed: ${errorText}` }
+    // No timeout - let it run as long as needed
+    const uploadResponse = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+      {
+        method: 'POST',
+        body: formData
       }
-      
+    )
+    
+    console.log('📊 [FIRE_AND_FORGET] Response received:', uploadResponse.status)
+    
+    if (uploadResponse.ok) {
       const result = await uploadResponse.json()
-      console.log('✅ [CLOUDINARY SIMPLE] Upload successful:', result.public_id)
+      console.log('✅ [FIRE_AND_FORGET] Upload successful:', result.public_id)
+      console.log('🎉 [FIRE_AND_FORGET] Video processing complete, thumbnail should now be available')
+    } else {
+      const errorText = await uploadResponse.text()
+      console.error('❌ [FIRE_AND_FORGET] Upload failed:', errorText)
       
-      return { 
-        success: true, 
-        publicId: result.public_id
-      }
-      
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-      
-      if (fetchError.name === 'AbortError') {
-        console.log('⏰ [CLOUDINARY SIMPLE] Upload timed out, but continuing with thumbnail URL')
-        // Return success anyway - thumbnail URL will work once processing completes
-        return { success: true, publicId: publicId }
-      }
-      throw fetchError
+      // Update video with error status
+      await supabaseClient
+        .from('videos')
+        .update({
+          thumb_status: 'error',
+          thumb_error_message: `Cloudinary upload failed: ${errorText}`
+        })
+        .eq('id', videoId)
     }
     
   } catch (error) {
-    console.error('❌ [CLOUDINARY SIMPLE] Upload error:', error.message)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error)
+    console.error('❌ [FIRE_AND_FORGET] Background upload error:', error.message)
+    
+    // Update video with error status
+    try {
+      await supabaseClient
+        .from('videos')
+        .update({
+          thumb_status: 'error',
+          thumb_error_message: `Background upload failed: ${error.message}`
+        })
+        .eq('id', videoId)
+    } catch (dbError) {
+      console.error('❌ [FIRE_AND_FORGET] Failed to update error status:', dbError)
     }
   }
 }
