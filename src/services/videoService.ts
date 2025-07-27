@@ -41,14 +41,25 @@ class VideoService {
       
       const videosWithThumbnails = await Promise.all(
         data.map(async (video, index) => {
-          const thumbnailUrl = video.thumbnail_path 
-            ? await this.getFileUrl('thumbnails', video.thumbnail_path)
-            : undefined;
+          let thumbnailUrl: string | undefined;
+          
+          // Priority 1: Use Cloudinary URL if available
+          if (video.cloudinary_url) {
+            thumbnailUrl = video.cloudinary_url;
+            console.log(`☁️ [VIDEO SERVICE DEBUG] Using Cloudinary thumbnail for ${video.title.substring(0, 20)}`);
+          }
+          // Priority 2: Use Supabase Storage thumbnail with signed URL
+          else if (video.thumbnail_path) {
+            thumbnailUrl = await this.getFileUrl('thumbnails', video.thumbnail_path);
+            console.log(`📁 [VIDEO SERVICE DEBUG] Using Supabase thumbnail for ${video.title.substring(0, 20)}`);
+          }
 
           // Only log if there's an issue
-          if (video.thumbnail_path && !thumbnailUrl) {
+          if ((video.thumbnail_path || video.cloudinary_url) && !thumbnailUrl) {
             console.warn(`⚠️ [VIDEO SERVICE DEBUG] Failed to get thumbnail URL for video ${video.id}:`, {
               thumbnail_path: video.thumbnail_path,
+              cloudinary_url: video.cloudinary_url,
+              thumb_status: video.thumb_status,
               title: video.title.substring(0, 20) + '...'
             });
           }
@@ -308,9 +319,16 @@ class VideoService {
         return null;
       }
 
-      const thumbnailUrl = data.thumbnail_path 
-        ? await this.getFileUrl('thumbnails', data.thumbnail_path)
-        : undefined;
+      let thumbnailUrl: string | undefined;
+      
+      // Priority 1: Use Cloudinary URL if available
+      if (data.cloudinary_url) {
+        thumbnailUrl = data.cloudinary_url;
+      }
+      // Priority 2: Use Supabase Storage thumbnail with signed URL
+      else if (data.thumbnail_path) {
+        thumbnailUrl = await this.getFileUrl('thumbnails', data.thumbnail_path);
+      }
 
       return {
         ...data,

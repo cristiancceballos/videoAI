@@ -146,13 +146,19 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
         ) : (
           <>
             <View style={styles.placeholderThumbnail}>
-              <Video size={24} color="#666" />
+              {video.thumb_status === 'processing' ? (
+                <ActivityIndicator size="small" color="#FF9500" />
+              ) : (
+                <Video size={24} color="#666" />
+              )}
             </View>
             {console.log('⚠️ [THUMBNAIL DEBUG] No thumbnailUrl for video:', {
               title: video.title.substring(0, 20),
               id: video.id.substring(0, 8),
               status: video.status,
+              thumb_status: video.thumb_status,
               hasThumbnailPath: !!video.thumbnail_path,
+              hasCloudinaryUrl: !!video.cloudinary_url,
               thumbnailPath: video.thumbnail_path
             })}
           </>

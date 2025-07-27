@@ -323,13 +323,13 @@ class WebUploadService {
       console.log('🎯 [DATABASE DEBUG] Setting video status to processing...');
       await this.updateVideoStatus(videoId, 'processing');
       
-      // 6. Generate real video thumbnails using server-side FFmpeg
-      console.log('🎬 [SERVER THUMBNAIL DEBUG] Starting server-side FFmpeg thumbnail generation...');
+      // 6. Generate Cloudinary thumbnails (real video frames)
+      console.log('☁️ [CLOUDINARY DEBUG] Starting Cloudinary thumbnail generation...');
       
       try {
-        // Call the Edge Function to generate real video thumbnails
-        console.log('📤 [SERVER THUMBNAIL DEBUG] Calling generate-thumbnails Edge Function...');
-        const response = await supabase.functions.invoke('generate-thumbnails', {
+        // Call the Cloudinary thumbnail Edge Function
+        console.log('📤 [CLOUDINARY DEBUG] Calling cloudinary-thumbnails Edge Function...');
+        const response = await supabase.functions.invoke('cloudinary-thumbnails', {
           body: {
             videoId: videoId,
             userId: userId,
@@ -338,25 +338,22 @@ class WebUploadService {
         });
 
         if (response.error) {
-          console.error('❌ [SERVER THUMBNAIL DEBUG] Edge Function error:', response.error);
-          throw new Error(`Edge Function failed: ${response.error.message}`);
-        }
-
-        console.log('✅ [SERVER THUMBNAIL DEBUG] FFmpeg thumbnail generation completed:', response.data);
-        
-        if (response.data?.success && response.data?.thumbnails?.length > 0) {
-          console.log('🎉 [SERVER THUMBNAIL DEBUG] Real video thumbnails generated successfully!');
-          console.log('📊 [SERVER THUMBNAIL DEBUG] Generated thumbnails:', response.data.thumbnails);
+          console.error('❌ [CLOUDINARY DEBUG] Edge Function error:', response.error);
+          // Fallback to old SVG thumbnail generation on Cloudinary failure
+          console.log('🔄 [CLOUDINARY DEBUG] Falling back to SVG thumbnails...');
+          await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
+        } else if (response.data?.success) {
+          console.log('✅ [CLOUDINARY DEBUG] Cloudinary thumbnail generated:', response.data.thumbnailUrl);
         } else {
-          console.warn('⚠️ [SERVER THUMBNAIL DEBUG] No thumbnails generated or incomplete response');
+          console.warn('⚠️ [CLOUDINARY DEBUG] Cloudinary generation failed, using fallback');
+          await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
         }
         
       } catch (error) {
-        console.error('❌ [SERVER THUMBNAIL DEBUG] Failed to generate server-side thumbnails:', error);
-        
-        // Update video status to ready without thumbnails (better than error state)
-        console.log('🔄 [SERVER THUMBNAIL DEBUG] Setting video status to ready without thumbnails');
-        await this.updateVideoStatus(videoId, 'ready');
+        console.error('❌ [CLOUDINARY DEBUG] Failed to generate Cloudinary thumbnails:', error);
+        // Fallback to SVG thumbnails
+        console.log('🔄 [CLOUDINARY DEBUG] Using SVG fallback due to error');
+        await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
       }
       
       console.log('✅ Video fully processed and ready!');
@@ -371,7 +368,35 @@ class WebUploadService {
     }
   }
 
-  // Custom thumbnail upload removed - now handled by server-side FFmpeg
+  // Fallback SVG thumbnail generation (when Cloudinary fails)
+  private async generateFallbackSVGThumbnails(
+    videoId: string,
+    userId: string,
+    storagePath: string
+  ): Promise<void> {
+    try {
+      console.log('🎨 [SVG FALLBACK DEBUG] Generating SVG thumbnails as fallback...');
+      
+      const response = await supabase.functions.invoke('generate-thumbnails', {
+        body: {
+          videoId: videoId,
+          userId: userId,
+          storagePath: storagePath
+        }
+      });
+
+      if (response.error) {
+        console.error('❌ [SVG FALLBACK DEBUG] SVG generation also failed:', response.error);
+        // Set video to ready without thumbnails
+        await this.updateVideoStatus(videoId, 'ready');
+      } else {
+        console.log('✅ [SVG FALLBACK DEBUG] SVG thumbnails generated successfully');
+      }
+    } catch (error) {
+      console.error('❌ [SVG FALLBACK DEBUG] Exception in SVG generation:', error);
+      await this.updateVideoStatus(videoId, 'ready');
+    }
+  }
 
   // Validate video file
   private validateVideoFile(asset: WebMediaAsset): { valid: boolean; error?: string } {
