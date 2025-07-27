@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**GrowthOfWisdom** - A mobile-first Progressive Web App (PWA) for video organization with AI-powered summaries and Q&A. Built with Expo for web deployment, allowing users to upload videos, generate AI summaries, and interact with content through intelligent chat. Distributed via QR code for easy sharing to <10 users.
+**VideoAI** - A mobile-first Progressive Web App (PWA) for video organization with AI-powered summaries and Q&A. Built with Expo for web deployment, allowing users to upload videos, generate AI summaries, and interact with content through intelligent chat. Distributed via QR code for easy sharing to <10 users.
 
 ## Technology Stack
 

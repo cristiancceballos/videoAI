@@ -11,7 +11,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-console.log("🎬 Cloudinary Thumbnail Generator Edge Function starting...")
+// Cloudinary Thumbnail Generator Edge Function
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
@@ -20,7 +20,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('📥 [CLOUDINARY] Thumbnail generation request received')
+    // Log request received
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -41,9 +41,22 @@ serve(async (req: Request) => {
 
     if (!cloudinaryCloudName || !cloudinaryApiKey || !cloudinaryApiSecret) {
       console.error('❌ [CLOUDINARY] Missing Cloudinary environment variables')
+      // Instead of failing, update video to ready without thumbnail
+      const { error: updateError } = await supabaseClient
+        .from('videos')
+        .update({
+          status: 'ready',
+          thumb_status: 'error',
+          thumb_error_message: 'Cloudinary not configured'
+        })
+        .eq('id', videoId)
+      
       return new Response(
-        JSON.stringify({ error: 'Missing Cloudinary environment variables' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Cloudinary not configured - video marked as ready without thumbnail' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
@@ -52,11 +65,7 @@ serve(async (req: Request) => {
     // Parse request body
     const { videoId, userId, storagePath } = await req.json()
     
-    console.log('📋 [CLOUDINARY] Request data:', { 
-      videoId, 
-      userId, 
-      storagePath: storagePath?.substring(0, 50) + '...' 
-    })
+    // Request data: videoId, userId, storagePath
 
     if (!videoId || !userId || !storagePath) {
       console.error('❌ [CLOUDINARY] Missing required parameters')
@@ -67,10 +76,10 @@ serve(async (req: Request) => {
     }
 
     // Note: We'll set thumb_status to 'processing' after generating the optimistic URL
-    console.log('🔄 [CLOUDINARY] Preparing thumbnail generation...')
+    // Preparing thumbnail generation
 
     // Generate signed URL for the video
-    console.log('🔐 [CLOUDINARY] Generating signed URL for video access...')
+    // Generate signed URL for video access
     const { data: signedUrlData, error: signedUrlError } = await supabaseClient.storage
       .from('videos')
       .createSignedUrl(storagePath, 21600) // 6 hours expiry for large video processing
@@ -85,10 +94,10 @@ serve(async (req: Request) => {
     }
 
     const videoUrl = signedUrlData.signedUrl
-    console.log('✅ [CLOUDINARY] Generated signed URL for video')
+    // Signed URL generated
 
     // Basic quota check (warn if approaching limits)
-    console.log('💰 [CLOUDINARY] Checking quota usage...')
+    // Check Cloudinary quota
     try {
       const quotaResponse = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/usage`,
@@ -106,20 +115,16 @@ serve(async (req: Request) => {
         const creditsLimit = quotaData.credits?.limit || 1000
         const usagePercent = (creditsUsed / creditsLimit) * 100
         
-        console.log(`📊 [CLOUDINARY] Credits: ${creditsUsed}/${creditsLimit} (${usagePercent.toFixed(1)}%)`)
-        
-        if (usagePercent > 80) {
-          console.warn('⚠️ [CLOUDINARY] WARNING: Approaching credit limit (>80%)')
-        }
+        // Credits usage tracked
       } else {
-        console.warn('⚠️ [CLOUDINARY] Could not fetch quota data:', quotaResponse.status)
+        // Could not fetch quota data
       }
     } catch (quotaError) {
-      console.warn('⚠️ [CLOUDINARY] Quota check failed:', quotaError.message)
+        // Quota check failed
     }
 
     // Get video metadata to determine optimal frame offset
-    console.log('📊 [CLOUDINARY] Fetching video metadata for duration...')
+    // Fetch video metadata for duration
     const { data: videoData, error: videoError } = await supabaseClient
       .from('videos')
       .select('duration')
@@ -136,23 +141,23 @@ serve(async (req: Request) => {
       } else {
         frameOffset = 3; // 3 seconds for longer videos
       }
-      console.log(`🎯 [CLOUDINARY] Using frame offset ${frameOffset}s for ${videoData.duration}s video`);
+      // Using calculated frame offset
     } else {
-      console.log('⚠️ [CLOUDINARY] No duration data, using default 3s offset');
+      // No duration data, using default offset
     }
 
     // Upload video to Cloudinary with simplified async approach
-    console.log('☁️ [CLOUDINARY] Starting simplified Cloudinary upload...')
+    // Start Cloudinary upload
     
     const publicId = `video_thumbnails/${videoId}`
     
     // Generate clean thumbnail URL with dynamic offset
     const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
     
-    console.log('🎯 [CLOUDINARY] Generated optimistic thumbnail URL:', thumbnailUrl)
+    // Generated thumbnail URL
     
     // Start Cloudinary upload in fire-and-forget mode (don't wait)
-    console.log('🚀 [CLOUDINARY] Starting fire-and-forget upload...')
+    // Start background upload
     uploadVideoFireAndForget(
       videoUrl,
       publicId,
@@ -167,10 +172,10 @@ serve(async (req: Request) => {
       // Don't fail the main function - this is background processing
     })
     
-    console.log('✅ [CLOUDINARY] Background upload started, continuing...')
+    // Background upload started
 
     // Update video record with thumbnail information
-    console.log('💾 [CLOUDINARY] Updating database with thumbnail info...')
+    // Update database with thumbnail info
     const { error: updateError } = await supabaseClient
       .from('videos')
       .update({
@@ -188,8 +193,7 @@ serve(async (req: Request) => {
       )
     }
 
-    console.log('✅ [CLOUDINARY] Successfully updated video record in database')
-    console.log('🎉 [CLOUDINARY] Cloudinary thumbnail generation completed successfully!')
+    // Video record updated successfully
 
     return new Response(
       JSON.stringify({ 
@@ -225,7 +229,7 @@ async function uploadVideoFireAndForget(
   frameOffset: number = 3
 ) {
   try {
-    console.log('🔥 [FIRE_AND_FORGET] Starting background upload...')
+    // Starting background upload
     
     // Create timestamp and signature
     const timestamp = Math.round(new Date().getTime() / 1000)
@@ -242,7 +246,7 @@ async function uploadVideoFireAndForget(
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
     
-    console.log('🚀 [FIRE_AND_FORGET] Sending upload request...')
+    // Sending upload request
     
     // Add timeout signal for large video processing (10 minutes max)
     const timeoutController = new AbortController()
@@ -259,24 +263,23 @@ async function uploadVideoFireAndForget(
     
     clearTimeout(timeoutId) // Clear timeout if request completes
     
-    console.log('📊 [FIRE_AND_FORGET] Response received:', uploadResponse.status)
+    // Response received
     
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
-      console.log('✅ [FIRE_AND_FORGET] Upload successful:', result.public_id)
-      console.log('🎉 [FIRE_AND_FORGET] Video processing complete, validating thumbnail...')
+      // Upload successful, validating thumbnail
       
       // Validate that the thumbnail is actually accessible
       const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
       const isValid = await validateThumbnailUrl(thumbnailUrl)
       
       if (isValid) {
-        console.log('✅ [FIRE_AND_FORGET] Thumbnail validated, updating status to ready...')
+        // Thumbnail validated
         await updateVideoStatusWithRetry(supabaseClient, videoId, {
           thumb_status: 'ready'
         }, 'Status updated to ready after validation')
       } else {
-        console.error('❌ [FIRE_AND_FORGET] Thumbnail validation failed')
+        console.error('Thumbnail validation failed')
         await updateVideoStatusWithRetry(supabaseClient, videoId, {
           thumb_status: 'error',
           thumb_error_message: `THUMBNAIL_ERROR: Generated thumbnail is not accessible [${new Date().toISOString()}]`
@@ -284,7 +287,7 @@ async function uploadVideoFireAndForget(
       }
     } else {
       const errorText = await uploadResponse.text()
-      console.error('❌ [FIRE_AND_FORGET] Upload failed:', errorText)
+      console.error('Cloudinary upload failed:', errorText)
       
       // Update video with error status (with retry logic)
       await updateVideoStatusWithRetry(supabaseClient, videoId, {
@@ -294,7 +297,7 @@ async function uploadVideoFireAndForget(
     }
     
   } catch (error) {
-    console.error('❌ [FIRE_AND_FORGET] Background upload error:', error.message)
+    console.error('Background upload error:', error.message)
     
     // Update video with error status (with retry logic)
     await updateVideoStatusWithRetry(supabaseClient, videoId, {
@@ -308,7 +311,7 @@ async function uploadVideoFireAndForget(
 async function validateThumbnailUrl(url: string, maxRetries: number = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔍 [VALIDATION] Checking thumbnail accessibility (attempt ${attempt})...`)
+      // Checking thumbnail accessibility
       
       const response = await fetch(url, { 
         method: 'HEAD',
@@ -316,24 +319,24 @@ async function validateThumbnailUrl(url: string, maxRetries: number = 3): Promis
       })
       
       if (response.ok && response.status === 200) {
-        console.log('✅ [VALIDATION] Thumbnail is accessible')
+        // Thumbnail is accessible
         return true
       } else {
-        console.warn(`⚠️ [VALIDATION] Thumbnail not ready yet: ${response.status}`)
+        // Thumbnail not ready yet
       }
     } catch (error) {
-      console.warn(`⚠️ [VALIDATION] Attempt ${attempt} failed:`, error.message)
+      // Validation attempt failed
     }
     
     if (attempt < maxRetries) {
       // Wait longer between retries (Cloudinary processing takes time)
       const delay = attempt * 5000 // 5s, 10s, 15s
-      console.log(`⏳ [VALIDATION] Waiting ${delay}ms before retry...`)
+      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
   
-  console.error('❌ [VALIDATION] Thumbnail validation failed after all retries')
+  // Thumbnail validation failed after all retries
   return false
 }
 
@@ -356,19 +359,19 @@ async function updateVideoStatusWithRetry(
         throw error
       }
       
-      console.log(`✅ [DB_RETRY] ${successMessage} (attempt ${attempt})`)
+      // Database update successful
       return
     } catch (error) {
-      console.error(`❌ [DB_RETRY] Attempt ${attempt}/${maxRetries} failed:`, error.message)
+      // Database update failed
       
       if (attempt === maxRetries) {
-        console.error('❌ [DB_RETRY] All retry attempts failed, video may remain in incorrect state')
+        console.error('All database retry attempts failed')
         return
       }
       
       // Exponential backoff: wait 1s, 2s, 4s
       const delay = Math.pow(2, attempt - 1) * 1000
-      console.log(`⏳ [DB_RETRY] Waiting ${delay}ms before retry...`)
+      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
@@ -403,7 +406,7 @@ function generateThumbnailUrl(cloudName: string, publicId: string): string {
 // Update video with error status (standardized format)
 async function updateVideoError(supabaseClient: any, videoId: string, errorMessage: string) {
   const standardizedError = `THUMBNAIL_ERROR: ${errorMessage} [${new Date().toISOString()}]`
-  console.log('❌ [CLOUDINARY] Updating video with error status:', standardizedError)
+  // Update video with error status
   
   await updateVideoStatusWithRetry(supabaseClient, videoId, {
     thumb_status: 'error',

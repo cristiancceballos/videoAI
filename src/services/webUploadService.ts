@@ -53,13 +53,7 @@ class WebUploadService {
     onProgress?: (progress: UploadProgress) => void
   ): Promise<boolean> {
     try {
-      console.log('🚀 [UPLOAD DEBUG] Starting file upload:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        urlPrefix: presignedUrl.substring(0, 100) + '...',
-        urlHost: new URL(presignedUrl).host
-      });
+      // Starting file upload
 
       const xhr = new XMLHttpRequest();
       
@@ -72,74 +66,51 @@ class WebUploadService {
               percentage: (event.loaded / event.total) * 100,
             };
             onProgress(progress);
-            console.log('📊 [UPLOAD DEBUG] Upload progress:', progress.percentage.toFixed(1) + '%');
+            // Upload progress tracked
           }
         };
 
         xhr.onload = () => {
-          console.log('✅ [UPLOAD DEBUG] Upload completed with status:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            responseType: xhr.responseType,
-            responseLength: xhr.response?.length || 0,
-            responseHeaders: xhr.getAllResponseHeaders(),
-            fileName: file.name
-          });
+          // Upload completed
 
           if (xhr.status === 200 || xhr.status === 201) {
-            console.log('✅ [UPLOAD DEBUG] Upload reported as successful for:', file.name);
+            // Upload successful
             resolve(true);
           } else {
-            console.error('❌ [UPLOAD DEBUG] Upload failed for:', file.name, 'with status:', xhr.status);
-            console.error('❌ [UPLOAD DEBUG] Response text:', xhr.responseText);
+            console.error('Upload failed with status:', xhr.status);
             resolve(false);
           }
         };
 
         xhr.onerror = (error) => {
-          console.error('💥 [UPLOAD DEBUG] Upload error occurred for:', file.name, error);
-          console.error('💥 [UPLOAD DEBUG] XHR error details:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            readyState: xhr.readyState,
-            responseText: xhr.responseText
-          });
+          console.error('Upload error:', error);
           resolve(false);
         };
 
         xhr.ontimeout = () => {
-          console.error('⏰ [UPLOAD DEBUG] Upload timeout for:', file.name);
+          console.error('Upload timeout');
           resolve(false);
         };
 
         xhr.onabort = () => {
-          console.error('🛑 [UPLOAD DEBUG] Upload aborted for:', file.name);
+          console.error('Upload aborted');
           resolve(false);
         };
 
         // Set timeout to 60 seconds
         xhr.timeout = 60000;
 
-        console.log('📤 [UPLOAD DEBUG] Initiating XMLHttpRequest PUT for:', file.name);
+        // Initiate upload
         xhr.open('PUT', presignedUrl);
         xhr.setRequestHeader('Content-Type', file.type);
         
-        // Log request headers
-        console.log('📋 [UPLOAD DEBUG] Request headers set:', {
-          'Content-Type': file.type,
-          method: 'PUT'
-        });
+        // Request headers set
         
         xhr.send(file);
-        console.log('🚀 [UPLOAD DEBUG] XHR request sent for:', file.name);
+        // Request sent
       });
     } catch (error) {
-      console.error('💥 [UPLOAD DEBUG] Exception in uploadFileWithProgress:', error);
-      console.error('💥 [UPLOAD DEBUG] File details:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
+      console.error('Exception in uploadFileWithProgress:', error);
       return false;
     }
   }
@@ -161,8 +132,7 @@ class WebUploadService {
         return null;
       }
       
-      console.log('Session user ID:', session.user.id);
-      console.log('Provided user ID:', userId);
+      // Session verified
       
       type VideoInsert = Database['public']['Tables']['videos']['Insert'];
       
@@ -180,7 +150,7 @@ class WebUploadService {
         height: asset.height ? Math.round(asset.height) : null, // Ensure integer
       };
 
-      console.log('Attempting to insert video data:', videoData);
+      // Insert video data
 
       const { data, error } = await supabase
         .from('videos')
@@ -203,8 +173,7 @@ class WebUploadService {
         return null;
       }
 
-      console.log('Video record created successfully:', data);
-      console.log('Video will appear in home feed with ID:', data.id);
+      // Video record created
       return data.id;
     } catch (error) {
       console.error('Database exception:', error);
@@ -228,17 +197,17 @@ class WebUploadService {
     thumbnailPath?: string
   ): Promise<boolean> {
     try {
-      console.log(`📊 [DATABASE DEBUG] Updating video ${videoId} status to: ${status}`);
+      // Update video status
       
       const updateData: any = { status };
       if (thumbnailPath) {
         updateData.thumbnail_path = thumbnailPath;
-        console.log(`🖼️ [DATABASE DEBUG] Adding thumbnail path to update:`, thumbnailPath);
+        // Add thumbnail path
       } else if (status === 'ready') {
-        console.log(`⚠️ [DATABASE DEBUG] Setting status to ready but no thumbnail path provided`);
+        // No thumbnail path provided
       }
 
-      console.log(`💾 [DATABASE DEBUG] Update data:`, updateData);
+      // Update data prepared
 
       const { data, error } = await supabase
         .from('videos')
@@ -251,19 +220,11 @@ class WebUploadService {
         return false;
       }
 
-      console.log('✅ [DATABASE DEBUG] Video status updated successfully in database:');
-      console.log('📄 [DATABASE DEBUG] Updated record:', JSON.stringify(data[0], null, 2));
-      
-      // Specifically log thumbnail information
-      if (data[0] && data[0].thumbnail_path) {
-        console.log(`🎯 [DATABASE DEBUG] Thumbnail path successfully stored: ${data[0].thumbnail_path}`);
-      } else if (status === 'ready') {
-        console.log(`⚠️ [DATABASE DEBUG] Video marked as ready but no thumbnail_path in database`);
-      }
+      // Video status updated successfully
       
       return true;
     } catch (error) {
-      console.error('💥 [DATABASE DEBUG] Exception updating video status:', error);
+      console.error('Exception updating video status:', error);
       return false;
     }
   }
@@ -285,12 +246,10 @@ class WebUploadService {
       }
 
       // 2. Generate presigned URL
-      console.log('Generating presigned URL for bucket: videos, user:', userId, 'filename:', asset.filename);
       const uploadUrl = await this.generatePresignedUrl(userId, asset.filename);
       if (!uploadUrl) {
         return { success: false, error: 'Failed to generate upload URL' };
       }
-      console.log('Presigned URL generated:', { url: '***', path: uploadUrl.path });
 
       // 3. Create video record in database
       const videoId = await this.createVideoRecord(
@@ -320,15 +279,10 @@ class WebUploadService {
       }
 
       // 5. Update status to processing before thumbnail generation
-      console.log('🎯 [DATABASE DEBUG] Setting video status to processing...');
       await this.updateVideoStatus(videoId, 'processing');
       
       // 6. Generate Cloudinary thumbnails (real video frames)
-      console.log('☁️ [CLOUDINARY DEBUG] Starting Cloudinary thumbnail generation...');
-      
       try {
-        // Call the Cloudinary thumbnail Edge Function
-        console.log('📤 [CLOUDINARY DEBUG] Calling cloudinary-thumbnails Edge Function...');
         const response = await supabase.functions.invoke('cloudinary-thumbnails', {
           body: {
             videoId: videoId,
@@ -337,29 +291,18 @@ class WebUploadService {
           }
         });
 
-        if (response.error) {
-          console.error('❌ [CLOUDINARY DEBUG] Edge Function error:', response.error);
-          console.error('❌ [CLOUDINARY DEBUG] Error details:', JSON.stringify(response.error, null, 2));
-          // Fallback to old SVG thumbnail generation on Cloudinary failure
-          console.log('🔄 [CLOUDINARY DEBUG] Falling back to SVG thumbnails...');
-          await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
-        } else if (response.data?.success) {
-          console.log('✅ [CLOUDINARY DEBUG] Cloudinary thumbnail generated:', response.data.thumbnailUrl);
-        } else {
-          console.warn('⚠️ [CLOUDINARY DEBUG] Cloudinary generation failed, using fallback');
-          console.warn('⚠️ [CLOUDINARY DEBUG] Response data:', JSON.stringify(response.data, null, 2));
-          await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
+        if (response.error || !response.data?.success) {
+          // If thumbnail generation fails, still mark video as ready
+          console.error('Thumbnail generation failed, marking video as ready without thumbnail');
+          await this.updateVideoStatus(videoId, 'ready');
         }
+        // If successful, the Edge Function will update the status
         
       } catch (error) {
-        console.error('❌ [CLOUDINARY DEBUG] Failed to generate Cloudinary thumbnails:', error);
-        console.error('❌ [CLOUDINARY DEBUG] Exception details:', error.message, error.stack);
-        // Fallback to SVG thumbnails
-        console.log('🔄 [CLOUDINARY DEBUG] Using SVG fallback due to error');
-        await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
+        console.error('Failed to generate thumbnails:', error);
+        // Ensure video is still marked as ready
+        await this.updateVideoStatus(videoId, 'ready');
       }
-      
-      console.log('✅ Video fully processed and ready!');
 
       // Note: Blob URL cleanup is handled by the WebVideoPreviewModal component
       // to prevent premature revocation during thumbnail generation
@@ -378,8 +321,6 @@ class WebUploadService {
     storagePath: string
   ): Promise<void> {
     try {
-      console.log('🎨 [SVG FALLBACK DEBUG] Generating SVG thumbnails as fallback...');
-      
       const response = await supabase.functions.invoke('generate-thumbnails', {
         body: {
           videoId: videoId,
@@ -389,14 +330,10 @@ class WebUploadService {
       });
 
       if (response.error) {
-        console.error('❌ [SVG FALLBACK DEBUG] SVG generation also failed:', response.error);
         // Set video to ready without thumbnails
         await this.updateVideoStatus(videoId, 'ready');
-      } else {
-        console.log('✅ [SVG FALLBACK DEBUG] SVG thumbnails generated successfully');
       }
     } catch (error) {
-      console.error('❌ [SVG FALLBACK DEBUG] Exception in SVG generation:', error);
       await this.updateVideoStatus(videoId, 'ready');
     }
   }
