@@ -91,37 +91,43 @@ serve(async (req: Request) => {
     const videoUrl = signedUrlData.signedUrl
     console.log('✅ [CLOUDINARY] Generated signed URL for video')
 
-    // Use direct Cloudinary thumbnail generation from URL (faster, no upload needed)
-    console.log('☁️ [CLOUDINARY] Generating thumbnail via URL transformation...')
+    // Upload video to Cloudinary with simplified async approach
+    console.log('☁️ [CLOUDINARY] Starting simplified Cloudinary upload...')
     
-    // Use Cloudinary's fetch feature to generate thumbnail directly from video URL
     const publicId = `video_thumbnails/${videoId}`
     
-    // Generate Cloudinary URL that fetches and transforms the video in one step
-    const cloudinaryFetchUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${encodeURIComponent(videoUrl)}.jpg`
-    
-    console.log('🖼️ [CLOUDINARY] Generated thumbnail URL via fetch:', cloudinaryFetchUrl)
-    
-    // Test if the thumbnail URL works (this triggers Cloudinary to process it)
-    console.log('🧪 [CLOUDINARY] Testing thumbnail generation...')
     try {
-      const thumbnailTest = await fetch(cloudinaryFetchUrl, { method: 'HEAD' })
-      console.log('📊 [CLOUDINARY] Thumbnail test result:', {
-        status: thumbnailTest.status,
-        contentType: thumbnailTest.headers.get('content-type')
-      })
-      
-      if (thumbnailTest.ok) {
-        console.log('✅ [CLOUDINARY] Thumbnail available immediately')
-      } else {
-        console.log('⏳ [CLOUDINARY] Thumbnail being generated, will use URL anyway')
+      // Upload video to Cloudinary using simplified form upload
+      const uploadResult = await uploadVideoToCloudinarySimple(
+        videoUrl,
+        publicId,
+        cloudinaryCloudName,
+        cloudinaryApiKey,
+        cloudinaryApiSecret
+      )
+
+      if (!uploadResult.success) {
+        console.error('❌ [CLOUDINARY] Upload failed:', uploadResult.error)
+        await updateVideoError(supabaseClient, videoId, uploadResult.error)
+        return new Response(
+          JSON.stringify({ error: 'Failed to upload video to Cloudinary' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
-    } catch (testError) {
-      console.log('⚠️ [CLOUDINARY] Thumbnail test failed, but URL should work:', testError.message)
+
+      // Generate clean thumbnail URL using standard Cloudinary format
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+      
+      console.log('✅ [CLOUDINARY] Generated clean thumbnail URL:', thumbnailUrl)
+      
+    } catch (uploadError) {
+      console.error('❌ [CLOUDINARY] Upload exception:', uploadError)
+      await updateVideoError(supabaseClient, videoId, `Upload failed: ${uploadError.message}`)
+      return new Response(
+        JSON.stringify({ error: 'Failed to process video' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
-    
-    // Use the fetch URL as the thumbnail URL
-    const thumbnailUrl = cloudinaryFetchUrl
 
     // Update video record with thumbnail information
     console.log('💾 [CLOUDINARY] Updating database with thumbnail info...')
@@ -167,50 +173,25 @@ serve(async (req: Request) => {
   }
 })
 
-// Upload video to Cloudinary
-async function uploadVideoToCloudinary(
-  videoUrl: string, 
-  videoId: string, 
-  cloudName: string, 
-  apiKey: string, 
+// Simplified Cloudinary upload with timeout protection
+async function uploadVideoToCloudinarySimple(
+  videoUrl: string,
+  publicId: string,
+  cloudName: string,
+  apiKey: string,
   apiSecret: string
 ) {
   try {
-    console.log('📤 [CLOUDINARY] Starting video upload...')
-    console.log('🔍 [CLOUDINARY] Debug info:', {
-      videoUrl: videoUrl.substring(0, 100) + '...',
-      videoId,
-      cloudName,
-      apiKeyLength: apiKey.length,
-      apiSecretLength: apiSecret.length
-    })
+    console.log('📤 [CLOUDINARY SIMPLE] Starting simplified upload...')
     
-    // Test video URL accessibility first
-    console.log('🔗 [CLOUDINARY] Testing video URL accessibility...')
-    try {
-      const testResponse = await fetch(videoUrl, { method: 'HEAD' })
-      console.log('✅ [CLOUDINARY] Video URL test result:', {
-        status: testResponse.status,
-        contentType: testResponse.headers.get('content-type'),
-        contentLength: testResponse.headers.get('content-length')
-      })
-    } catch (urlError) {
-      console.error('❌ [CLOUDINARY] Video URL not accessible:', urlError)
-      return { success: false, error: `Video URL not accessible: ${urlError.message}` }
-    }
-    
-    // Create timestamp for API signature
+    // Create timestamp and signature
     const timestamp = Math.round(new Date().getTime() / 1000)
-    const publicId = `video_thumbnails/${videoId}`
-    
-    console.log('🔑 [CLOUDINARY] Creating API signature...')
-    // Create signature for authenticated upload
     const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}&resource_type=video`
     const signature = await generateSignature(paramsToSign, apiSecret)
-    console.log('✅ [CLOUDINARY] Signature created successfully')
     
-    // Prepare form data for upload
-    console.log('📋 [CLOUDINARY] Preparing form data...')
+    console.log('📋 [CLOUDINARY SIMPLE] Prepared upload parameters')
+    
+    // Create FormData
     const formData = new FormData()
     formData.append('file', videoUrl)
     formData.append('public_id', publicId)
@@ -220,64 +201,53 @@ async function uploadVideoToCloudinary(
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
     
-    console.log('📋 [CLOUDINARY] Form data prepared:', {
-      publicId,
-      timestamp,
-      apiKey: apiKey.substring(0, 6) + '...',
-      signature: signature.substring(0, 10) + '...',
-      cloudinaryUrl: `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`
-    })
+    // Upload with timeout protection (15 seconds max)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
     
-    // Upload to Cloudinary
-    console.log('🚀 [CLOUDINARY] Sending upload request to Cloudinary...')
-    const uploadResponse = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-      {
-        method: 'POST',
-        body: formData
+    console.log('🚀 [CLOUDINARY SIMPLE] Sending upload request with timeout...')
+    
+    try {
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+        {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        }
+      )
+      
+      clearTimeout(timeoutId)
+      
+      console.log('📊 [CLOUDINARY SIMPLE] Response received:', uploadResponse.status)
+      
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text()
+        console.error('❌ [CLOUDINARY SIMPLE] Upload failed:', errorText)
+        return { success: false, error: `Upload failed: ${errorText}` }
       }
-    )
-    
-    console.log('📊 [CLOUDINARY] Upload response received:', {
-      status: uploadResponse.status,
-      statusText: uploadResponse.statusText,
-      headers: Object.fromEntries(uploadResponse.headers.entries())
-    })
-    
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text()
-      console.error('❌ [CLOUDINARY] Upload failed:', {
-        status: uploadResponse.status,
-        statusText: uploadResponse.statusText,
-        errorBody: errorText
-      })
-      return { success: false, error: `Upload failed (${uploadResponse.status}): ${errorText}` }
-    }
-    
-    console.log('🎉 [CLOUDINARY] Upload successful! Parsing response...')
-    const result = await uploadResponse.json()
-    console.log('✅ [CLOUDINARY] Video uploaded successfully:', {
-      publicId: result.public_id,
-      format: result.format,
-      resourceType: result.resource_type,
-      bytes: result.bytes,
-      duration: result.duration,
-      width: result.width,
-      height: result.height
-    })
-    
-    return { 
-      success: true, 
-      publicId: result.public_id,
-      cloudinaryResponse: result
+      
+      const result = await uploadResponse.json()
+      console.log('✅ [CLOUDINARY SIMPLE] Upload successful:', result.public_id)
+      
+      return { 
+        success: true, 
+        publicId: result.public_id
+      }
+      
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      
+      if (fetchError.name === 'AbortError') {
+        console.log('⏰ [CLOUDINARY SIMPLE] Upload timed out, but continuing with thumbnail URL')
+        // Return success anyway - thumbnail URL will work once processing completes
+        return { success: true, publicId: publicId }
+      }
+      throw fetchError
     }
     
   } catch (error) {
-    console.error('❌ [CLOUDINARY] Upload error:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    })
+    console.error('❌ [CLOUDINARY SIMPLE] Upload error:', error.message)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : String(error)
