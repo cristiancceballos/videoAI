@@ -168,16 +168,40 @@ async function uploadVideoToCloudinary(
 ) {
   try {
     console.log('📤 [CLOUDINARY] Starting video upload...')
+    console.log('🔍 [CLOUDINARY] Debug info:', {
+      videoUrl: videoUrl.substring(0, 100) + '...',
+      videoId,
+      cloudName,
+      apiKeyLength: apiKey.length,
+      apiSecretLength: apiSecret.length
+    })
+    
+    // Test video URL accessibility first
+    console.log('🔗 [CLOUDINARY] Testing video URL accessibility...')
+    try {
+      const testResponse = await fetch(videoUrl, { method: 'HEAD' })
+      console.log('✅ [CLOUDINARY] Video URL test result:', {
+        status: testResponse.status,
+        contentType: testResponse.headers.get('content-type'),
+        contentLength: testResponse.headers.get('content-length')
+      })
+    } catch (urlError) {
+      console.error('❌ [CLOUDINARY] Video URL not accessible:', urlError)
+      return { success: false, error: `Video URL not accessible: ${urlError.message}` }
+    }
     
     // Create timestamp for API signature
     const timestamp = Math.round(new Date().getTime() / 1000)
     const publicId = `video_thumbnails/${videoId}`
     
+    console.log('🔑 [CLOUDINARY] Creating API signature...')
     // Create signature for authenticated upload
     const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}&resource_type=video`
     const signature = await generateSignature(paramsToSign, apiSecret)
+    console.log('✅ [CLOUDINARY] Signature created successfully')
     
     // Prepare form data for upload
+    console.log('📋 [CLOUDINARY] Preparing form data...')
     const formData = new FormData()
     formData.append('file', videoUrl)
     formData.append('public_id', publicId)
@@ -187,7 +211,16 @@ async function uploadVideoToCloudinary(
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
     
+    console.log('📋 [CLOUDINARY] Form data prepared:', {
+      publicId,
+      timestamp,
+      apiKey: apiKey.substring(0, 6) + '...',
+      signature: signature.substring(0, 10) + '...',
+      cloudinaryUrl: `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`
+    })
+    
     // Upload to Cloudinary
+    console.log('🚀 [CLOUDINARY] Sending upload request to Cloudinary...')
     const uploadResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
       {
@@ -196,14 +229,33 @@ async function uploadVideoToCloudinary(
       }
     )
     
+    console.log('📊 [CLOUDINARY] Upload response received:', {
+      status: uploadResponse.status,
+      statusText: uploadResponse.statusText,
+      headers: Object.fromEntries(uploadResponse.headers.entries())
+    })
+    
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text()
-      console.error('❌ [CLOUDINARY] Upload failed:', errorText)
-      return { success: false, error: `Upload failed: ${errorText}` }
+      console.error('❌ [CLOUDINARY] Upload failed:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        errorBody: errorText
+      })
+      return { success: false, error: `Upload failed (${uploadResponse.status}): ${errorText}` }
     }
     
+    console.log('🎉 [CLOUDINARY] Upload successful! Parsing response...')
     const result = await uploadResponse.json()
-    console.log('✅ [CLOUDINARY] Video uploaded successfully:', result.public_id)
+    console.log('✅ [CLOUDINARY] Video uploaded successfully:', {
+      publicId: result.public_id,
+      format: result.format,
+      resourceType: result.resource_type,
+      bytes: result.bytes,
+      duration: result.duration,
+      width: result.width,
+      height: result.height
+    })
     
     return { 
       success: true, 
@@ -212,7 +264,11 @@ async function uploadVideoToCloudinary(
     }
     
   } catch (error) {
-    console.error('❌ [CLOUDINARY] Upload error:', error)
+    console.error('❌ [CLOUDINARY] Upload error:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return { 
       success: false, 
       error: error instanceof Error ? error.message : String(error)
