@@ -339,6 +339,7 @@ class WebUploadService {
 
         if (response.error) {
           console.error('❌ [CLOUDINARY DEBUG] Edge Function error:', response.error);
+          console.error('❌ [CLOUDINARY DEBUG] Error details:', JSON.stringify(response.error, null, 2));
           // Fallback to old SVG thumbnail generation on Cloudinary failure
           console.log('🔄 [CLOUDINARY DEBUG] Falling back to SVG thumbnails...');
           await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
@@ -346,11 +347,13 @@ class WebUploadService {
           console.log('✅ [CLOUDINARY DEBUG] Cloudinary thumbnail generated:', response.data.thumbnailUrl);
         } else {
           console.warn('⚠️ [CLOUDINARY DEBUG] Cloudinary generation failed, using fallback');
+          console.warn('⚠️ [CLOUDINARY DEBUG] Response data:', JSON.stringify(response.data, null, 2));
           await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
         }
         
       } catch (error) {
         console.error('❌ [CLOUDINARY DEBUG] Failed to generate Cloudinary thumbnails:', error);
+        console.error('❌ [CLOUDINARY DEBUG] Exception details:', error.message, error.stack);
         // Fallback to SVG thumbnails
         console.log('🔄 [CLOUDINARY DEBUG] Using SVG fallback due to error');
         await this.generateFallbackSVGThumbnails(videoId, userId, uploadUrl.path);
