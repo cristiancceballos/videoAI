@@ -50,7 +50,7 @@ class VideoService {
           }
           // Priority 2: Use Supabase Storage thumbnail with signed URL
           else if (video.thumbnail_path) {
-            thumbnailUrl = await this.getFileUrl('thumbnails', video.thumbnail_path);
+            thumbnailUrl = await this.getFileUrl('thumbnails', video.thumbnail_path) || undefined;
             console.log(`📁 [VIDEO SERVICE DEBUG] Using Supabase thumbnail for ${video.title.substring(0, 20)}`);
           }
 

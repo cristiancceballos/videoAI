@@ -66,18 +66,14 @@ serve(async (req: Request) => {
       )
     }
 
-    // Update video status to processing
-    console.log('🔄 [CLOUDINARY] Updating video status to processing...')
-    await supabaseClient
-      .from('videos')
-      .update({ thumb_status: 'processing' })
-      .eq('id', videoId)
+    // Note: We'll set thumb_status to 'processing' after generating the optimistic URL
+    console.log('🔄 [CLOUDINARY] Preparing thumbnail generation...')
 
     // Generate signed URL for the video
     console.log('🔐 [CLOUDINARY] Generating signed URL for video access...')
     const { data: signedUrlData, error: signedUrlError } = await supabaseClient.storage
       .from('videos')
-      .createSignedUrl(storagePath, 3600) // 1 hour expiry
+      .createSignedUrl(storagePath, 21600) // 6 hours expiry for large video processing
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('❌ [CLOUDINARY] Failed to generate signed URL:', signedUrlError)
@@ -91,13 +87,67 @@ serve(async (req: Request) => {
     const videoUrl = signedUrlData.signedUrl
     console.log('✅ [CLOUDINARY] Generated signed URL for video')
 
+    // Basic quota check (warn if approaching limits)
+    console.log('💰 [CLOUDINARY] Checking quota usage...')
+    try {
+      const quotaResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/usage`,
+        {
+          headers: {
+            'Authorization': `Basic ${btoa(`${cloudinaryApiKey}:${cloudinaryApiSecret}`)}`
+          },
+          signal: AbortSignal.timeout(5000)
+        }
+      )
+      
+      if (quotaResponse.ok) {
+        const quotaData = await quotaResponse.json()
+        const creditsUsed = quotaData.credits?.usage || 0
+        const creditsLimit = quotaData.credits?.limit || 1000
+        const usagePercent = (creditsUsed / creditsLimit) * 100
+        
+        console.log(`📊 [CLOUDINARY] Credits: ${creditsUsed}/${creditsLimit} (${usagePercent.toFixed(1)}%)`)
+        
+        if (usagePercent > 80) {
+          console.warn('⚠️ [CLOUDINARY] WARNING: Approaching credit limit (>80%)')
+        }
+      } else {
+        console.warn('⚠️ [CLOUDINARY] Could not fetch quota data:', quotaResponse.status)
+      }
+    } catch (quotaError) {
+      console.warn('⚠️ [CLOUDINARY] Quota check failed:', quotaError.message)
+    }
+
+    // Get video metadata to determine optimal frame offset
+    console.log('📊 [CLOUDINARY] Fetching video metadata for duration...')
+    const { data: videoData, error: videoError } = await supabaseClient
+      .from('videos')
+      .select('duration')
+      .eq('id', videoId)
+      .single()
+
+    // Calculate optimal frame offset based on video duration
+    let frameOffset = 3; // Default 3 seconds
+    if (videoData?.duration) {
+      if (videoData.duration < 3) {
+        frameOffset = Math.max(1, Math.floor(videoData.duration / 2)); // Middle of short videos
+      } else if (videoData.duration < 10) {
+        frameOffset = 2; // 2 seconds for short videos
+      } else {
+        frameOffset = 3; // 3 seconds for longer videos
+      }
+      console.log(`🎯 [CLOUDINARY] Using frame offset ${frameOffset}s for ${videoData.duration}s video`);
+    } else {
+      console.log('⚠️ [CLOUDINARY] No duration data, using default 3s offset');
+    }
+
     // Upload video to Cloudinary with simplified async approach
     console.log('☁️ [CLOUDINARY] Starting simplified Cloudinary upload...')
     
     const publicId = `video_thumbnails/${videoId}`
     
-    // Generate clean thumbnail URL immediately (optimistic)
-    const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+    // Generate clean thumbnail URL with dynamic offset
+    const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
     
     console.log('🎯 [CLOUDINARY] Generated optimistic thumbnail URL:', thumbnailUrl)
     
@@ -110,7 +160,8 @@ serve(async (req: Request) => {
       cloudinaryApiKey,
       cloudinaryApiSecret,
       supabaseClient,
-      videoId
+      videoId,
+      frameOffset
     ).catch((error) => {
       console.error('❌ [CLOUDINARY] Background upload failed:', error)
       // Don't fail the main function - this is background processing
@@ -124,7 +175,7 @@ serve(async (req: Request) => {
       .from('videos')
       .update({
         cloudinary_url: thumbnailUrl,
-        thumb_status: 'ready',
+        thumb_status: 'processing',
         thumb_error_message: null
       })
       .eq('id', videoId)
@@ -170,7 +221,8 @@ async function uploadVideoFireAndForget(
   apiKey: string,
   apiSecret: string,
   supabaseClient: any,
-  videoId: string
+  videoId: string,
+  frameOffset: number = 3
 ) {
   try {
     console.log('🔥 [FIRE_AND_FORGET] Starting background upload...')
@@ -192,49 +244,132 @@ async function uploadVideoFireAndForget(
     
     console.log('🚀 [FIRE_AND_FORGET] Sending upload request...')
     
-    // No timeout - let it run as long as needed
+    // Add timeout signal for large video processing (10 minutes max)
+    const timeoutController = new AbortController()
+    const timeoutId = setTimeout(() => timeoutController.abort(), 600000) // 10 minutes
+    
     const uploadResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
       {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: timeoutController.signal
       }
     )
+    
+    clearTimeout(timeoutId) // Clear timeout if request completes
     
     console.log('📊 [FIRE_AND_FORGET] Response received:', uploadResponse.status)
     
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
       console.log('✅ [FIRE_AND_FORGET] Upload successful:', result.public_id)
-      console.log('🎉 [FIRE_AND_FORGET] Video processing complete, thumbnail should now be available')
+      console.log('🎉 [FIRE_AND_FORGET] Video processing complete, validating thumbnail...')
+      
+      // Validate that the thumbnail is actually accessible
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+      const isValid = await validateThumbnailUrl(thumbnailUrl)
+      
+      if (isValid) {
+        console.log('✅ [FIRE_AND_FORGET] Thumbnail validated, updating status to ready...')
+        await updateVideoStatusWithRetry(supabaseClient, videoId, {
+          thumb_status: 'ready'
+        }, 'Status updated to ready after validation')
+      } else {
+        console.error('❌ [FIRE_AND_FORGET] Thumbnail validation failed')
+        await updateVideoStatusWithRetry(supabaseClient, videoId, {
+          thumb_status: 'error',
+          thumb_error_message: `THUMBNAIL_ERROR: Generated thumbnail is not accessible [${new Date().toISOString()}]`
+        }, 'Error status updated after thumbnail validation failure')
+      }
     } else {
       const errorText = await uploadResponse.text()
       console.error('❌ [FIRE_AND_FORGET] Upload failed:', errorText)
       
-      // Update video with error status
-      await supabaseClient
-        .from('videos')
-        .update({
-          thumb_status: 'error',
-          thumb_error_message: `Cloudinary upload failed: ${errorText}`
-        })
-        .eq('id', videoId)
+      // Update video with error status (with retry logic)
+      await updateVideoStatusWithRetry(supabaseClient, videoId, {
+        thumb_status: 'error',
+        thumb_error_message: `THUMBNAIL_ERROR: Cloudinary upload failed: ${errorText} [${new Date().toISOString()}]`
+      }, 'Error status updated after Cloudinary failure')
     }
     
   } catch (error) {
     console.error('❌ [FIRE_AND_FORGET] Background upload error:', error.message)
     
-    // Update video with error status
+    // Update video with error status (with retry logic)
+    await updateVideoStatusWithRetry(supabaseClient, videoId, {
+      thumb_status: 'error',
+      thumb_error_message: `THUMBNAIL_ERROR: Background upload failed: ${error.message} [${new Date().toISOString()}]`
+    }, 'Error status updated after background failure')
+  }
+}
+
+// Validate that Cloudinary thumbnail URL is accessible
+async function validateThumbnailUrl(url: string, maxRetries: number = 3): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await supabaseClient
+      console.log(`🔍 [VALIDATION] Checking thumbnail accessibility (attempt ${attempt})...`)
+      
+      const response = await fetch(url, { 
+        method: 'HEAD',
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+      
+      if (response.ok && response.status === 200) {
+        console.log('✅ [VALIDATION] Thumbnail is accessible')
+        return true
+      } else {
+        console.warn(`⚠️ [VALIDATION] Thumbnail not ready yet: ${response.status}`)
+      }
+    } catch (error) {
+      console.warn(`⚠️ [VALIDATION] Attempt ${attempt} failed:`, error.message)
+    }
+    
+    if (attempt < maxRetries) {
+      // Wait longer between retries (Cloudinary processing takes time)
+      const delay = attempt * 5000 // 5s, 10s, 15s
+      console.log(`⏳ [VALIDATION] Waiting ${delay}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  
+  console.error('❌ [VALIDATION] Thumbnail validation failed after all retries')
+  return false
+}
+
+// Database update with retry logic
+async function updateVideoStatusWithRetry(
+  supabaseClient: any, 
+  videoId: string, 
+  updateData: any, 
+  successMessage: string,
+  maxRetries: number = 3
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { error } = await supabaseClient
         .from('videos')
-        .update({
-          thumb_status: 'error',
-          thumb_error_message: `Background upload failed: ${error.message}`
-        })
+        .update(updateData)
         .eq('id', videoId)
-    } catch (dbError) {
-      console.error('❌ [FIRE_AND_FORGET] Failed to update error status:', dbError)
+      
+      if (error) {
+        throw error
+      }
+      
+      console.log(`✅ [DB_RETRY] ${successMessage} (attempt ${attempt})`)
+      return
+    } catch (error) {
+      console.error(`❌ [DB_RETRY] Attempt ${attempt}/${maxRetries} failed:`, error.message)
+      
+      if (attempt === maxRetries) {
+        console.error('❌ [DB_RETRY] All retry attempts failed, video may remain in incorrect state')
+        return
+      }
+      
+      // Exponential backoff: wait 1s, 2s, 4s
+      const delay = Math.pow(2, attempt - 1) * 1000
+      console.log(`⏳ [DB_RETRY] Waiting ${delay}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
 }
@@ -265,14 +400,13 @@ function generateThumbnailUrl(cloudName: string, publicId: string): string {
   return `https://res.cloudinary.com/${cloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
 }
 
-// Update video with error status
+// Update video with error status (standardized format)
 async function updateVideoError(supabaseClient: any, videoId: string, errorMessage: string) {
-  console.log('❌ [CLOUDINARY] Updating video with error status:', errorMessage)
-  await supabaseClient
-    .from('videos')
-    .update({
-      thumb_status: 'error',
-      thumb_error_message: errorMessage
-    })
-    .eq('id', videoId)
+  const standardizedError = `THUMBNAIL_ERROR: ${errorMessage} [${new Date().toISOString()}]`
+  console.log('❌ [CLOUDINARY] Updating video with error status:', standardizedError)
+  
+  await updateVideoStatusWithRetry(supabaseClient, videoId, {
+    thumb_status: 'error',
+    thumb_error_message: standardizedError
+  }, 'Error status updated with standardized format')
 }

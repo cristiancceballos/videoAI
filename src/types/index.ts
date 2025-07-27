@@ -16,6 +16,10 @@ export interface Video {
   status: 'uploading' | 'processing' | 'ready' | 'error';
   duration?: number;
   file_size?: number;
+  source_type?: string;
+  thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
+  cloudinary_url?: string;
+  thumb_error_message?: string;
   created_at: string;
   updated_at: string;
 }

@@ -64,10 +64,16 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
             source={{ uri: video.thumbnailUrl }} 
             style={styles.thumbnail}
             resizeMode="cover"
+            onLoad={() => console.log('✅ [GRID THUMBNAIL DEBUG] Image loaded successfully for:', video.title.substring(0, 20))}
+            onError={(error) => console.error('❌ [GRID THUMBNAIL DEBUG] Image load failed for:', video.title.substring(0, 20), error.nativeEvent)}
           />
         ) : (
           <View style={styles.placeholderThumbnail}>
-            <Video size={24} color="#666" />
+            {(video.thumb_status === 'processing' || video.thumb_status === 'pending') ? (
+              <ActivityIndicator size="small" color="#FF9500" />
+            ) : (
+              <Video size={24} color="#666" />
+            )}
           </View>
         )}
 
@@ -100,7 +106,7 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
         )}
 
         {/* Processing Indicator */}
-        {video.status === 'processing' && (
+        {(video.status === 'processing' || video.status === 'uploading') && (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="small" color="#fff" />
           </View>

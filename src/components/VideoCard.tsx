@@ -146,7 +146,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
         ) : (
           <>
             <View style={styles.placeholderThumbnail}>
-              {video.thumb_status === 'processing' ? (
+              {(video.thumb_status === 'processing' || video.thumb_status === 'pending') ? (
                 <ActivityIndicator size="small" color="#FF9500" />
               ) : (
                 <Video size={24} color="#666" />
@@ -159,7 +159,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
               thumb_status: video.thumb_status,
               hasThumbnailPath: !!video.thumbnail_path,
               hasCloudinaryUrl: !!video.cloudinary_url,
-              thumbnailPath: video.thumbnail_path
+              cloudinaryUrl: video.cloudinary_url
             })}
           </>
         )}
@@ -209,7 +209,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             <Text style={[styles.statusText, { color: getStatusColor(video.status) }]}>
               {getStatusText(video.status)}
             </Text>
-            {video.status === 'processing' && (
+            {(video.status === 'processing' || video.status === 'uploading') && (
               <ActivityIndicator 
                 size="small" 
                 color={getStatusColor(video.status)}
