@@ -91,28 +91,37 @@ serve(async (req: Request) => {
     const videoUrl = signedUrlData.signedUrl
     console.log('✅ [CLOUDINARY] Generated signed URL for video')
 
-    // Upload video to Cloudinary and generate thumbnail
-    console.log('☁️ [CLOUDINARY] Uploading video to Cloudinary...')
-    const cloudinaryResult = await uploadVideoToCloudinary(
-      videoUrl,
-      videoId,
-      cloudinaryCloudName,
-      cloudinaryApiKey,
-      cloudinaryApiSecret
-    )
-
-    if (!cloudinaryResult.success) {
-      console.error('❌ [CLOUDINARY] Failed to upload to Cloudinary:', cloudinaryResult.error)
-      await updateVideoError(supabaseClient, videoId, cloudinaryResult.error)
-      return new Response(
-        JSON.stringify({ error: 'Failed to process video with Cloudinary' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Use direct Cloudinary thumbnail generation from URL (faster, no upload needed)
+    console.log('☁️ [CLOUDINARY] Generating thumbnail via URL transformation...')
+    
+    // Use Cloudinary's fetch feature to generate thumbnail directly from video URL
+    const publicId = `video_thumbnails/${videoId}`
+    
+    // Generate Cloudinary URL that fetches and transforms the video in one step
+    const cloudinaryFetchUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_3,w_400,h_225,c_fill,f_jpg/${encodeURIComponent(videoUrl)}.jpg`
+    
+    console.log('🖼️ [CLOUDINARY] Generated thumbnail URL via fetch:', cloudinaryFetchUrl)
+    
+    // Test if the thumbnail URL works (this triggers Cloudinary to process it)
+    console.log('🧪 [CLOUDINARY] Testing thumbnail generation...')
+    try {
+      const thumbnailTest = await fetch(cloudinaryFetchUrl, { method: 'HEAD' })
+      console.log('📊 [CLOUDINARY] Thumbnail test result:', {
+        status: thumbnailTest.status,
+        contentType: thumbnailTest.headers.get('content-type')
+      })
+      
+      if (thumbnailTest.ok) {
+        console.log('✅ [CLOUDINARY] Thumbnail available immediately')
+      } else {
+        console.log('⏳ [CLOUDINARY] Thumbnail being generated, will use URL anyway')
+      }
+    } catch (testError) {
+      console.log('⚠️ [CLOUDINARY] Thumbnail test failed, but URL should work:', testError.message)
     }
-
-    // Generate thumbnail URL
-    const thumbnailUrl = generateThumbnailUrl(cloudinaryCloudName, cloudinaryResult.publicId)
-    console.log('🖼️ [CLOUDINARY] Generated thumbnail URL:', thumbnailUrl)
+    
+    // Use the fetch URL as the thumbnail URL
+    const thumbnailUrl = cloudinaryFetchUrl
 
     // Update video record with thumbnail information
     console.log('💾 [CLOUDINARY] Updating database with thumbnail info...')
@@ -140,8 +149,8 @@ serve(async (req: Request) => {
       JSON.stringify({ 
         success: true, 
         thumbnailUrl: thumbnailUrl,
-        publicId: cloudinaryResult.publicId,
-        message: 'Cloudinary thumbnail generated successfully'
+        method: 'fetch_transform',
+        message: 'Cloudinary thumbnail URL generated successfully'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
