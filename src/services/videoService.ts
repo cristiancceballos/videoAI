@@ -46,12 +46,23 @@ class VideoService {
           // Priority 1: Use Cloudinary URL if available
           if (video.cloudinary_url) {
             thumbnailUrl = video.cloudinary_url;
-            console.log(`☁️ [VIDEO SERVICE DEBUG] Using Cloudinary thumbnail for ${video.title.substring(0, 20)}`);
+            console.log(`☁️ [VIDEO SERVICE DEBUG] Using Cloudinary thumbnail for ${video.title.substring(0, 20)}:`, {
+              cloudinary_url: video.cloudinary_url,
+              thumb_status: video.thumb_status
+            });
           }
           // Priority 2: Use Supabase Storage thumbnail with signed URL
           else if (video.thumbnail_path) {
             thumbnailUrl = await this.getFileUrl('thumbnails', video.thumbnail_path) || undefined;
             console.log(`📁 [VIDEO SERVICE DEBUG] Using Supabase thumbnail for ${video.title.substring(0, 20)}`);
+          }
+          // No thumbnail available
+          else {
+            console.log(`❌ [VIDEO SERVICE DEBUG] No thumbnail source for ${video.title.substring(0, 20)}:`, {
+              thumb_status: video.thumb_status,
+              has_cloudinary_url: !!video.cloudinary_url,
+              has_thumbnail_path: !!video.thumbnail_path
+            });
           }
 
           // Only log if there's an issue
@@ -237,10 +248,23 @@ class VideoService {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('Real-time video change detected:', payload);
+          console.log('🔄 [REALTIME] Video change detected:', {
+            eventType: payload.eventType,
+            table: payload.table,
+            videoId: payload.new?.id || payload.old?.id,
+            oldThumbStatus: payload.old?.thumb_status,
+            newThumbStatus: payload.new?.thumb_status,
+            cloudinaryUrl: payload.new?.cloudinary_url
+          });
+          
+          // Check if this is a thumbnail status change
+          if (payload.new?.thumb_status && payload.old?.thumb_status !== payload.new?.thumb_status) {
+            console.log(`🎯 [REALTIME] Thumbnail status changed: ${payload.old?.thumb_status} → ${payload.new?.thumb_status}`);
+          }
+          
           // Refetch videos when changes occur
           const videos = await this.getUserVideos(userId);
-          console.log('Refreshed videos via real-time:', videos.length);
+          console.log('✅ [REALTIME] Refreshed videos via real-time:', videos.length);
           callback(videos);
         }
       )

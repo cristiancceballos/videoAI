@@ -60,15 +60,31 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
       {/* Video Thumbnail */}
       <View style={styles.thumbnailContainer}>
         {video.thumbnailUrl ? (
-          <Image 
-            source={{ uri: video.thumbnailUrl }} 
-            style={styles.thumbnail}
-            resizeMode="cover"
-            onLoad={() => console.log('✅ [GRID THUMBNAIL DEBUG] Image loaded successfully for:', video.title.substring(0, 20))}
-            onError={(error) => console.error('❌ [GRID THUMBNAIL DEBUG] Image load failed for:', video.title.substring(0, 20), error.nativeEvent)}
-          />
+          <>
+            {console.log('📸 [GRID DEBUG] Rendering thumbnail:', {
+              title: video.title.substring(0, 20),
+              thumbnailUrl: video.thumbnailUrl,
+              thumb_status: video.thumb_status,
+              cloudinary_url: video.cloudinary_url
+            })}
+            <Image 
+              source={{ uri: video.thumbnailUrl }} 
+              style={styles.thumbnail}
+              resizeMode="cover"
+              onLoad={() => console.log('✅ [GRID THUMBNAIL DEBUG] Image loaded successfully for:', video.title.substring(0, 20))}
+              onError={(error) => console.error('❌ [GRID THUMBNAIL DEBUG] Image load failed for:', video.title.substring(0, 20), error.nativeEvent)}
+            />
+          </>
         ) : (
           <View style={styles.placeholderThumbnail}>
+            {console.log('🔄 [GRID DEBUG] Showing placeholder for:', {
+              title: video.title.substring(0, 20),
+              status: video.status,
+              thumb_status: video.thumb_status,
+              hasThumbnailUrl: !!video.thumbnailUrl,
+              hasCloudinaryUrl: !!video.cloudinary_url,
+              cloudinary_url: video.cloudinary_url
+            })}
             {(video.thumb_status === 'processing' || video.thumb_status === 'pending') ? (
               <ActivityIndicator size="small" color="#FF9500" />
             ) : (

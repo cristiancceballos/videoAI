@@ -56,6 +56,40 @@ export function HomeScreen() {
     }, [user])
   );
 
+  // Polling mechanism for processing videos
+  useEffect(() => {
+    if (!user || !videos.length) return;
+
+    // Check if any videos are processing thumbnails
+    const processingVideos = videos.filter(v => 
+      v.thumb_status === 'processing' || v.thumb_status === 'pending'
+    );
+
+    if (processingVideos.length === 0) return;
+
+    console.log(`🔄 [POLLING] Found ${processingVideos.length} videos processing thumbnails, starting polling...`);
+
+    const pollInterval = setInterval(async () => {
+      console.log('🕐 [POLLING] Checking for thumbnail updates...');
+      await loadVideos(false);
+      
+      // Check if we still need to poll
+      const stillProcessing = videos.filter(v => 
+        v.thumb_status === 'processing' || v.thumb_status === 'pending'
+      );
+      
+      if (stillProcessing.length === 0) {
+        console.log('✅ [POLLING] All thumbnails complete, stopping poll');
+        clearInterval(pollInterval);
+      }
+    }, 10000); // Poll every 10 seconds
+
+    return () => {
+      console.log('🛑 [POLLING] Cleaning up poll interval');
+      clearInterval(pollInterval);
+    };
+  }, [user, videos]);
+
   const loadVideos = async (showLoading = false) => {
     if (!user) return;
     
@@ -123,6 +157,28 @@ export function HomeScreen() {
     setRefreshing(true);
     await loadVideos();
     setRefreshing(false);
+  };
+
+  const checkForStuckThumbnails = () => {
+    if (!videos.length) return false;
+    
+    const stuckVideos = videos.filter(v => 
+      (v.thumb_status === 'processing' || v.thumb_status === 'pending') &&
+      v.created_at && 
+      Date.now() - new Date(v.created_at).getTime() > 300000 // 5 minutes
+    );
+    
+    if (stuckVideos.length > 0) {
+      console.log(`⚠️ [STUCK CHECK] Found ${stuckVideos.length} videos with stuck thumbnails`);
+      return true;
+    }
+    
+    return false;
+  };
+
+  const handleForceRefresh = () => {
+    console.log('🔄 [FORCE REFRESH] User triggered force refresh');
+    handleRefresh();
   };
 
   const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<void> => {
