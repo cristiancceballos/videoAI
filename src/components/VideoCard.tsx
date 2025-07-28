@@ -140,8 +140,9 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
             source={{ uri: video.thumbnailUrl }} 
             style={styles.thumbnail}
             resizeMode="cover"
-            onLoad={() => {}}
-            onError={(error) => console.error('Image load failed:', error.nativeEvent?.error)}
+            onError={(error) => {
+              console.error('Thumbnail load failed:', error.nativeEvent?.error);
+            }}
           />
         ) : (
           <>
@@ -152,7 +153,7 @@ export function VideoCard({ video, onPress, onDelete, isDeleting }: VideoCardPro
                 <Video size={24} color="#666" />
               )}
             </View>
-            {/* No thumbnail available */}
+            {/* Placeholder thumbnail */}
           </>
         )}
         

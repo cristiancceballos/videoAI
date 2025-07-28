@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { WebMediaAsset } from './webMediaService';
-// Client-side frame capture removed - now using server-side FFmpeg extraction
+import { thumbnailExtractor } from './thumbnailExtractor';
 
 export interface UploadProgress {
   loaded: number;
@@ -142,12 +142,12 @@ class WebUploadService {
         storage_path: storagePath,
         status: 'uploading',
         file_size: Math.round(asset.fileSize), // Ensure integer
-        duration: asset.duration ? Math.round(asset.duration) : null, // Convert to integer seconds
+        duration: asset.duration ? Math.round(asset.duration) : undefined, // Convert to integer seconds
         source_type: sourceType,
         source_url: sourceUrl,
         original_filename: asset.filename,
-        width: asset.width ? Math.round(asset.width) : null, // Ensure integer
-        height: asset.height ? Math.round(asset.height) : null, // Ensure integer
+        width: asset.width ? Math.round(asset.width) : undefined, // Ensure integer
+        height: asset.height ? Math.round(asset.height) : undefined, // Ensure integer
       };
 
       // Insert video data
@@ -278,30 +278,30 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Update status to processing before thumbnail generation
-      await this.updateVideoStatus(videoId, 'processing');
+      // 5. Mark video as ready first (video is playable regardless of thumbnail)
+      await this.updateVideoStatus(videoId, 'ready');
       
-      // 6. Generate Cloudinary thumbnails (real video frames)
+      // 6. Generate client-side thumbnail (non-blocking)
       try {
-        const response = await supabase.functions.invoke('cloudinary-thumbnails', {
-          body: {
-            videoId: videoId,
-            userId: userId,
-            storagePath: uploadUrl.path
-          }
-        });
+        console.log('Generating client-side thumbnail...');
+        const thumbnailResult = await thumbnailExtractor.generateAndUploadThumbnail(
+          asset.file,
+          videoId,
+          userId,
+          3 // Extract frame at 3 seconds
+        );
 
-        if (response.error || !response.data?.success) {
-          // If thumbnail generation fails, still mark video as ready
-          console.error('Thumbnail generation failed, marking video as ready without thumbnail');
-          await this.updateVideoStatus(videoId, 'ready');
+        if (thumbnailResult.success && thumbnailResult.thumbnailPath) {
+          // Update video with thumbnail path
+          await thumbnailExtractor.updateVideoThumbnail(videoId, thumbnailResult.thumbnailPath);
+          console.log('Thumbnail generated and uploaded successfully');
+        } else {
+          console.warn('Thumbnail generation failed:', thumbnailResult.error);
+          // Video remains ready, just without thumbnail
         }
-        // If successful, the Edge Function will update the status
-        
       } catch (error) {
-        console.error('Failed to generate thumbnails:', error);
-        // Ensure video is still marked as ready
-        await this.updateVideoStatus(videoId, 'ready');
+        console.error('Thumbnail generation error:', error);
+        // Video remains ready, just without thumbnail
       }
 
       // Note: Blob URL cleanup is handled by the WebVideoPreviewModal component
@@ -314,29 +314,7 @@ class WebUploadService {
     }
   }
 
-  // Fallback SVG thumbnail generation (when Cloudinary fails)
-  private async generateFallbackSVGThumbnails(
-    videoId: string,
-    userId: string,
-    storagePath: string
-  ): Promise<void> {
-    try {
-      const response = await supabase.functions.invoke('generate-thumbnails', {
-        body: {
-          videoId: videoId,
-          userId: userId,
-          storagePath: storagePath
-        }
-      });
-
-      if (response.error) {
-        // Set video to ready without thumbnails
-        await this.updateVideoStatus(videoId, 'ready');
-      }
-    } catch (error) {
-      await this.updateVideoStatus(videoId, 'ready');
-    }
-  }
+  // Note: Removed complex Cloudinary fallback - now using reliable client-side extraction
 
   // Validate video file
   private validateVideoFile(asset: WebMediaAsset): { valid: boolean; error?: string } {
@@ -449,7 +427,7 @@ class WebUploadService {
     thumbnails: Array<{
       position: string;
       positionPercent: number;
-      frameData: FrameCaptureResult;
+      frameData: { blob: Blob; width: number; height: number; };
     }>
   ): Promise<{ success: boolean; error?: string; firstThumbnailPath?: string }> {
     try {

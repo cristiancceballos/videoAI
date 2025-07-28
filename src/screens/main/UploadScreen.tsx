@@ -77,9 +77,7 @@ export function UploadScreen() {
         title,
         (progress) => {
           setUploadProgress(progress);
-        },
-        thumbnailData,
-        thumbnailOption || 'server'
+        }
       );
 
       setUploading(false);
