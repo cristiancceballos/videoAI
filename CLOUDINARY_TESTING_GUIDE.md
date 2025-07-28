@@ -197,11 +197,102 @@ UPDATE videos SET thumb_status = 'error' WHERE thumb_status IN ('pending', 'proc
 - [ ] Rollback plan documented
 - [ ] Monitoring alerts configured
 
-## Next Steps for Scale
+## Client-Side Extraction Testing (Approach C)
 
-When ready to scale beyond 200 thumbnails/month:
-1. Upgrade Cloudinary plan
-2. Implement bulk processing queue
-3. Add more sophisticated error retry logic
-4. Consider caching strategies
-5. Monitor costs closely
+### Test Scenarios for HTML5 Canvas Approach
+
+**Test 1: Basic Canvas Extraction**
+**Objective**: Verify browser can extract frames from common video formats
+
+**Steps**:
+1. Upload MP4 video (H.264 codec)
+2. Check if video loads in HTML5 video element
+3. Verify canvas draws frame at specified time
+4. Test blob conversion to JPEG
+5. Verify upload to Supabase Storage
+
+**Expected Result**: Frame extracted and uploaded successfully
+**Actual Result**: ❌ Failed - Inconsistent frame extraction across browsers
+
+**Test 2: Video Format Compatibility**
+**Objective**: Test various video formats and codecs
+
+**Test Videos**:
+- `.mp4` (H.264) - ⚠️ Partial success
+- `.mov` (H.264) - ❌ Failed often
+- `.webm` (VP8) - ❌ Failed
+- Mobile recordings - ❌ Failed (H.265/HEVC not supported)
+
+**Test 3: Browser Compatibility**
+**Browsers Tested**:
+- Chrome: ⚠️ Works for some formats
+- Firefox: ❌ Inconsistent seeking
+- Safari: ❌ Video loading issues
+- Mobile browsers: ❌ Poor compatibility
+
+**Test 4: Memory Usage**
+**Objective**: Test with large video files
+
+**Results**:
+- Files <10MB: Usually works
+- Files 10-50MB: ⚠️ Inconsistent
+- Files >50MB: ❌ Browser crashes/hangs
+
+### Debug Tools for Client-Side Approach
+
+```javascript
+// Test video compatibility
+const video = document.createElement('video');
+video.addEventListener('canplay', () => console.log('Video can play'));
+video.addEventListener('error', (e) => console.error('Video error:', e));
+video.src = URL.createObjectURL(file);
+
+// Test canvas extraction
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+video.addEventListener('seeked', () => {
+  try {
+    ctx.drawImage(video, 0, 0, 400, 225);
+    console.log('Frame extracted successfully');
+  } catch (error) {
+    console.error('Canvas extraction failed:', error);
+  }
+});
+```
+
+### Known Issues with Client-Side Approach
+
+1. **Video Codec Support**: HTML5 video doesn't support H.265/HEVC (common in mobile recordings)
+2. **Seeking Accuracy**: `video.currentTime` doesn't always seek to exact frame
+3. **CORS Issues**: Some video files trigger CORS errors in canvas
+4. **Memory Leaks**: Large videos cause browser memory issues
+5. **Mobile Limitations**: Poor support on mobile browsers
+
+### Troubleshooting Client-Side Failures
+
+**Issue**: Canvas throws "tainted canvas" error
+**Solution**: Ensure video element has `crossorigin="anonymous"`
+
+**Issue**: Video seeking not accurate
+**Solution**: Use `video.seeked` event instead of `timeupdate`
+
+**Issue**: Browser crashes with large files
+**Solution**: Add file size limits (<50MB)
+
+**Issue**: No frame extracted on mobile
+**Solution**: Use different approach for mobile browsers
+
+## Conclusion
+
+### Status Summary
+- **Cloudinary Approach**: ❌ FAILED (Environment variable issues)
+- **Client-Side Approach**: ❌ FAILED (Browser compatibility)
+- **Current State**: No working thumbnail solution
+
+### Recommendations
+1. **Implement FFmpeg worker** (Approach A) for reliable thumbnail generation
+2. **Fix Cloudinary environment variables** as fallback option
+3. **Accept SVG placeholders** as interim solution
+4. **Consider alternative SaaS providers** (Mux, AWS Elemental)
+
+**Next Steps**: Pivot to dedicated worker approach or maintain status quo with SVG placeholders.

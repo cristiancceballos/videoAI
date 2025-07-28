@@ -69,7 +69,7 @@ export function UploadScreen() {
     setShowProgress(true);
 
     try {
-      console.log('📤 Upload starting with thumbnail option:', thumbnailOption);
+      // Starting video upload
       
       const result = await webUploadService.uploadWebVideo(
         selectedAsset,

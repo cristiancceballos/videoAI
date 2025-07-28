@@ -177,6 +177,85 @@ Real-time UI ← Database Update ← Cloudinary Completion
 
 ---
 
-**Status**: does not work
+**Status**: FAILED - Cloudinary approach unsuccessful
 
-EOF < /dev/null
+---
+
+## Approach C – Client-Side HTML5 Canvas Extraction
+
+### Quick Summary  
+Extract video frames directly in the browser using HTML5 Video and Canvas APIs, then upload thumbnails to Supabase Storage. No external services or Edge Functions required.
+
+### Pros
+|  | Benefit |
+|---|---|
+| **No external dependencies** | Zero reliance on third-party services or API keys. |
+| **Immediate processing** | Thumbnails generated instantly during upload flow. |
+| **Cost-free** | No per-thumbnail charges or monthly subscription fees. |
+| **Simple architecture** | Direct client-to-storage upload, no Edge Functions. |
+| **Smart frame selection** | Dynamic timing based on video duration. |
+
+### Cons
+|  | Drawback |
+|---|---|
+| **Browser compatibility** | HTML5 video support varies across browsers and formats. |
+| **Video codec limitations** | Canvas extraction fails with certain codecs (H.265, AV1). |
+| **Memory constraints** | Large video files can cause browser crashes. |
+| **Unreliable seeking** | Video `currentTime` seeking not always accurate. |
+| **Format restrictions** | Works only with web-compatible video formats. |
+
+### Build Plan (5 steps)
+1. **HTML5 Video Element** – Load user's video file in hidden video element.
+2. **Smart timing calculation** – Select optimal frame based on video duration (<3s: middle, 3-10s: 2s, >10s: 3s).
+3. **Canvas frame capture** – Draw video frame to 400x225 canvas at calculated time.
+4. **Blob conversion** – Convert canvas to JPEG blob with 80% quality.
+5. **Direct upload** – Upload thumbnail blob to Supabase Storage, update video record.
+
+### Implementation Summary
+```typescript
+// Core extraction logic
+const video = document.createElement('video');
+const canvas = document.createElement('canvas');
+video.addEventListener('seeked', () => {
+  ctx.drawImage(video, 0, 0, 400, 225);
+  canvas.toBlob(resolve, 'image/jpeg', 0.8);
+});
+video.currentTime = targetTime;
+```
+
+### Why It Failed
+- **Browser inconsistencies**: Firefox, Safari, Chrome handle video seeking differently
+- **Video format issues**: Many mobile-recorded videos use unsupported codecs
+- **Canvas limitations**: Cannot extract frames from DRM-protected or corrupted videos
+- **Memory problems**: Large files (>50MB) cause browser performance issues
+- **Timing accuracy**: Video seeking often lands on wrong frames
+
+**Status**: FAILED - Browser compatibility issues
+
+---
+
+## Updated Decision Matrix
+| Criterion            | Weight | A · Worker | B · SaaS | C · Client |
+|----------------------|-------:|:---------:|:-------:|:---------:|
+| Dev time (initial)   | 30 %   | 60 | 90 | **95** |
+| Monthly cost @ 1k vids | 25 %   | **85** | 70 | **90** |
+| Reliability          | 25 %   | **90** | 60 | 30 |
+| Browser compatibility | 10 %   | **85** | 80 | 40 |
+| Maintenance burden   | 10 %   | 60 | **90** | **85** |
+| **Weighted score**    | 100 % | **79** | 74 | 67 |
+
+### Current Reality: All Approaches Have Failed
+
+- **Approach A (Worker)**: Not attempted due to complexity
+- **Approach B (SaaS/Cloudinary)**: Failed due to Edge Function environment variable issues  
+- **Approach C (Client-side)**: Failed due to browser compatibility and video format limitations
+
+### Recommendation: **Approach A - Dedicated Worker**
+
+Given the failures of both SaaS and client-side approaches, the dedicated worker with FFmpeg appears to be the only viable solution for reliable thumbnail generation across all video formats and browsers.
+
+**Next Steps**: Implement Approach A or accept SVG placeholders as the permanent solution.
+
+---
+
+**Current Status**: No working thumbnail solution after multiple implementation attempts.

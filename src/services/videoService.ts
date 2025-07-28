@@ -37,7 +37,7 @@ class VideoService {
       }
 
       // Add thumbnail URLs
-      console.log('🎬 [VIDEO SERVICE DEBUG] Processing thumbnail URLs for', data.length, 'videos');
+      // Process thumbnail URLs
       
       const videosWithThumbnails = await Promise.all(
         data.map(async (video, index) => {
@@ -46,33 +46,21 @@ class VideoService {
           // Priority 1: Use Cloudinary URL if available
           if (video.cloudinary_url) {
             thumbnailUrl = video.cloudinary_url;
-            console.log(`☁️ [VIDEO SERVICE DEBUG] Using Cloudinary thumbnail for ${video.title.substring(0, 20)}:`, {
-              cloudinary_url: video.cloudinary_url,
-              thumb_status: video.thumb_status
-            });
+            // Using Cloudinary thumbnail
           }
           // Priority 2: Use Supabase Storage thumbnail with signed URL
           else if (video.thumbnail_path) {
             thumbnailUrl = await this.getFileUrl('thumbnails', video.thumbnail_path) || undefined;
-            console.log(`📁 [VIDEO SERVICE DEBUG] Using Supabase thumbnail for ${video.title.substring(0, 20)}`);
+            // Using Supabase thumbnail
           }
           // No thumbnail available
           else {
-            console.log(`❌ [VIDEO SERVICE DEBUG] No thumbnail source for ${video.title.substring(0, 20)}:`, {
-              thumb_status: video.thumb_status,
-              has_cloudinary_url: !!video.cloudinary_url,
-              has_thumbnail_path: !!video.thumbnail_path
-            });
+            // No thumbnail source available
           }
 
           // Only log if there's an issue
           if ((video.thumbnail_path || video.cloudinary_url) && !thumbnailUrl) {
-            console.warn(`⚠️ [VIDEO SERVICE DEBUG] Failed to get thumbnail URL for video ${video.id}:`, {
-              thumbnail_path: video.thumbnail_path,
-              cloudinary_url: video.cloudinary_url,
-              thumb_status: video.thumb_status,
-              title: video.title.substring(0, 20) + '...'
-            });
+            console.warn('Failed to get thumbnail URL for video:', video.id);
           }
 
           return {
@@ -85,18 +73,7 @@ class VideoService {
       // Cache the results for offline use
       setOfflineData(cacheKey, videosWithThumbnails);
 
-      console.log('🎉 [VIDEO SERVICE DEBUG] Final videos with thumbnails:', {
-        totalVideos: videosWithThumbnails.length,
-        videosWithThumbnails: videosWithThumbnails.filter(v => v.thumbnailUrl).length,
-        videosWithoutThumbnails: videosWithThumbnails.filter(v => !v.thumbnailUrl).length,
-        summary: videosWithThumbnails.map(v => ({
-          id: v.id,
-          title: v.title.substring(0, 20) + '...',
-          status: v.status,
-          hasThumbnailPath: !!v.thumbnail_path,
-          hasThumbnailUrl: !!v.thumbnailUrl
-        }))
-      });
+      // Thumbnail processing complete
 
       return videosWithThumbnails;
     } catch (error) {
@@ -110,7 +87,7 @@ class VideoService {
   // Get secure signed URL for a file in storage (user-specific access)
   async getSecureFileUrl(bucket: string, path: string, expiresIn: number = 3600): Promise<string | null> {
     try {
-      console.log('🔐 Getting secure signed URL from bucket:', bucket, 'path:', path, 'expires in:', expiresIn, 'seconds');
+      // Generate secure signed URL
       
       const { data, error } = await supabase.storage
         .from(bucket)
@@ -192,32 +169,24 @@ class VideoService {
   // Get video playback URL
   async getVideoUrl(video: VideoWithMetadata): Promise<string | null> {
     try {
-      console.log('Getting video URL for:', video.title);
-      console.log('Video storage details:', {
-        id: video.id,
-        storage_path: video.storage_path,
-        status: video.status,
-        file_size: video.file_size,
-        user_id: video.user_id
-      });
+      // Get video URL for playback
       
       if (!video.storage_path) {
         console.error('No storage path found for video:', video.title);
         return null;
       }
 
-      console.log('Attempting to get secure signed URL from bucket "videos" with path:', video.storage_path);
+      // Generate signed URL for video access
       // Use signed URL for secure, user-specific access (expires in 1 hour)
       const videoUrl = await this.getSecureFileUrl('videos', video.storage_path, 3600);
       
       if (videoUrl) {
-        console.log('Video URL generated successfully:', videoUrl);
-        // Test if URL is accessible
+        // Video URL generated successfully
+        // Test URL accessibility
         try {
           const response = await fetch(videoUrl, { method: 'HEAD' });
-          console.log('URL accessibility test:', response.status, response.statusText);
           if (!response.ok) {
-            console.error('Generated URL is not accessible:', response.status, response.statusText);
+            console.error('Generated URL is not accessible:', response.status);
           }
         } catch (fetchError) {
           console.error('URL accessibility test failed:', fetchError);

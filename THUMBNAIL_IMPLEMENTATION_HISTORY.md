@@ -344,9 +344,79 @@ npx tsc --noEmit
 - **Operational Complexity**: Minimal (managed service)
 - **User Experience**: Significant improvement in content discoverability
 
-**Status**: does not work
+**Status**: FAILED - Cloudinary integration unsuccessful
 
 ---
 
-*This implementation demonstrates how thoughtful architecture decisions and modern SaaS integration can deliver significant user experience improvements with minimal development and operational overhead.*
+## 🔄 **Approach C: Client-Side HTML5 Canvas Extraction** (January 2025)
+
+### Implementation Summary
+After the Cloudinary approach failed due to environment variable access issues in Edge Functions, a client-side thumbnail extraction approach was attempted using HTML5 Canvas API.
+
+### Technical Approach
+- **HTML5 Video Element**: Load video file in browser
+- **Canvas API**: Draw video frame to canvas at specified time
+- **Blob Conversion**: Convert canvas to JPEG blob
+- **Direct Upload**: Upload thumbnail directly to Supabase Storage
+- **Real-time Updates**: Update video record with thumbnail path
+
+### Implementation Details
+```typescript
+// Core extraction logic
+const video = document.createElement('video');
+const canvas = document.createElement('canvas');
+video.currentTime = targetTime;
+ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+canvas.toBlob(resolve, 'image/jpeg', 0.8);
+```
+
+### Smart Frame Selection
+- Videos <3s: Middle frame (duration/2)
+- Videos 3-10s: 2-second frame  
+- Videos >10s: 3-second frame
+
+### Key Features
+- ✅ Zero external dependencies
+- ✅ No environment variable issues
+- ✅ Direct Supabase Storage upload
+- ✅ Smart timing based on video duration
+- ✅ Proper error handling and timeouts
+
+### Why It Failed
+- **Browser Compatibility**: Inconsistent video frame extraction across browsers
+- **Video Format Issues**: Some video codecs not supported in HTML5 video
+- **Canvas Limitations**: Couldn't reliably extract frames from all video types
+- **Timing Problems**: Video seeking not always accurate for frame extraction
+- **Performance**: Large video files caused browser memory issues
+
+### Lessons Learned
+1. **Client-side extraction is unreliable** for production use
+2. **Video codec compatibility** is a major issue in browsers
+3. **Canvas frame extraction** works only for specific video formats
+4. **Memory limitations** prevent processing of large videos
+5. **Browser inconsistencies** make reliable implementation impossible
+
+**Status**: FAILED - Client-side approach unreliable
+
+---
+
+## 📊 **Summary of All Approaches**
+
+| Approach | Status | Reason for Failure | Development Time |
+|----------|--------|-------------------|------------------|
+| **A: Dedicated Worker (FFmpeg)** | Not Attempted | Complexity/Time constraints | Estimated 20+ hours |
+| **B: SaaS Integration (Cloudinary)** | FAILED | Environment variable access in Edge Functions | ~8 hours |
+| **C: Client-Side Canvas** | FAILED | Browser compatibility and video format issues | ~4 hours |
+
+### Current Status: **NO WORKING THUMBNAIL SOLUTION**
+
+**Next Steps Required:**
+1. **Reconsider Approach A** - Dedicated worker with FFmpeg may be the only reliable solution
+2. **Simplify Cloudinary** - Fix environment variable issues in Edge Functions
+3. **Alternative Services** - Investigate other video processing SaaS providers
+4. **Accept Limitations** - Continue with SVG placeholders for now
+
+---
+
+*Multiple implementation approaches have been attempted, but real video frame thumbnail generation remains an unsolved technical challenge for this PWA.*
 EOF < /dev/null

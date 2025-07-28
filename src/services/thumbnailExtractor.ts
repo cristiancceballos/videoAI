@@ -60,7 +60,7 @@ class ThumbnailExtractor {
             targetTime = Math.min(timeSeconds, video.duration - 1);
           }
           
-          console.log(`Extracting thumbnail at ${targetTime}s from ${video.duration}s video`);
+          // Extract thumbnail at calculated time
           
           // Set canvas dimensions (16:9 aspect ratio, 400px wide)
           canvas.width = 400;
@@ -78,14 +78,14 @@ class ThumbnailExtractor {
           // Draw video frame to canvas
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           
-          console.log('Video frame drawn to canvas successfully');
+          // Video frame drawn to canvas
           
           // Convert to blob
           canvas.toBlob((blob) => {
             cleanup();
             if (blob) {
               const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-              console.log(`Thumbnail generated: ${blob.size} bytes`);
+              // Thumbnail generated successfully
               resolve({ 
                 success: true, 
                 blob, 

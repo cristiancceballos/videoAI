@@ -283,7 +283,7 @@ class WebUploadService {
       
       // 6. Generate client-side thumbnail (non-blocking)
       try {
-        console.log('Generating client-side thumbnail...');
+        // Generate client-side thumbnail
         const thumbnailResult = await thumbnailExtractor.generateAndUploadThumbnail(
           asset.file,
           videoId,
@@ -294,7 +294,7 @@ class WebUploadService {
         if (thumbnailResult.success && thumbnailResult.thumbnailPath) {
           // Update video with thumbnail path
           await thumbnailExtractor.updateVideoThumbnail(videoId, thumbnailResult.thumbnailPath);
-          console.log('Thumbnail generated and uploaded successfully');
+          // Thumbnail generated successfully
         } else {
           console.warn('Thumbnail generation failed:', thumbnailResult.error);
           // Video remains ready, just without thumbnail
