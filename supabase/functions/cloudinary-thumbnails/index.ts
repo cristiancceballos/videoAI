@@ -38,13 +38,7 @@ serve(async (req: Request) => {
     // Parse request body
     const { videoId, userId, storagePath, cloudinaryCloudName, uploadPreset } = await req.json()
     
-    console.log('[CLOUDINARY] Request received:', {
-      videoId,
-      userId,
-      storagePath,
-      cloudinaryCloudName,
-      uploadPreset
-    })
+    // Request received with parameters
 
     if (!videoId || !userId || !storagePath || !cloudinaryCloudName) {
       console.error('[CLOUDINARY] Missing required parameters')
@@ -187,13 +181,7 @@ async function uploadVideoToCloudinary(
     formData.append('resource_type', 'video')
     // Note: eager transformations are not allowed for unsigned uploads
     
-    console.log('[CLOUDINARY] Upload parameters:', {
-      cloudName,
-      publicId,
-      uploadPreset,
-      videoUrl: videoUrl.substring(0, 100) + '...',
-      frameOffset
-    })
+    // Upload parameters configured
     
     // Sending upload request
     
@@ -217,8 +205,7 @@ async function uploadVideoToCloudinary(
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
       
-      // Log the full response to understand the structure
-      console.log('[CLOUDINARY] Full upload response:', JSON.stringify(result, null, 2))
+      // Upload completed successfully
       
       // Use the actual public_id from Cloudinary's response
       // This includes any folder structure Cloudinary added
@@ -233,10 +220,14 @@ async function uploadVideoToCloudinary(
         url: result.url
       })
       
+      // For video thumbnails, we need to remove the file extension from the public_id
+      // Cloudinary returns: video_thumbnails/id.mp4
+      // We need: video_thumbnails/id (without extension)
+      const publicIdWithoutExtension = actualPublicId.replace(/\.[^/.]+$/, '')
+      
       // For unsigned uploads, we use on-the-fly transformation URL
-      // Use the ACTUAL public_id from Cloudinary, not our constructed one
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${actualPublicId}.jpg`
-      console.log('[CLOUDINARY] Thumbnail URL with actual public_id:', thumbnailUrl)
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}.jpg`
+      console.log('[CLOUDINARY] Thumbnail URL (without extension):', thumbnailUrl)
       
       return {
         success: true,
