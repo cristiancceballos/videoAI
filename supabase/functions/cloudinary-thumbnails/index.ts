@@ -92,61 +92,63 @@ serve(async (req: Request) => {
       // No duration data, using default offset
     }
 
-    // Upload video to Cloudinary with simplified async approach
-    // Start Cloudinary upload
-    
+    // Upload video to Cloudinary and wait for completion
     const publicId = `video_thumbnails/${videoId}`
     
-    // Generate clean thumbnail URL with dynamic offset
-    const thumbnailUrl = `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
-    
-    // Generated thumbnail URL
-    
-    // Start Cloudinary upload in fire-and-forget mode (don't wait)
-    // Start background upload
-    uploadVideoFireAndForget(
-      videoUrl,
-      publicId,
-      cloudinaryCloudName,
-      uploadPreset || 'video-thumbnails', // Default preset name if not provided
-      supabaseClient,
-      videoId,
-      frameOffset
-    ).catch((error) => {
-      // Don't fail the main function - this is background processing
-    })
-    
-    // Background upload started
+    try {
+      // Upload video to Cloudinary with eager transformation
+      const uploadResult = await uploadVideoToCloudinary(
+        videoUrl,
+        publicId,
+        cloudinaryCloudName,
+        uploadPreset || 'video-thumbnails',
+        frameOffset
+      )
 
-    // Update video record with thumbnail information
-    // Update database with thumbnail info
-    const { error: updateError } = await supabaseClient
-      .from('videos')
-      .update({
-        cloudinary_url: thumbnailUrl,
-        thumb_status: 'processing',
-        thumb_error_message: null
-      })
-      .eq('id', videoId)
+      if (!uploadResult.success) {
+        await updateVideoError(supabaseClient, videoId, uploadResult.error || 'Upload failed')
+        return new Response(
+          JSON.stringify({ error: uploadResult.error || 'Upload failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
-    if (updateError) {
+      // Get the thumbnail URL from the eager transformation
+      const thumbnailUrl = uploadResult.thumbnailUrl || 
+        `https://res.cloudinary.com/${cloudinaryCloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+
+      // Update video record with thumbnail information
+      const { error: updateError } = await supabaseClient
+        .from('videos')
+        .update({
+          cloudinary_url: thumbnailUrl,
+          thumb_status: 'ready',
+          thumb_error_message: null
+        })
+        .eq('id', videoId)
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to update video record', details: updateError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       return new Response(
-        JSON.stringify({ error: 'Failed to update video record', details: updateError }),
+        JSON.stringify({ 
+          success: true, 
+          thumbnailUrl: thumbnailUrl,
+          message: 'Cloudinary thumbnail generated successfully'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (error) {
+      await updateVideoError(supabaseClient, videoId, error.message)
+      return new Response(
+        JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    // Video record updated successfully
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        thumbnailUrl: thumbnailUrl,
-        method: 'fetch_transform',
-        message: 'Cloudinary thumbnail URL generated successfully'
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
 
   } catch (error) {
     return new Response(
@@ -159,16 +161,14 @@ serve(async (req: Request) => {
   }
 })
 
-// Fire-and-forget Cloudinary upload (runs in background)
-async function uploadVideoFireAndForget(
+// Upload video to Cloudinary and return result
+async function uploadVideoToCloudinary(
   videoUrl: string,
   publicId: string,
   cloudName: string,
   uploadPreset: string,
-  supabaseClient: any,
-  videoId: string,
   frameOffset: number = 3
-) {
+): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
   try {
     // Starting background upload
     
@@ -179,12 +179,15 @@ async function uploadVideoFireAndForget(
     formData.append('upload_preset', uploadPreset)
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
+    // Add eager transformation for thumbnail generation
+    formData.append('eager', `so_${frameOffset},w_400,h_225,c_fill,f_jpg`)
+    formData.append('eager_async', 'false') // Wait for transformation
     
     // Sending upload request
     
-    // Add timeout signal for large video processing (10 minutes max)
+    // Add timeout signal for video processing (3 minutes max for Edge Function limit)
     const timeoutController = new AbortController()
-    const timeoutId = setTimeout(() => timeoutController.abort(), 600000) // 10 minutes
+    const timeoutId = setTimeout(() => timeoutController.abort(), 170000) // 170 seconds (just under 3 min limit)
     
     const uploadResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
@@ -201,40 +204,34 @@ async function uploadVideoFireAndForget(
     
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
-      // Upload successful, validating thumbnail
       
-      // Validate that the thumbnail is actually accessible
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
-      const isValid = await validateThumbnailUrl(thumbnailUrl)
-      
-      if (isValid) {
-        // Thumbnail validated
-        await updateVideoStatusWithRetry(supabaseClient, videoId, {
-          thumb_status: 'ready'
-        }, 'Status updated to ready after validation')
+      // Check if eager transformation was successful
+      let thumbnailUrl = null
+      if (result.eager && result.eager.length > 0) {
+        // Use the eager transformation URL
+        thumbnailUrl = result.eager[0].secure_url || result.eager[0].url
       } else {
-        await updateVideoStatusWithRetry(supabaseClient, videoId, {
-          thumb_status: 'error',
-          thumb_error_message: `THUMBNAIL_ERROR: Generated thumbnail is not accessible [${new Date().toISOString()}]`
-        }, 'Error status updated after thumbnail validation failure')
+        // Fallback to constructed URL
+        thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+      }
+      
+      return {
+        success: true,
+        thumbnailUrl: thumbnailUrl
       }
     } else {
       const errorText = await uploadResponse.text()
-      
-      // Update video with error status (with retry logic)
-      await updateVideoStatusWithRetry(supabaseClient, videoId, {
-        thumb_status: 'error',
-        thumb_error_message: `THUMBNAIL_ERROR: Cloudinary upload failed: ${errorText} [${new Date().toISOString()}]`
-      }, 'Error status updated after Cloudinary failure')
+      return {
+        success: false,
+        error: `Cloudinary upload failed: ${errorText}`
+      }
     }
     
   } catch (error) {
-    
-    // Update video with error status (with retry logic)
-    await updateVideoStatusWithRetry(supabaseClient, videoId, {
-      thumb_status: 'error',
-      thumb_error_message: `THUMBNAIL_ERROR: Background upload failed: ${error.message} [${new Date().toISOString()}]`
-    }, 'Error status updated after background failure')
+    return {
+      success: false,
+      error: `Upload exception: ${error.message}`
+    }
   }
 }
 
