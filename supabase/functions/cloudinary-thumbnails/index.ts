@@ -26,11 +26,6 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
-    // Get Cloudinary credentials
-    const cloudinaryCloudName = Deno.env.get('CLOUDINARY_CLOUD_NAME')
-    const cloudinaryApiKey = Deno.env.get('CLOUDINARY_API_KEY')
-    const cloudinaryApiSecret = Deno.env.get('CLOUDINARY_API_SECRET')
-    
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ [CLOUDINARY] Missing Supabase environment variables')
       return new Response(
@@ -38,39 +33,18 @@ serve(async (req: Request) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    if (!cloudinaryCloudName || !cloudinaryApiKey || !cloudinaryApiSecret) {
-      console.error('❌ [CLOUDINARY] Missing Cloudinary environment variables')
-      // Instead of failing, update video to ready without thumbnail
-      const { error: updateError } = await supabaseClient
-        .from('videos')
-        .update({
-          status: 'ready',
-          thumb_status: 'error',
-          thumb_error_message: 'Cloudinary not configured'
-        })
-        .eq('id', videoId)
-      
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Cloudinary not configured - video marked as ready without thumbnail' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
     
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     // Parse request body
-    const { videoId, userId, storagePath } = await req.json()
+    const { videoId, userId, storagePath, cloudinaryCloudName, uploadPreset } = await req.json()
     
-    // Request data: videoId, userId, storagePath
+    // Request data: videoId, userId, storagePath, cloudinaryCloudName, uploadPreset
 
-    if (!videoId || !userId || !storagePath) {
+    if (!videoId || !userId || !storagePath || !cloudinaryCloudName) {
       console.error('❌ [CLOUDINARY] Missing required parameters')
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters: videoId, userId, storagePath' }),
+        JSON.stringify({ error: 'Missing required parameters: videoId, userId, storagePath, cloudinaryCloudName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -96,32 +70,7 @@ serve(async (req: Request) => {
     const videoUrl = signedUrlData.signedUrl
     // Signed URL generated
 
-    // Basic quota check (warn if approaching limits)
-    // Check Cloudinary quota
-    try {
-      const quotaResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/usage`,
-        {
-          headers: {
-            'Authorization': `Basic ${btoa(`${cloudinaryApiKey}:${cloudinaryApiSecret}`)}`
-          },
-          signal: AbortSignal.timeout(5000)
-        }
-      )
-      
-      if (quotaResponse.ok) {
-        const quotaData = await quotaResponse.json()
-        const creditsUsed = quotaData.credits?.usage || 0
-        const creditsLimit = quotaData.credits?.limit || 1000
-        const usagePercent = (creditsUsed / creditsLimit) * 100
-        
-        // Credits usage tracked
-      } else {
-        // Could not fetch quota data
-      }
-    } catch (quotaError) {
-        // Quota check failed
-    }
+    // Skip quota check for unsigned uploads
 
     // Get video metadata to determine optimal frame offset
     // Fetch video metadata for duration
@@ -162,8 +111,7 @@ serve(async (req: Request) => {
       videoUrl,
       publicId,
       cloudinaryCloudName,
-      cloudinaryApiKey,
-      cloudinaryApiSecret,
+      uploadPreset || 'video-thumbnails', // Default preset name if not provided
       supabaseClient,
       videoId,
       frameOffset
@@ -222,8 +170,7 @@ async function uploadVideoFireAndForget(
   videoUrl: string,
   publicId: string,
   cloudName: string,
-  apiKey: string,
-  apiSecret: string,
+  uploadPreset: string,
   supabaseClient: any,
   videoId: string,
   frameOffset: number = 3
@@ -231,18 +178,11 @@ async function uploadVideoFireAndForget(
   try {
     // Starting background upload
     
-    // Create timestamp and signature
-    const timestamp = Math.round(new Date().getTime() / 1000)
-    const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}&resource_type=video`
-    const signature = await generateSignature(paramsToSign, apiSecret)
-    
-    // Create FormData
+    // Create FormData for unsigned upload
     const formData = new FormData()
     formData.append('file', videoUrl)
     formData.append('public_id', publicId)
-    formData.append('timestamp', timestamp.toString())
-    formData.append('api_key', apiKey)
-    formData.append('signature', signature)
+    formData.append('upload_preset', uploadPreset)
     formData.append('resource_type', 'video')
     formData.append('overwrite', 'true')
     
@@ -377,21 +317,6 @@ async function updateVideoStatusWithRetry(
   }
 }
 
-// Generate Cloudinary API signature
-async function generateSignature(paramsToSign: string, apiSecret: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(apiSecret),
-    { name: 'HMAC', hash: 'SHA-1' },
-    false,
-    ['sign']
-  )
-  
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(paramsToSign))
-  const hashArray = Array.from(new Uint8Array(signature))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
 
 // Generate thumbnail URL from Cloudinary public ID
 function generateThumbnailUrl(cloudName: string, publicId: string): string {

@@ -1,6 +1,10 @@
 import { supabase } from './supabase';
 import { costMonitoring } from '../utils/costMonitoring';
 
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = 'dyhvjcvko'; // Your Cloudinary cloud name
+const CLOUDINARY_UPLOAD_PRESET = 'video-thumbnails'; // Unsigned upload preset for thumbnails
+
 export interface CloudinaryThumbnailResult {
   success: boolean;
   thumbnailUrl?: string;
@@ -28,7 +32,9 @@ class CloudinaryService {
         body: {
           videoId,
           userId,
-          storagePath
+          storagePath,
+          cloudinaryCloudName: CLOUDINARY_CLOUD_NAME,
+          uploadPreset: CLOUDINARY_UPLOAD_PRESET
         }
       });
 
