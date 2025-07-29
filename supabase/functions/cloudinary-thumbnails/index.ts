@@ -185,10 +185,7 @@ async function uploadVideoToCloudinary(
     formData.append('public_id', publicId)
     formData.append('upload_preset', uploadPreset)
     formData.append('resource_type', 'video')
-    // Note: overwrite is not allowed for unsigned uploads
-    // Add eager transformation for thumbnail generation
-    formData.append('eager', `so_${frameOffset},w_400,h_225,c_fill,f_jpg`)
-    formData.append('eager_async', 'false') // Wait for transformation
+    // Note: eager transformations are not allowed for unsigned uploads
     
     console.log('[CLOUDINARY] Upload parameters:', {
       cloudName,
@@ -221,22 +218,15 @@ async function uploadVideoToCloudinary(
       const result = await uploadResponse.json()
       console.log('[CLOUDINARY] Upload successful:', {
         public_id: result.public_id,
-        eager: result.eager?.length || 0,
         resource_type: result.resource_type,
-        format: result.format
+        format: result.format,
+        secure_url: result.secure_url
       })
       
-      // Check if eager transformation was successful
-      let thumbnailUrl = null
-      if (result.eager && result.eager.length > 0) {
-        // Use the eager transformation URL
-        thumbnailUrl = result.eager[0].secure_url || result.eager[0].url
-        console.log('[CLOUDINARY] Using eager transformation URL:', thumbnailUrl)
-      } else {
-        // Fallback to constructed URL
-        thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
-        console.log('[CLOUDINARY] Using constructed URL:', thumbnailUrl)
-      }
+      // For unsigned uploads, we use on-the-fly transformation URL
+      // The thumbnail will be generated when first accessed
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${result.public_id}.jpg`
+      console.log('[CLOUDINARY] Thumbnail URL (on-the-fly transformation):', thumbnailUrl)
       
       return {
         success: true,
