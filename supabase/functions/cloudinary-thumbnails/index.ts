@@ -173,9 +173,33 @@ async function uploadVideoToCloudinary(
   try {
     // Starting background upload
     
-    // Create FormData for unsigned upload
+    // First, fetch the video content from Supabase
+    console.log('[CLOUDINARY] Fetching video from Supabase URL...')
+    const videoResponse = await fetch(videoUrl)
+    
+    if (!videoResponse.ok) {
+      console.error('[CLOUDINARY] Failed to fetch video from Supabase:', videoResponse.status)
+      return {
+        success: false,
+        error: `Failed to fetch video from storage: ${videoResponse.status}`
+      }
+    }
+    
+    // Get video as blob
+    const videoBlob = await videoResponse.blob()
+    console.log('[CLOUDINARY] Video fetched, size:', videoBlob.size, 'bytes')
+    
+    // Check size limit (100MB for Edge Functions)
+    if (videoBlob.size > 100 * 1024 * 1024) {
+      return {
+        success: false,
+        error: 'Video file too large for processing (max 100MB)'
+      }
+    }
+    
+    // Create FormData for unsigned upload with actual file
     const formData = new FormData()
-    formData.append('file', videoUrl)
+    formData.append('file', videoBlob, 'video.mp4')
     formData.append('public_id', publicId)
     formData.append('upload_preset', uploadPreset)
     formData.append('resource_type', 'video')
@@ -183,7 +207,7 @@ async function uploadVideoToCloudinary(
     
     // Upload parameters configured
     
-    // Sending upload request
+    // Sending upload request with actual video file
     
     // Add timeout signal for video processing (3 minutes max for Edge Function limit)
     const timeoutController = new AbortController()
