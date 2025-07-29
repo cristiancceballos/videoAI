@@ -27,7 +27,6 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ [CLOUDINARY] Missing Supabase environment variables')
       return new Response(
         JSON.stringify({ error: 'Missing Supabase environment variables' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -42,7 +41,6 @@ serve(async (req: Request) => {
     // Request data: videoId, userId, storagePath, cloudinaryCloudName, uploadPreset
 
     if (!videoId || !userId || !storagePath || !cloudinaryCloudName) {
-      console.error('❌ [CLOUDINARY] Missing required parameters')
       return new Response(
         JSON.stringify({ error: 'Missing required parameters: videoId, userId, storagePath, cloudinaryCloudName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,7 +57,6 @@ serve(async (req: Request) => {
       .createSignedUrl(storagePath, 21600) // 6 hours expiry for large video processing
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error('❌ [CLOUDINARY] Failed to generate signed URL:', signedUrlError)
       await updateVideoError(supabaseClient, videoId, 'Failed to generate video access URL')
       return new Response(
         JSON.stringify({ error: 'Failed to generate video access URL' }),
@@ -116,7 +113,6 @@ serve(async (req: Request) => {
       videoId,
       frameOffset
     ).catch((error) => {
-      console.error('❌ [CLOUDINARY] Background upload failed:', error)
       // Don't fail the main function - this is background processing
     })
     
@@ -134,7 +130,6 @@ serve(async (req: Request) => {
       .eq('id', videoId)
 
     if (updateError) {
-      console.error('❌ [CLOUDINARY] Failed to update video record:', updateError)
       return new Response(
         JSON.stringify({ error: 'Failed to update video record', details: updateError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -154,7 +149,6 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
-    console.error('💥 [CLOUDINARY] Unexpected error:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
@@ -219,7 +213,6 @@ async function uploadVideoFireAndForget(
           thumb_status: 'ready'
         }, 'Status updated to ready after validation')
       } else {
-        console.error('Thumbnail validation failed')
         await updateVideoStatusWithRetry(supabaseClient, videoId, {
           thumb_status: 'error',
           thumb_error_message: `THUMBNAIL_ERROR: Generated thumbnail is not accessible [${new Date().toISOString()}]`
@@ -227,7 +220,6 @@ async function uploadVideoFireAndForget(
       }
     } else {
       const errorText = await uploadResponse.text()
-      console.error('Cloudinary upload failed:', errorText)
       
       // Update video with error status (with retry logic)
       await updateVideoStatusWithRetry(supabaseClient, videoId, {
@@ -237,7 +229,6 @@ async function uploadVideoFireAndForget(
     }
     
   } catch (error) {
-    console.error('Background upload error:', error.message)
     
     // Update video with error status (with retry logic)
     await updateVideoStatusWithRetry(supabaseClient, videoId, {
@@ -305,7 +296,6 @@ async function updateVideoStatusWithRetry(
       // Database update failed
       
       if (attempt === maxRetries) {
-        console.error('All database retry attempts failed')
         return
       }
       

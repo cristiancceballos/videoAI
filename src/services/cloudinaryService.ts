@@ -25,7 +25,6 @@ class CloudinaryService {
     storagePath: string
   ): Promise<CloudinaryThumbnailResult> {
     try {
-      console.log('☁️ [CLOUDINARY SERVICE] Triggering thumbnail generation for video:', videoId);
 
       // Call the Cloudinary thumbnail Edge Function
       const { data, error } = await supabase.functions.invoke('cloudinary-thumbnails', {
@@ -39,7 +38,6 @@ class CloudinaryService {
       });
 
       if (error) {
-        console.error('❌ [CLOUDINARY SERVICE] Edge Function error:', error);
         return {
           success: false,
           error: error.message || 'Failed to invoke thumbnail generation function'
@@ -47,14 +45,12 @@ class CloudinaryService {
       }
 
       if (!data?.success) {
-        console.error('❌ [CLOUDINARY SERVICE] Thumbnail generation failed:', data?.error);
         return {
           success: false,
           error: data?.error || 'Thumbnail generation failed'
         };
       }
 
-      console.log('✅ [CLOUDINARY SERVICE] Thumbnail generated successfully:', data.thumbnailUrl);
       
       // Record the thumbnail generation for cost monitoring
       costMonitoring.recordThumbnailGeneration();
@@ -65,7 +61,6 @@ class CloudinaryService {
       };
 
     } catch (error) {
-      console.error('💥 [CLOUDINARY SERVICE] Unexpected error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -91,13 +86,11 @@ class CloudinaryService {
         .single();
 
       if (error) {
-        console.error('❌ [CLOUDINARY SERVICE] Error fetching thumbnail status:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('💥 [CLOUDINARY SERVICE] Error getting thumbnail status:', error);
       return null;
     }
   }
@@ -114,7 +107,6 @@ class CloudinaryService {
     userId: string,
     storagePath: string
   ): Promise<CloudinaryThumbnailResult> {
-    console.log('🔄 [CLOUDINARY SERVICE] Retrying thumbnail generation for video:', videoId);
     
     // Reset status to pending before retry
     await supabase
@@ -142,7 +134,6 @@ class CloudinaryService {
       thumb_error_message?: string;
     }) => void
   ) {
-    console.log('👁️ [CLOUDINARY SERVICE] Setting up real-time thumbnail status monitoring for:', videoId);
     
     const subscription = supabase
       .channel(`thumbnail_${videoId}`)
@@ -155,7 +146,6 @@ class CloudinaryService {
           filter: `id=eq.${videoId}`,
         },
         (payload) => {
-          console.log('🔔 [CLOUDINARY SERVICE] Thumbnail status update:', payload.new);
           onStatusChange({
             thumb_status: payload.new.thumb_status,
             cloudinary_url: payload.new.cloudinary_url,
@@ -164,8 +154,6 @@ class CloudinaryService {
         }
       )
       .subscribe((status, err) => {
-        console.log('🔔 [CLOUDINARY SERVICE] Subscription status:', status);
-        if (err) console.error('❌ [CLOUDINARY SERVICE] Subscription error:', err);
       });
 
     return subscription;

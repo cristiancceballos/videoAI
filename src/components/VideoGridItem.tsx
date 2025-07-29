@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { Video, Play, X } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
+import { useThumbnailValidation } from '../utils/thumbnailValidator';
 
 interface VideoGridItemProps {
   video: VideoWithMetadata;
@@ -22,6 +23,23 @@ interface VideoGridItemProps {
 }
 
 export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnIndex }: VideoGridItemProps) {
+  // Use thumbnail validation hook with retry logic
+  const { isValidated, isValidating } = useThumbnailValidation(
+    video.thumbnailUrl,
+    {
+      maxRetries: 5,
+      initialDelay: 3000, // Wait 3 seconds before first check
+      maxDelay: 20000,
+      backoffMultiplier: 1.5
+    }
+  );
+
+  // Determine if we should show the thumbnail
+  const shouldShowThumbnail = video.thumbnailUrl && isValidated;
+  
+  // Show loading state for thumbnails that are being processed
+  const isThumbProcessing = video.thumb_status === 'processing' || 
+                           (video.thumbnailUrl && isValidating);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -31,7 +49,6 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
   };
 
   const handleDelete = () => {
-    console.log('Delete requested for video:', video.title);
     if (onDelete) {
       // Use browser-compatible confirmation for web platform
       if (Platform.OS === 'web') {
@@ -59,18 +76,15 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
     >
       {/* Video Thumbnail */}
       <View style={styles.thumbnailContainer}>
-        {video.thumbnailUrl ? (
+        {shouldShowThumbnail ? (
           <Image 
             source={{ uri: video.thumbnailUrl }} 
             style={styles.thumbnail}
             resizeMode="cover"
-            onError={(error) => {
-              console.error('Thumbnail load failed:', error.nativeEvent?.error);
-            }}
           />
         ) : (
           <View style={styles.placeholderThumbnail}>
-            {video.status === 'uploading' ? (
+            {video.status === 'uploading' || isThumbProcessing ? (
               <ActivityIndicator size="small" color="#FF9500" />
             ) : (
               <Video size={24} color="#666" />
