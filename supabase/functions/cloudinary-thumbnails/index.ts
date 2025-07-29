@@ -226,7 +226,8 @@ async function uploadVideoToCloudinary(
       const publicIdWithoutExtension = actualPublicId.replace(/\.[^/.]+$/, '')
       
       // For unsigned uploads, we use on-the-fly transformation URL
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}.jpg`
+      // Note: Do not add .jpg at the end - Cloudinary handles the format via f_jpg parameter
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}`
       console.log('[CLOUDINARY] Thumbnail URL (without extension):', thumbnailUrl)
       
       return {
