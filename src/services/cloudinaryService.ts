@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { costMonitoring } from '../utils/costMonitoring';
 
 // Cloudinary configuration
-const CLOUDINARY_CLOUD_NAME = 'dyhvjcvko'; // Your Cloudinary cloud name
+const CLOUDINARY_CLOUD_NAME = 'ddboyfn5x'; // Your Cloudinary cloud name
 const CLOUDINARY_UPLOAD_PRESET = 'video-thumbnails'; // Unsigned upload preset for thumbnails
 
 export interface CloudinaryThumbnailResult {
