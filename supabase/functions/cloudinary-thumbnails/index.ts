@@ -220,15 +220,23 @@ async function uploadVideoToCloudinary(
         url: result.url
       })
       
+      // Extract version from secure_url (e.g., /v1735458350/)
+      const versionMatch = result.secure_url.match(/\/v(\d+)\//);
+      const version = versionMatch ? `v${versionMatch[1]}` : '';
+      
       // For video thumbnails, we need to remove the file extension from the public_id
       // Cloudinary returns: video_thumbnails/id.mp4
       // We need: video_thumbnails/id (without extension)
       const publicIdWithoutExtension = actualPublicId.replace(/\.[^/.]+$/, '')
       
-      // For unsigned uploads, we use on-the-fly transformation URL
-      // Note: Do not add .jpg at the end - Cloudinary handles the format via f_jpg parameter
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}`
-      console.log('[CLOUDINARY] Thumbnail URL (without extension):', thumbnailUrl)
+      // For unsigned uploads, we need to include the version in the URL
+      // Transformation URL format: /video/upload/{version}/{transformations}/{public_id}
+      const thumbnailUrl = version 
+        ? `https://res.cloudinary.com/${cloudName}/video/upload/${version}/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}`
+        : `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}`;
+      
+      console.log('[CLOUDINARY] Thumbnail URL with version:', thumbnailUrl)
+      console.log('[CLOUDINARY] Version extracted:', version)
       
       return {
         success: true,
