@@ -216,17 +216,27 @@ async function uploadVideoToCloudinary(
     
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
-      console.log('[CLOUDINARY] Upload successful:', {
-        public_id: result.public_id,
+      
+      // Log the full response to understand the structure
+      console.log('[CLOUDINARY] Full upload response:', JSON.stringify(result, null, 2))
+      
+      // Use the actual public_id from Cloudinary's response
+      // This includes any folder structure Cloudinary added
+      const actualPublicId = result.public_id
+      
+      console.log('[CLOUDINARY] Upload details:', {
+        expected_public_id: publicId,
+        actual_public_id: actualPublicId,
         resource_type: result.resource_type,
         format: result.format,
-        secure_url: result.secure_url
+        secure_url: result.secure_url,
+        url: result.url
       })
       
       // For unsigned uploads, we use on-the-fly transformation URL
-      // The thumbnail will be generated when first accessed
-      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${result.public_id}.jpg`
-      console.log('[CLOUDINARY] Thumbnail URL (on-the-fly transformation):', thumbnailUrl)
+      // Use the ACTUAL public_id from Cloudinary, not our constructed one
+      const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${actualPublicId}.jpg`
+      console.log('[CLOUDINARY] Thumbnail URL with actual public_id:', thumbnailUrl)
       
       return {
         success: true,
