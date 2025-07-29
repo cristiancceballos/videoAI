@@ -38,9 +38,16 @@ serve(async (req: Request) => {
     // Parse request body
     const { videoId, userId, storagePath, cloudinaryCloudName, uploadPreset } = await req.json()
     
-    // Request data: videoId, userId, storagePath, cloudinaryCloudName, uploadPreset
+    console.log('[CLOUDINARY] Request received:', {
+      videoId,
+      userId,
+      storagePath,
+      cloudinaryCloudName,
+      uploadPreset
+    })
 
     if (!videoId || !userId || !storagePath || !cloudinaryCloudName) {
+      console.error('[CLOUDINARY] Missing required parameters')
       return new Response(
         JSON.stringify({ error: 'Missing required parameters: videoId, userId, storagePath, cloudinaryCloudName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -178,10 +185,18 @@ async function uploadVideoToCloudinary(
     formData.append('public_id', publicId)
     formData.append('upload_preset', uploadPreset)
     formData.append('resource_type', 'video')
-    formData.append('overwrite', 'true')
+    // Note: overwrite is not allowed for unsigned uploads
     // Add eager transformation for thumbnail generation
     formData.append('eager', `so_${frameOffset},w_400,h_225,c_fill,f_jpg`)
     formData.append('eager_async', 'false') // Wait for transformation
+    
+    console.log('[CLOUDINARY] Upload parameters:', {
+      cloudName,
+      publicId,
+      uploadPreset,
+      videoUrl: videoUrl.substring(0, 100) + '...',
+      frameOffset
+    })
     
     // Sending upload request
     
@@ -204,15 +219,23 @@ async function uploadVideoToCloudinary(
     
     if (uploadResponse.ok) {
       const result = await uploadResponse.json()
+      console.log('[CLOUDINARY] Upload successful:', {
+        public_id: result.public_id,
+        eager: result.eager?.length || 0,
+        resource_type: result.resource_type,
+        format: result.format
+      })
       
       // Check if eager transformation was successful
       let thumbnailUrl = null
       if (result.eager && result.eager.length > 0) {
         // Use the eager transformation URL
         thumbnailUrl = result.eager[0].secure_url || result.eager[0].url
+        console.log('[CLOUDINARY] Using eager transformation URL:', thumbnailUrl)
       } else {
         // Fallback to constructed URL
         thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicId}.jpg`
+        console.log('[CLOUDINARY] Using constructed URL:', thumbnailUrl)
       }
       
       return {
@@ -221,9 +244,14 @@ async function uploadVideoToCloudinary(
       }
     } else {
       const errorText = await uploadResponse.text()
+      console.error('[CLOUDINARY] Upload failed:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        error: errorText
+      })
       return {
         success: false,
-        error: `Cloudinary upload failed: ${errorText}`
+        error: `Cloudinary upload failed (${uploadResponse.status}): ${errorText}`
       }
     }
     
