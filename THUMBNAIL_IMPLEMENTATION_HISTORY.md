@@ -480,4 +480,114 @@ Unsigned uploads are secure for thumbnail generation because:
 
 ---
 
-*The Cloudinary approach has been successfully refactored to work around Edge Function limitations while maintaining security and functionality.*
+## 🔧 **Cloudinary Unsigned Upload Issues** (July 2025)
+
+### The 404 Mystery
+After successfully refactoring to use unsigned uploads, a new critical issue emerged: Cloudinary returns success responses but the uploaded resources don't actually exist.
+
+### Debugging Timeline
+
+#### Attempt 1: Environment Variable Fix ✅
+- **Issue**: Edge Functions couldn't access `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET`
+- **Solution**: Switched to unsigned uploads with upload presets
+- **Result**: Successfully bypassed environment variable issues
+
+#### Attempt 2: Remove Eager Transformations ✅
+- **Issue**: "Eager async parameter is not allowed when using unsigned upload"
+- **Solution**: Removed eager transformations, switched to on-the-fly URL generation
+- **Result**: Upload requests successful, but thumbnails still 404
+
+#### Attempt 3: Use Actual public_id ❌
+- **Issue**: Mismatch between our constructed public_id and Cloudinary's returned public_id
+- **Solution**: Used `result.public_id` from Cloudinary response
+- **Result**: Still 404 errors
+
+#### Attempt 4: Remove .jpg Extension ❌
+- **Issue**: Thought the `.jpg` extension at end of URL was causing issues
+- **Solution**: Removed `.jpg` from transformation URL
+- **Result**: Still 404 errors
+
+#### Attempt 5: Extract Version Number ❌
+- **Issue**: Noticed secure_url includes version number (e.g., `/v1735458350/`)
+- **Solution**: Extracted version and included in transformation URL
+- **Result**: Still 404 errors
+
+#### Attempt 6: Direct Blob Upload ❌
+- **Issue**: Suspected Cloudinary couldn't fetch from Supabase signed URLs
+- **Solution**: Fetch video blob and upload directly instead of remote URL
+- **Result**: Upload succeeds with 200 OK, but resources still 404
+
+### Critical Discovery
+The core issue: **Cloudinary returns a successful upload response with a secure_url, but the secure_url itself returns 404**. This suggests:
+1. The upload is being accepted but not processed
+2. The upload preset might have restrictions we're unaware of
+3. Cloudinary account limitations for unsigned uploads
+4. Possible async processing that we're not waiting for
+
+### Technical Evidence
+```bash
+# Upload Response (200 OK)
+secure_url: https://res.cloudinary.com/ddboyfn5x/video/upload/v1735513322/video_thumbnails/cm1eijt1r00003b6imctkqtzo.mp4
+
+# Testing the URL
+curl -I "https://res.cloudinary.com/ddboyfn5x/video/upload/v1735513322/video_thumbnails/cm1eijt1r00003b6imctkqtzo.mp4"
+# Returns: 404 Not Found
+```
+
+### Current Implementation State
+- Edge Function successfully fetches video from Supabase (10.7MB tested)
+- FormData properly constructed with video blob
+- Cloudinary API returns 200 OK with full response object
+- But all URLs (secure_url, transformation URLs) return 404
+
+**Status**: BLOCKED - Fundamental issue with Cloudinary resource storage
+
+---
+
+## 📊 **Summary of All Approaches (Updated July 2025)**
+
+| Approach | Status | Reason for Failure | Development Time |
+|----------|--------|-------------------|------------------|
+| **A: Dedicated Worker (FFmpeg)** | Not Attempted | Complexity/Time constraints | Estimated 20+ hours |
+| **B: SaaS Integration (Cloudinary)** | BLOCKED | Resources not accessible after "successful" upload | ~12 hours total |
+| **C: Client-Side Canvas** | FAILED | Browser compatibility and video format issues | ~4 hours |
+
+### Cloudinary Specific Issues
+1. **Signed Uploads**: Failed due to Edge Function environment variable access
+2. **Unsigned Uploads**: "Successful" but resources don't exist (404)
+3. **Remote URL Upload**: Cloudinary can't fetch from Supabase signed URLs
+4. **Direct Blob Upload**: Still results in phantom resources
+
+### Next Recommended Approaches
+
+#### Option D: Alternative SaaS Providers
+- **Transloadit**: More expensive but very reliable
+- **Filestack**: Good API, reasonable pricing
+- **Uploadcare**: Strong transformation capabilities
+- **Bunny.net**: CDN with video processing features
+
+#### Option E: Hybrid CDN Approach
+1. Upload video to public CDN (Bunny.net, Cloudflare R2)
+2. Use Cloudinary/other service for transformation only
+3. Store thumbnail URL in database
+
+#### Option F: Supabase Storage Functions
+- Wait for Supabase's upcoming image transformation features
+- Use temporary SVG placeholders until available
+
+#### Option G: Accept Current Limitations
+- Keep SVG placeholders
+- Focus on other features
+- Revisit when more time available
+
+### Lessons Learned
+1. **Always verify resources exist** after "successful" uploads
+2. **Unsigned uploads have hidden limitations** not well documented
+3. **Edge Function constraints** make external service integration challenging
+4. **Client-side approaches are unreliable** for production video processing
+
+**Current Status**: NO WORKING THUMBNAIL SOLUTION - Evaluating alternatives
+
+---
+
+*The Cloudinary approach revealed unexpected challenges with unsigned uploads and resource availability, requiring a reevaluation of our thumbnail generation strategy.*

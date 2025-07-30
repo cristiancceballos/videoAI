@@ -12,7 +12,6 @@ import {
 import { Video, Play, X } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
-import { useThumbnailValidation } from '../utils/thumbnailValidator';
 
 interface VideoGridItemProps {
   video: VideoWithMetadata;
@@ -23,24 +22,12 @@ interface VideoGridItemProps {
 }
 
 export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnIndex }: VideoGridItemProps) {
-  // For Cloudinary on-the-fly thumbnails, we need to handle initial generation delay
-  const { isValidated, isValidating } = useThumbnailValidation(
-    video.thumbnailUrl && video.thumb_status === 'ready' ? video.thumbnailUrl : undefined,
-    {
-      maxRetries: 3,
-      initialDelay: 1000, // Wait 1 second before first check
-      maxDelay: 5000,
-      backoffMultiplier: 2
-    }
-  );
-
-  // Show thumbnail when it's ready and validated
-  const shouldShowThumbnail = video.thumbnailUrl && video.thumb_status === 'ready' && isValidated;
+  // Show thumbnail when it's ready
+  const shouldShowThumbnail = video.thumbnailUrl && video.thumb_status === 'ready';
   
-  // Show loading state for thumbnails that are being processed or validated
+  // Show loading state for thumbnails that are being processed
   const isThumbProcessing = video.thumb_status === 'processing' || 
-                           video.thumb_status === 'pending' ||
-                           (video.thumb_status === 'ready' && isValidating);
+                           video.thumb_status === 'pending';
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';

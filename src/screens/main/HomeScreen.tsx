@@ -18,6 +18,7 @@ import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
 import { TikTokVideoPlayer } from '../../components/TikTokVideoPlayer';
 import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
+import { BunnyStreamService } from '../../services/bunnyStreamService';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
@@ -50,7 +51,7 @@ export function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
-        console.log('HomeScreen focused - refreshing videos');
+        // HomeScreen focused - refreshing videos
         loadVideos();
       }
     }, [user])
@@ -67,10 +68,10 @@ export function HomeScreen() {
 
     if (processingVideos.length === 0) return;
 
-    console.log(`🔄 [POLLING] Found ${processingVideos.length} videos processing thumbnails, starting polling...`);
+    // Found videos processing thumbnails, starting polling...
 
     const pollInterval = setInterval(async () => {
-      console.log('🕐 [POLLING] Checking for thumbnail updates...');
+      // Checking for thumbnail updates...
       await loadVideos(false);
       
       // Check if we still need to poll
@@ -79,13 +80,13 @@ export function HomeScreen() {
       );
       
       if (stillProcessing.length === 0) {
-        console.log('✅ [POLLING] All thumbnails complete, stopping poll');
+        // All thumbnails complete, stopping poll
         clearInterval(pollInterval);
       }
     }, 10000); // Poll every 10 seconds
 
     return () => {
-      console.log('🛑 [POLLING] Cleaning up poll interval');
+      // Cleaning up poll interval
       clearInterval(pollInterval);
     };
   }, [user, videos]);
@@ -96,17 +97,10 @@ export function HomeScreen() {
     if (showLoading) setLoading(true);
     
     try {
-      console.log('Loading videos for user:', user.id);
+      // Loading videos for user
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
-      console.log('📹 Loaded videos:', userVideos.length, userVideos.map(v => ({
-        id: v.id.substring(0,8), 
-        title: v.title.substring(0, 20), 
-        status: v.status,
-        hasThumbnailPath: !!v.thumbnail_path,
-        hasThumbnailUrl: !!v.thumbnailUrl,
-        thumbnailPath: v.thumbnail_path?.substring(0, 30) + '...'
-      })));
+      // Loaded videos successfully
       
       // Debug recent video details
       if (userVideos.length > 0) {
@@ -120,6 +114,9 @@ export function HomeScreen() {
           created_at: recentVideo.created_at
         });
       }
+      
+      // Process any pending thumbnails with Bunny
+      await processPendingThumbnails();
     } catch (error) {
       console.error('Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');
@@ -132,18 +129,18 @@ export function HomeScreen() {
     if (!user) return () => {};
 
     try {
-      console.log('🔔 Setting up real-time subscription for user:', user.id);
+      // Setting up real-time subscription
       const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
-        console.log('📡 Real-time update received, updating video list with', updatedVideos.length, 'videos');
+        // Real-time update received
         setVideos(updatedVideos);
       });
 
       return () => {
         try {
-          console.log('🔕 Cleaning up real-time subscription');
+          // Cleaning up real-time subscription
           subscription.unsubscribe();
         } catch (error) {
-          console.log('Real-time unsubscribe error (non-critical):', error);
+          // Real-time unsubscribe error (non-critical)
         }
       };
     } catch (error) {
@@ -157,6 +154,31 @@ export function HomeScreen() {
     setRefreshing(true);
     await loadVideos();
     setRefreshing(false);
+  };
+
+  const processPendingThumbnails = async () => {
+    if (!user || !videos.length) return;
+    
+    // Find videos that need thumbnail processing
+    const pendingVideos = videos.filter(v => 
+      v.thumb_status === 'pending' && 
+      v.storage_path &&
+      !v.bunny_video_id // Not already processed by Bunny
+    );
+    
+    if (pendingVideos.length === 0) return;
+    
+    // Found videos needing thumbnail processing
+    
+    // Process each pending video
+    for (const video of pendingVideos) {
+      try {
+        // Processing video with Bunny
+        await BunnyStreamService.processVideo(video.id, user.id, video.storage_path);
+      } catch (error) {
+        console.error(`❌ [BUNNY] Failed to process video ${video.id}:`, error);
+      }
+    }
   };
 
   const checkForStuckThumbnails = () => {
@@ -191,7 +213,7 @@ export function HomeScreen() {
         console.log('Fresh signed video URL loaded successfully (expires in 1 hour)');
       } else {
         setVideoError('Unable to generate secure video link. Please check your permissions.');
-        console.error('Failed to get secure video URL');
+        // Failed to get secure video URL
       }
     } catch (error) {
       console.error('Error loading video URL:', error);
@@ -215,7 +237,7 @@ export function HomeScreen() {
       return;
     }
 
-    console.log('Opening video player for:', video.title);
+    // Opening video player
     setSelectedVideo(video);
     setVideoLoading(true);
     setVideoError(null);
@@ -235,7 +257,7 @@ export function HomeScreen() {
       return;
     }
 
-    console.log('Video URL appears to be expired, refreshing...');
+    // Video URL appears to be expired, refreshing...
     setUrlRetryCount(prev => prev + 1);
     setVideoLoading(true);
     setVideoError(null);
@@ -245,7 +267,7 @@ export function HomeScreen() {
   };
 
   const handleCloseVideoPlayer = () => {
-    console.log('📴 Closing video player');
+    // Closing video player
     setShowVideoPlayer(false);
     setSelectedVideo(null);
     setVideoUrl(null);
@@ -255,21 +277,21 @@ export function HomeScreen() {
   };
 
   const handleVideoDelete = async (video: VideoWithMetadata) => {
-    console.log('🏠 HomeScreen: Delete request received for:', video.title);
+    // Delete request received
     setDeleting(video.id);
     
     try {
-      console.log('Deleting video:', video.title);
+      // Deleting video
       const success = await videoService.deleteVideo(video.id);
       
       if (success) {
         // Remove from local state immediately
         setVideos(prevVideos => prevVideos.filter(v => v.id !== video.id));
         Alert.alert('Success', 'Video deleted successfully');
-        console.log('Video deleted successfully');
+        // Video deleted successfully
       } else {
         Alert.alert('Error', 'Failed to delete video. Please try again.');
-        console.error('Failed to delete video');
+        // Failed to delete video
       }
     } catch (error) {
       console.error('Error deleting video:', error);
@@ -291,7 +313,7 @@ export function HomeScreen() {
 
   const handleTabPress = (tab: ProfileTab) => {
     setActiveTab(tab);
-    console.log('Tab switched to:', tab);
+    // Tab switched
   };
 
   const renderTabContent = () => {

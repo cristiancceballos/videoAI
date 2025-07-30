@@ -41,10 +41,10 @@ class VideoService {
         data.map(async (video, index) => {
           let thumbnailUrl: string | undefined;
           
-          // Priority 1: Use Cloudinary URL if available
-          if (video.cloudinary_url) {
-            thumbnailUrl = video.cloudinary_url;
-            // Using Cloudinary thumbnail
+          // Priority 1: Use Bunny.net thumbnail URL if available
+          if (video.bunny_thumbnail_url) {
+            thumbnailUrl = video.bunny_thumbnail_url;
+            // Using Bunny.net thumbnail
           }
           // Priority 2: Use Supabase Storage thumbnail with signed URL
           else if (video.thumbnail_path) {
@@ -263,9 +263,9 @@ class VideoService {
 
       let thumbnailUrl: string | undefined;
       
-      // Priority 1: Use Cloudinary URL if available
-      if (data.cloudinary_url) {
-        thumbnailUrl = data.cloudinary_url;
+      // Priority 1: Use Bunny.net thumbnail URL if available
+      if (data.bunny_thumbnail_url) {
+        thumbnailUrl = data.bunny_thumbnail_url;
       }
       // Priority 2: Use Supabase Storage thumbnail with signed URL
       else if (data.thumbnail_path) {
