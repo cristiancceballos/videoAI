@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 // Bunny.net Stream configuration
 // These values should be stored securely in environment variables for production
