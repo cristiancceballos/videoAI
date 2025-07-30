@@ -56,17 +56,26 @@ export class BunnyStreamService {
         throw new Error('Bunny.net configuration missing. Please check environment variables.');
       }
 
+      // Prepare the payload
+      const payload = {
+        videoId,
+        userId,
+        storagePath,
+        // Pass configuration from client
+        bunnyLibraryId: BUNNY_STREAM_LIBRARY_ID,
+        bunnyApiKey: BUNNY_STREAM_API_KEY,
+        bunnyCdnHostname: BUNNY_STREAM_CDN_HOSTNAME
+      };
+
+      // Debug: Log the payload being sent
+      console.log('[BUNNY DEBUG] Sending to Edge Function:', {
+        ...payload,
+        bunnyApiKey: payload.bunnyApiKey ? '***hidden***' : 'missing'
+      });
+
       // Call our Edge Function which will handle the Bunny.net integration
       const { data, error } = await supabase.functions.invoke('bunny-video-processor', {
-        body: {
-          videoId,
-          userId,
-          storagePath,
-          // Pass configuration from client
-          bunnyLibraryId: BUNNY_STREAM_LIBRARY_ID,
-          bunnyApiKey: BUNNY_STREAM_API_KEY,
-          bunnyCdnHostname: BUNNY_STREAM_CDN_HOSTNAME
-        }
+        body: payload
       });
 
       if (error) {
