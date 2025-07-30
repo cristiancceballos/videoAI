@@ -31,21 +31,62 @@ serve(async (req: Request) => {
     
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Debug: Log raw request
+    const bodyText = await req.text()
+    console.log('[BUNNY EDGE] Raw request body:', bodyText)
+    
     // Parse request body
-    const { videoId, userId, storagePath, bunnyLibraryId, bunnyApiKey, bunnyCdnHostname } = await req.json()
+    let requestData
+    try {
+      requestData = JSON.parse(bodyText)
+    } catch (parseError) {
+      console.error('[BUNNY EDGE] Failed to parse request body:', parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const { videoId, userId, storagePath, bunnyLibraryId, bunnyApiKey, bunnyCdnHostname } = requestData
+    
+    // Debug: Log parsed parameters
+    console.log('[BUNNY EDGE] Parsed parameters:', {
+      videoId: videoId || 'missing',
+      userId: userId || 'missing',
+      storagePath: storagePath || 'missing',
+      bunnyLibraryId: bunnyLibraryId ? 'provided' : 'missing',
+      bunnyApiKey: bunnyApiKey ? 'provided' : 'missing',
+      bunnyCdnHostname: bunnyCdnHostname || 'missing'
+    })
     
     if (!videoId || !userId || !storagePath || !bunnyLibraryId || !bunnyApiKey || !bunnyCdnHostname) {
+      const missingParams = []
+      if (!videoId) missingParams.push('videoId')
+      if (!userId) missingParams.push('userId')
+      if (!storagePath) missingParams.push('storagePath')
+      if (!bunnyLibraryId) missingParams.push('bunnyLibraryId')
+      if (!bunnyApiKey) missingParams.push('bunnyApiKey')
+      if (!bunnyCdnHostname) missingParams.push('bunnyCdnHostname')
+      
+      console.error('[BUNNY EDGE] Missing parameters:', missingParams)
+      
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ error: 'Missing required parameters', missing: missingParams }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    console.log('[BUNNY EDGE] All parameters validated, proceeding with video processing')
+    
     // Update video status to processing
-    await supabaseClient
+    const { error: updateStatusError } = await supabaseClient
       .from('videos')
       .update({ thumb_status: 'processing' })
       .eq('id', videoId)
+    
+    if (updateStatusError) {
+      console.error('[BUNNY EDGE] Failed to update video status:', updateStatusError)
+    }
 
     // Generate signed URL for the video
     const { data: signedUrlData, error: signedUrlError } = await supabaseClient.storage
