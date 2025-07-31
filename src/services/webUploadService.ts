@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { WebMediaAsset } from './webMediaService';
-import { thumbnailExtractor } from './thumbnailExtractor';
 
 export interface UploadProgress {
   loaded: number;
@@ -255,32 +254,11 @@ class WebUploadService {
         return { success: false, error: 'File upload failed' };
       }
 
-      // 5. Mark video as ready first (video is playable regardless of thumbnail)
+      // 5. Mark video as ready (video is playable, thumbnail will be processed by Bunny)
       await this.updateVideoStatus(videoId, 'ready');
-      
-      // 6. Generate client-side thumbnail (non-blocking)
-      try {
-        // Generate client-side thumbnail
-        const thumbnailResult = await thumbnailExtractor.generateAndUploadThumbnail(
-          asset.file,
-          videoId,
-          userId,
-          3 // Extract frame at 3 seconds
-        );
 
-        if (thumbnailResult.success && thumbnailResult.thumbnailPath) {
-          // Update video with thumbnail path
-          await thumbnailExtractor.updateVideoThumbnail(videoId, thumbnailResult.thumbnailPath);
-          // Thumbnail generated successfully
-        } else {
-          // Video remains ready, just without thumbnail
-        }
-      } catch (error) {
-        // Video remains ready, just without thumbnail
-      }
-
-      // Note: Blob URL cleanup is handled by the WebVideoPreviewModal component
-      // to prevent premature revocation during thumbnail generation
+      // Note: Thumbnail generation is handled by Bunny.net after upload
+      // The video will have thumb_status: 'pending' until Bunny processes it
 
       return { success: true, videoId };
     } catch (error) {
