@@ -137,6 +137,7 @@ class UploadService {
         title: title || metadata.filename,
         storage_path: storagePath,
         status: 'uploading',
+        thumb_status: 'pending', // Set thumbnail status to pending for Bunny processing
         file_size: metadata.fileSize,
         duration: metadata.duration,
         source_type: sourceType,

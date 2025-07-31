@@ -164,12 +164,25 @@ export function HomeScreen() {
     }
     
     console.log('[BUNNY PROCESS] Total videos:', videosList.length);
-    console.log('[BUNNY PROCESS] Videos thumb_status:', videosList.map(v => ({
+    const videoStatuses = videosList.map(v => ({
       id: v.id.substring(0, 8),
       thumb_status: v.thumb_status,
       has_bunny_id: !!v.bunny_video_id,
       has_storage_path: !!v.storage_path
-    })));
+    }));
+    console.log('[BUNNY PROCESS] Videos thumb_status:', videoStatuses);
+    
+    // Log more details about the most recent video
+    const recentVideo = videosList[0];
+    if (recentVideo) {
+      console.log('[BUNNY PROCESS] Most recent video:', {
+        id: recentVideo.id,
+        thumb_status: recentVideo.thumb_status,
+        bunny_video_id: recentVideo.bunny_video_id,
+        bunny_thumbnail_url: recentVideo.bunny_thumbnail_url,
+        created_at: recentVideo.created_at
+      });
+    }
     
     // Find videos that need thumbnail processing
     const pendingVideos = videosList.filter(v => 

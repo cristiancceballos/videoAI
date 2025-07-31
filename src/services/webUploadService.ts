@@ -133,6 +133,7 @@ class WebUploadService {
         title: title || asset.filename,
         storage_path: storagePath,
         status: 'uploading',
+        thumb_status: 'pending', // Set thumbnail status to pending for Bunny processing
         file_size: Math.round(asset.fileSize), // Ensure integer
         duration: asset.duration ? Math.round(asset.duration) : undefined, // Convert to integer seconds
         source_type: sourceType,
