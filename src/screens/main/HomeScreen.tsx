@@ -116,7 +116,7 @@ export function HomeScreen() {
       }
       
       // Process any pending thumbnails with Bunny
-      await processPendingThumbnails();
+      await processPendingThumbnails(userVideos);
     } catch (error) {
       console.error('Error loading videos:', error);
       Alert.alert('Error', 'Failed to load videos');
@@ -156,15 +156,15 @@ export function HomeScreen() {
     setRefreshing(false);
   };
 
-  const processPendingThumbnails = async () => {
+  const processPendingThumbnails = async (videosList: VideoWithMetadata[]) => {
     console.log('[BUNNY PROCESS] Checking for pending thumbnails...');
-    if (!user || !videos.length) {
+    if (!user || !videosList || videosList.length === 0) {
       console.log('[BUNNY PROCESS] No user or videos, returning');
       return;
     }
     
-    console.log('[BUNNY PROCESS] Total videos:', videos.length);
-    console.log('[BUNNY PROCESS] Videos thumb_status:', videos.map(v => ({
+    console.log('[BUNNY PROCESS] Total videos:', videosList.length);
+    console.log('[BUNNY PROCESS] Videos thumb_status:', videosList.map(v => ({
       id: v.id.substring(0, 8),
       thumb_status: v.thumb_status,
       has_bunny_id: !!v.bunny_video_id,
@@ -172,7 +172,7 @@ export function HomeScreen() {
     })));
     
     // Find videos that need thumbnail processing
-    const pendingVideos = videos.filter(v => 
+    const pendingVideos = videosList.filter(v => 
       v.thumb_status === 'pending' && 
       v.storage_path &&
       !v.bunny_video_id // Not already processed by Bunny
