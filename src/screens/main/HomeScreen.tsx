@@ -157,7 +157,19 @@ export function HomeScreen() {
   };
 
   const processPendingThumbnails = async () => {
-    if (!user || !videos.length) return;
+    console.log('[BUNNY PROCESS] Checking for pending thumbnails...');
+    if (!user || !videos.length) {
+      console.log('[BUNNY PROCESS] No user or videos, returning');
+      return;
+    }
+    
+    console.log('[BUNNY PROCESS] Total videos:', videos.length);
+    console.log('[BUNNY PROCESS] Videos thumb_status:', videos.map(v => ({
+      id: v.id.substring(0, 8),
+      thumb_status: v.thumb_status,
+      has_bunny_id: !!v.bunny_video_id,
+      has_storage_path: !!v.storage_path
+    })));
     
     // Find videos that need thumbnail processing
     const pendingVideos = videos.filter(v => 
@@ -166,14 +178,13 @@ export function HomeScreen() {
       !v.bunny_video_id // Not already processed by Bunny
     );
     
+    console.log('[BUNNY PROCESS] Found pending videos:', pendingVideos.length);
     if (pendingVideos.length === 0) return;
-    
-    // Found videos needing thumbnail processing
     
     // Process each pending video
     for (const video of pendingVideos) {
       try {
-        // Processing video with Bunny
+        console.log(`[BUNNY PROCESS] Processing video ${video.id}`);
         await BunnyStreamService.processVideo(video.id, user.id, video.storage_path);
       } catch (error) {
         console.error(`❌ [BUNNY] Failed to process video ${video.id}:`, error);

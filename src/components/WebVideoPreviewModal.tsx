@@ -106,7 +106,6 @@ export function WebVideoPreviewModal({
         <TouchableOpacity 
           style={styles.content}
           activeOpacity={1}
-          onPress={() => setShowThumbnailEditor(false)}
         >
           {/* Updated Layout: Title Input | Thumbnail Preview */}
           
