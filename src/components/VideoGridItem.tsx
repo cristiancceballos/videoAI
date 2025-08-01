@@ -97,7 +97,7 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
         )}
 
 
-        {/* Delete Button */}
+        {/* Delete Button - Always show for all videos */}
         {onDelete && !isDeleting && (
           <TouchableOpacity 
             style={styles.deleteButton}
