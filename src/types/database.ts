@@ -20,7 +20,6 @@ export interface Database {
           fps?: number;
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
-          cloudinary_url?: string;
           thumb_error_message?: string;
           created_at: string;
           updated_at: string;
@@ -43,7 +42,6 @@ export interface Database {
           fps?: number;
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
-          cloudinary_url?: string;
           thumb_error_message?: string;
           created_at?: string;
           updated_at?: string;
@@ -66,7 +64,6 @@ export interface Database {
           fps?: number;
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
-          cloudinary_url?: string;
           thumb_error_message?: string;
           created_at?: string;
           updated_at?: string;

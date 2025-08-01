@@ -19,6 +19,7 @@ import { VideoGridItem } from '../../components/VideoGridItem';
 import { TikTokVideoPlayer } from '../../components/TikTokVideoPlayer';
 import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
 import { BunnyStreamService } from '../../services/bunnyStreamService';
+import { clearCloudinaryUrls } from '../../utils/clearCloudinaryUrls';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
@@ -43,6 +44,10 @@ export function HomeScreen() {
       loadVideos();
       // Set up real-time subscription with error handling
       const cleanup = setupRealtimeSubscription();
+      
+      // Clear old Cloudinary URLs once on mount
+      clearCloudinaryUrls();
+      
       return cleanup;
     }
   }, [user]);

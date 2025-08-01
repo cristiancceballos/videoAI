@@ -105,7 +105,6 @@ export function TikTokVideoPlayer({
     onStartShouldSetPanResponder: (evt) => {
       // Completely disable player gestures when details sheet is open
       if (showDetailsSheet) {
-        console.log('🚫 Details sheet open - ignoring player gesture');
         return false;
       }
       
@@ -115,11 +114,9 @@ export function TikTokVideoPlayer({
       
       if (touchY > bottomZone) {
         // In bottom zone - let progress handler take precedence for horizontal drags
-        console.log('👇 Touch in bottom zone - deferring to progress handler');
         return false;
       }
       
-      console.log('👆 Touch started - toggling mute');
       toggleMute();
       gestureStartTime.current = Date.now();
       return true;
@@ -127,11 +124,9 @@ export function TikTokVideoPlayer({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
       // Completely disable player gestures when details sheet is open
       if (showDetailsSheet) {
-        console.log('🚫 Details sheet open - ignoring player gesture movement');
         return false;
       }
       
-      console.log('🎯 Gesture movement detected:', { dx: gestureState.dx, dy: gestureState.dy });
       
       const touchY = evt.nativeEvent.pageY;
       const screenHeight = Dimensions.get('window').height;
@@ -139,13 +134,11 @@ export function TikTokVideoPlayer({
       
       // Don't capture horizontal gestures in bottom zone - let progress handler handle them
       if (touchY > bottomZone && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
-        console.log('👇 Horizontal gesture in bottom zone - deferring to progress handler');
         return false;
       }
       
       // Prioritize swipe-up detection first for consistent details sheet opening
       if (gestureState.dy < -30 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 0.7) {
-        console.log('☝️ Vertical swipe up detected for details (prioritized)');
         return true;
       }
       
@@ -155,17 +148,14 @@ export function TikTokVideoPlayer({
       
       // Only capture gestures with significant movement (actual swipes)
       if (horizontal && gestureState.dx > 20) {
-        console.log('👉 Horizontal swipe detected for exit');
         return true;
       }
       
       if (vertical && gestureState.dy > 30) {
-        console.log('👇 Vertical swipe down detected for exit');
         return true;
       }
       
       if (diagonal) {
-        console.log('↘️ Diagonal swipe detected for exit');
         return true;
       }
       
@@ -174,7 +164,6 @@ export function TikTokVideoPlayer({
     },
     onMoveShouldSetPanResponderCapture: () => false,
     onPanResponderGrant: () => {
-      console.log('🤏 Gesture granted for swipe');
       panRef.setOffset({
         x: panRef.x._value,
         y: panRef.y._value,
@@ -188,7 +177,6 @@ export function TikTokVideoPlayer({
       
       if (diagonal) {
         // Handle diagonal swipe (top-left to bottom-right) for exit
-        console.log('↘️ Diagonal move:', { dx: gestureState.dx, dy: gestureState.dy });
         panRef.setValue({ x: gestureState.dx, y: gestureState.dy });
         // Fade out based on diagonal distance
         const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
@@ -196,14 +184,12 @@ export function TikTokVideoPlayer({
         fadeAnim.setValue(opacity);
       } else if (horizontal && gestureState.dx > 0) {
         // Handle horizontal swipe for exit
-        console.log('➡️ Horizontal move:', gestureState.dx);
         panRef.setValue({ x: gestureState.dx, y: 0 });
         // Fade out as user swipes right
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
         fadeAnim.setValue(opacity);
       } else if (vertical && gestureState.dy > 0) {
         // Handle vertical swipe down for exit
-        console.log('⬇️ Vertical down move:', gestureState.dy);
         panRef.setValue({ x: 0, y: gestureState.dy });
         // Fade out as user swipes down
         const opacity = Math.max(0.3, 1 - gestureState.dy / 200);
@@ -212,13 +198,11 @@ export function TikTokVideoPlayer({
       // Vertical up gestures don't need visual feedback during move
     },
     onPanResponderRelease: (evt, gestureState) => {
-      console.log('🔄 Gesture released:', { dx: gestureState.dx, dy: gestureState.dy, vx: gestureState.vx, vy: gestureState.vy });
       panRef.flattenOffset();
       
       // Prioritize swipe-up detection first (matches capture logic)
       if (gestureState.dy < -30 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 0.7) {
         // Vertical swipe up threshold met - show details (prioritized)
-        console.log('📊 Details threshold met - showing sheet (prioritized)');
         setShowDetailsSheet(true);
       } else {
         const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
@@ -227,16 +211,13 @@ export function TikTokVideoPlayer({
         
         if (horizontal && gestureState.dx > 50 && gestureState.vx > 0.25) {
           // Horizontal swipe right threshold met - exit (50% easier)
-          console.log('🚪 Horizontal exit threshold met - closing video');
           handleExit();
         } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
           // Vertical swipe down threshold met - exit (50% easier)
-          console.log('⬇️ Vertical down exit threshold met - closing video');
           handleExit();
         } else if (diagonal && gestureState.dx > 50 && gestureState.dy > 50 && 
                    gestureState.vx > 0.25 && gestureState.vy > 0.25) {
           // Diagonal swipe (top-left to bottom-right) threshold met - exit
-          console.log('↘️ Diagonal exit threshold met - closing video');
           handleExit();
         } else {
           // Check if this was a tap (short duration, minimal movement)
@@ -245,15 +226,11 @@ export function TikTokVideoPlayer({
           
           if (gestureDuration < 500 && totalMovement < 50) {
             // This was a tap - toggle mute
-            console.log('👆 Tap detected - toggling mute');
-            console.log('👆 Tap details:', { duration: gestureDuration, movement: totalMovement });
             toggleMute();
           } else {
-            console.log('❌ Not a tap:', { duration: gestureDuration, movement: totalMovement });
           }
           
           // Snap back to original position
-          console.log('↩️ Snapping back to original position');
           Animated.parallel([
             Animated.spring(panRef, {
               toValue: { x: 0, y: 0 },
@@ -282,7 +259,6 @@ export function TikTokVideoPlayer({
       const hasMovement = Math.abs(gestureState.dx) > 10;
       
       if (isBottomZone && isHorizontalDrag && hasMovement) {
-        console.log('📉 Progress bar drag detected');
         setShowProgressBar(true);
         return true;
       }
@@ -296,19 +272,16 @@ export function TikTokVideoPlayer({
         const progressPercent = Math.max(0, Math.min(1, gestureState.moveX / screenWidth));
         const newTime = progressPercent * duration;
         
-        console.log('📊 Updating video time to:', newTime);
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
       }
     },
     onPanResponderRelease: () => {
-      console.log('📉 Progress drag ended');
       // Progress bar will auto-hide after timeout via useEffect
     },
   });
 
   const handleExit = () => {
-    console.log('🚪 handleExit called - starting cleanup');
     
     // Stop video immediately to prevent white screen
     if (videoRef.current) {
@@ -321,7 +294,6 @@ export function TikTokVideoPlayer({
     setShowDetailsSheet(false);
     setVideoError(false);
     
-    console.log('🧹 State cleaned up, starting exit animation');
     
     // Quick exit animation
     Animated.parallel([
@@ -341,7 +313,6 @@ export function TikTokVideoPlayer({
         useNativeDriver: false,
       }),
     ]).start(() => {
-      console.log('✅ Exit animation complete, calling onClose');
       // Reset animation values before closing
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
@@ -404,7 +375,6 @@ export function TikTokVideoPlayer({
       
       // Remember user preference when they first unmute
       if (!newMutedState && !hasUserUnmuted) {
-        console.log('🔊 First time unmuting - remembering preference');
         setHasUserUnmuted(true);
       }
       
@@ -484,7 +454,6 @@ export function TikTokVideoPlayer({
             <TouchableOpacity
               style={styles.videoTouchArea}
               onPress={() => {
-                console.log('🎯 Fallback tap handler triggered');
                 toggleMute();
               }}
               activeOpacity={1}
