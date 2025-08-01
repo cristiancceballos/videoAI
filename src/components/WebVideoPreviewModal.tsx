@@ -37,7 +37,6 @@ export function WebVideoPreviewModal({
   React.useEffect(() => {
     return () => {
       if (asset?.uri) {
-        console.log('🧹 [CLEANUP DEBUG] Cleaning up blob URL on component unmount');
         URL.revokeObjectURL(asset.uri);
       }
     };
@@ -46,7 +45,6 @@ export function WebVideoPreviewModal({
 
   React.useEffect(() => {
     if (asset?.filename) {
-      console.log('🎬 [INIT DEBUG] Initializing WebVideoPreviewModal for:', asset.filename);
       
       // Set default title to simple 'title' for easy editing
       setTitle('title');
@@ -71,7 +69,6 @@ export function WebVideoPreviewModal({
       return;
     }
 
-    console.log('🚀 [UPLOAD DEBUG] Starting server-side upload with thumbnail generation');
     // Server-side thumbnail generation - Edge Function will create multiple thumbnail options
     onUpload(title.trim(), null, 'server');
   };

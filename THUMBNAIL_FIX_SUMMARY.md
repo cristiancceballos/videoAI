@@ -1,92 +1,103 @@
 # Thumbnail Implementation Summary
 
-## Current Status: Cloudinary Integration (Failing) ⚠️
+## Current Status: Bunny.net Integration (Working) ✅
 
 ### Implementation Overview
-- **Approach**: Using Cloudinary SaaS for video thumbnail generation
-- **Method**: Unsigned uploads with on-the-fly transformations
-- **Status**: Videos upload successfully but thumbnails return 404 errors
+- **Approach**: Using Bunny.net Stream for video processing and thumbnail generation
+- **Method**: Server-side video upload with automatic thumbnail extraction
+- **Status**: Fully functional - real video thumbnails are being generated successfully
 
-### Current Issues 🔴
+### Working Solution 🟢
 
-#### 1. **Cloudinary Resource Not Found (404)**
-- **Problem**: Cloudinary returns success response but resources don't actually exist
-- **Symptoms**: 
-  - Upload returns 200 OK with secure_url
-  - secure_url itself returns 404 when accessed
-  - Thumbnail transformation URLs also return 404
-- **Attempted Fixes**:
-  - ✅ Switched from signed to unsigned uploads
-  - ✅ Removed eager transformations (not allowed for unsigned)
-  - ✅ Used actual public_id from response
-  - ✅ Removed .jpg extension from transformation URL
-  - ✅ Extracted and included version number in URL
-  - ✅ Switched from remote URL to direct blob upload
-  - ❌ All attempts still result in 404 errors
+#### 1. **Bunny.net Stream Integration**
+- **Success**: Videos upload to Bunny.net and thumbnails are automatically generated
+- **Features**: 
+  - Automatic thumbnail extraction at configurable timestamps
+  - CDN-backed delivery for fast loading
+  - Multiple thumbnail resolutions available
+  - Real video frame extraction (not black screens)
 
-#### 2. **Possible Root Causes**
-- Upload preset configuration issues
-- Cloudinary account limitations
-- Unsigned upload restrictions we're not aware of
-- Video format compatibility issues
+#### 2. **Key Fix: Database Trigger Removal**
+- **Problem Solved**: A database trigger was automatically setting `thumb_status = 'ready'` when `status = 'ready'`
+- **Solution**: Dropped the trigger with `drop-thumb-status-trigger.sql`
+- **Result**: Videos now maintain `thumb_status = 'pending'` allowing Bunny processing
 
 ### Technical Details
 
 #### Edge Function Configuration
 ```typescript
-// Current implementation uses unsigned uploads
-const formData = new FormData()
-formData.append('file', videoBlob, 'video.mp4')
-formData.append('public_id', publicId)
-formData.append('upload_preset', 'video-thumbnails')
-formData.append('resource_type', 'video')
+// Bunny.net video processor
+const payload = {
+  videoId,
+  userId,
+  storagePath,
+  bunnyLibraryId: BUNNY_STREAM_LIBRARY_ID,
+  bunnyApiKey: BUNNY_STREAM_API_KEY,
+  bunnyCdnHostname: BUNNY_STREAM_CDN_HOSTNAME
+};
 ```
 
-#### Transformation URL Format
-```typescript
-// Including version extracted from secure_url
-const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${version}/so_${frameOffset},w_400,h_225,c_fill,f_jpg/${publicIdWithoutExtension}`
-```
+#### Service Architecture
+1. Video uploads to Supabase Storage
+2. Video record created with `thumb_status: 'pending'`
+3. Background processor finds pending videos
+4. Bunny.net Edge Function downloads and processes video
+5. Thumbnail URL saved back to database
 
 ### Database Schema
 ```sql
--- Cloudinary-specific columns added to videos table
+-- Bunny.net-specific columns in videos table
 thumb_status thumb_status_enum DEFAULT 'pending',
-cloudinary_url TEXT,
+bunny_thumbnail_url TEXT,
+bunny_video_id TEXT,
+bunny_video_url TEXT,
 thumb_error_message TEXT
 ```
 
 ### Components Using Thumbnails
-- ✅ `VideoGridItem.tsx` - Updated with thumbnail validation hook
-- ✅ `VideoCard.tsx` - Legacy component with thumbnail support
-- ✅ `videoService.ts` - Thumbnail URL prioritization logic
+- ✅ `VideoGridItem.tsx` - Displays Bunny.net thumbnails
+- ✅ `videoService.ts` - Retrieves Bunny thumbnail URLs
+- ✅ `HomeScreen.tsx` - Processes pending thumbnails
+- ✅ `bunnyStreamService.ts` - Handles Bunny.net API integration
 
-## Next Steps 🚀
+## Migration from Cloudinary
 
-### Option 1: Debug Cloudinary (Preferred)
-1. Check Cloudinary dashboard for actual uploaded videos
-2. Verify upload preset configuration
-3. Test with Cloudinary's signed upload API
-4. Contact Cloudinary support about unsigned upload limitations
+### Why Cloudinary Failed
+- Unsigned uploads returned success but resources didn't exist (404 errors)
+- Multiple approaches tried, all resulted in the same issue
+- Likely due to account limitations or configuration issues
 
-### Option 2: Alternative SaaS Providers
-- **Transloadit**: Robust video processing with better documentation
-- **Filestack**: Simple API with video thumbnail support
-- **Uploadcare**: Good transformation API
-- **Bunny.net**: CDN with video processing
+### Why Bunny.net Succeeded
+- More straightforward API with better error handling
+- Built specifically for video streaming and processing
+- Better documentation for video thumbnail generation
+- No issues with resource availability after upload
 
-### Option 3: Self-Hosted Solution
-- Deploy dedicated worker with FFmpeg
-- More control but higher maintenance
-- Estimated 20+ hours implementation
+## Production Cleanup
 
-### Option 4: Hybrid Approach
-- Upload to public CDN first (e.g., Bunny.net)
-- Then use Cloudinary for transformations only
-- Might bypass upload issues
+### SQL Scripts to Run
+1. ✅ `drop-thumb-status-trigger.sql` - Remove auto-update trigger
+2. ✅ `clear-old-cloudinary-urls.sql` - Clean up old Cloudinary URLs
 
-## Files to Update
-- ⏳ `/supabase/functions/cloudinary-thumbnails/index.ts` - Remove console.logs
-- ⏳ Consider reverting to different approach if Cloudinary can't be fixed
+### Code Cleanup Completed
+- ✅ Removed Cloudinary Edge Function
+- ✅ Removed client-side thumbnail generation
+- ✅ Cleaned up debug console logs
+- ✅ Removed Cloudinary service references
 
-**Status: BLOCKED - Cloudinary uploads succeed but resources are not accessible**
+## Final Architecture
+
+### Upload Flow
+1. User selects video → Web upload to Supabase
+2. Video marked with `status: 'ready'`, `thumb_status: 'pending'`
+3. Background processor detects pending thumbnail
+4. Bunny.net processes video and generates thumbnail
+5. Thumbnail URL stored, `thumb_status: 'ready'`
+6. UI updates with real video thumbnail
+
+### Key Files
+- `/supabase/functions/bunny-video-processor/` - Bunny.net integration
+- `/src/services/bunnyStreamService.ts` - Client-side Bunny service
+- `/src/screens/main/HomeScreen.tsx` - Pending thumbnail processor
+
+**Status: COMPLETED - Real video thumbnails working via Bunny.net** 🎉

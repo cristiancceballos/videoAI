@@ -51,8 +51,7 @@ export function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
-        // HomeScreen focused - refreshing videos
-        loadVideos();
+          loadVideos();
       }
     }, [user])
   );
@@ -97,23 +96,9 @@ export function HomeScreen() {
     if (showLoading) setLoading(true);
     
     try {
-      // Loading videos for user
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
-      // Loaded videos successfully
       
-      // Debug recent video details
-      if (userVideos.length > 0) {
-        const recentVideo = userVideos[0];
-        console.log('🔍 [HOME SCREEN DEBUG] Most recent video details:', {
-          id: recentVideo.id,
-          title: recentVideo.title,
-          status: recentVideo.status,
-          thumbnail_path: recentVideo.thumbnail_path,
-          thumbnailUrl: recentVideo.thumbnailUrl,
-          created_at: recentVideo.created_at
-        });
-      }
       
       // Process any pending thumbnails with Bunny
       await processPendingThumbnails(userVideos);
@@ -144,7 +129,7 @@ export function HomeScreen() {
         }
       };
     } catch (error) {
-      console.error('❌ Real-time subscription setup failed:', error);
+      // Real-time subscription setup failed (non-critical)
       // Fallback to manual refresh only
       return () => {};
     }
@@ -157,31 +142,8 @@ export function HomeScreen() {
   };
 
   const processPendingThumbnails = async (videosList: VideoWithMetadata[]) => {
-    console.log('[BUNNY PROCESS] Checking for pending thumbnails...');
     if (!user || !videosList || videosList.length === 0) {
-      console.log('[BUNNY PROCESS] No user or videos, returning');
       return;
-    }
-    
-    console.log('[BUNNY PROCESS] Total videos:', videosList.length);
-    const videoStatuses = videosList.map(v => ({
-      id: v.id.substring(0, 8),
-      thumb_status: v.thumb_status,
-      has_bunny_id: !!v.bunny_video_id,
-      has_storage_path: !!v.storage_path
-    }));
-    console.log('[BUNNY PROCESS] Videos thumb_status:', videoStatuses);
-    
-    // Log more details about the most recent video
-    const recentVideo = videosList[0];
-    if (recentVideo) {
-      console.log('[BUNNY PROCESS] Most recent video:', {
-        id: recentVideo.id,
-        thumb_status: recentVideo.thumb_status,
-        bunny_video_id: recentVideo.bunny_video_id,
-        bunny_thumbnail_url: recentVideo.bunny_thumbnail_url,
-        created_at: recentVideo.created_at
-      });
     }
     
     // Find videos that need thumbnail processing
@@ -191,16 +153,14 @@ export function HomeScreen() {
       !v.bunny_video_id // Not already processed by Bunny
     );
     
-    console.log('[BUNNY PROCESS] Found pending videos:', pendingVideos.length);
     if (pendingVideos.length === 0) return;
     
     // Process each pending video
     for (const video of pendingVideos) {
       try {
-        console.log(`[BUNNY PROCESS] Processing video ${video.id}`);
         await BunnyStreamService.processVideo(video.id, user.id, video.storage_path);
       } catch (error) {
-        console.error(`❌ [BUNNY] Failed to process video ${video.id}:`, error);
+        console.error(`Failed to process video ${video.id}:`, error);
       }
     }
   };
@@ -215,7 +175,6 @@ export function HomeScreen() {
     );
     
     if (stuckVideos.length > 0) {
-      console.log(`⚠️ [STUCK CHECK] Found ${stuckVideos.length} videos with stuck thumbnails`);
       return true;
     }
     
@@ -223,18 +182,15 @@ export function HomeScreen() {
   };
 
   const handleForceRefresh = () => {
-    console.log('🔄 [FORCE REFRESH] User triggered force refresh');
     handleRefresh();
   };
 
   const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<void> => {
     try {
-      console.log(`Loading video URL (attempt ${retryCount + 1}) for:`, video.title);
       const url = await videoService.getVideoUrl(video);
       if (url) {
         setVideoUrl(url);
         setUrlRetryCount(0); // Reset retry count on success
-        console.log('Fresh signed video URL loaded successfully (expires in 1 hour)');
       } else {
         setVideoError('Unable to generate secure video link. Please check your permissions.');
         // Failed to get secure video URL

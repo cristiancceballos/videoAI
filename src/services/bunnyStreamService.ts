@@ -41,15 +41,6 @@ export class BunnyStreamService {
    */
   static async processVideo(videoId: string, userId: string, storagePath: string): Promise<void> {
     try {
-      // Debug: Log environment variables (remove in production)
-      console.log('[BUNNY DEBUG] Environment variables:', {
-        BUNNY_STREAM_LIBRARY_ID: BUNNY_STREAM_LIBRARY_ID ? 'Set' : 'Not set',
-        BUNNY_STREAM_API_KEY: BUNNY_STREAM_API_KEY ? 'Set' : 'Not set',
-        BUNNY_STREAM_CDN_HOSTNAME: BUNNY_STREAM_CDN_HOSTNAME ? 'Set' : 'Not set',
-        libraryIdLength: BUNNY_STREAM_LIBRARY_ID.length,
-        apiKeyLength: BUNNY_STREAM_API_KEY.length,
-        cdnHostnameLength: BUNNY_STREAM_CDN_HOSTNAME.length
-      });
 
       // Validate environment variables
       if (!BUNNY_STREAM_LIBRARY_ID || !BUNNY_STREAM_API_KEY || !BUNNY_STREAM_CDN_HOSTNAME) {
@@ -67,11 +58,6 @@ export class BunnyStreamService {
         bunnyCdnHostname: BUNNY_STREAM_CDN_HOSTNAME
       };
 
-      // Debug: Log the payload being sent
-      console.log('[BUNNY DEBUG] Sending to Edge Function:', {
-        ...payload,
-        bunnyApiKey: payload.bunnyApiKey ? '***hidden***' : 'missing'
-      });
 
       // Call our Edge Function which will handle the Bunny.net integration
       const { data, error } = await supabase.functions.invoke('bunny-video-processor', {
