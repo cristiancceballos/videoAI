@@ -1,6 +1,6 @@
 # Video Thumbnail Implementation Journey
 
-> **Project**: GrowthOfWisdom Video AI PWA  
+> **Project**: Video AI PWA  
 > **Feature**: Real video frame thumbnail generation replacing SVG placeholders  
 > **Implementation Period**: January 2025 - July 2025  
 > **Technology Stack**: Initially Cloudinary → Successfully migrated to Bunny.net

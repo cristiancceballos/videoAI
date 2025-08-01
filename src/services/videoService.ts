@@ -1,8 +1,6 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { getNetworkStatus, getOfflineData, setOfflineData } from '../utils/pwaUtils';
-import { thumbnailService, ThumbnailUploadProgress } from './thumbnailService';
-import { FrameCaptureResult } from '../utils/frameCapture';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 
@@ -212,11 +210,6 @@ class VideoService {
         return false;
       }
 
-      // Delete files from storage
-      const filesToDelete = [video.storage_path];
-      if (video.thumbnail_path) {
-        filesToDelete.push(video.thumbnail_path);
-      }
 
       // Delete from videos bucket
       if (video.storage_path) {
@@ -225,12 +218,6 @@ class VideoService {
           .remove([video.storage_path]);
       }
 
-      // Delete from thumbnails bucket
-      if (video.thumbnail_path) {
-        await supabase.storage
-          .from('thumbnails')
-          .remove([video.thumbnail_path]);
-      }
 
       // Delete video record from database
       const { error: deleteError } = await supabase
@@ -302,141 +289,6 @@ class VideoService {
     }
   }
 
-  // ================================
-  // Thumbnail Management Methods
-  // ================================
-
-  /**
-   * Generates and uploads a thumbnail for a video
-   * @param videoId - ID of the video
-   * @param userId - ID of the user
-   * @param frameData - Captured frame data
-   * @param timeSeconds - Time position where frame was captured
-   * @param onProgress - Progress callback
-   * @returns Promise resolving to success status and thumbnail URL
-   */
-  async generateThumbnail(
-    videoId: string,
-    userId: string,
-    frameData: FrameCaptureResult,
-    timeSeconds: number,
-    onProgress?: (progress: ThumbnailUploadProgress) => void
-  ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
-    try {
-
-      // Verify user owns this video
-      const canModify = await thumbnailService.canModifyThumbnail(videoId, userId);
-      if (!canModify) {
-        return {
-          success: false,
-          error: 'Permission denied: You can only generate thumbnails for your own videos'
-        };
-      }
-
-      // Upload the thumbnail
-      const result = await thumbnailService.uploadThumbnail(
-        videoId,
-        userId,
-        frameData,
-        timeSeconds,
-        onProgress
-      );
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error || 'Failed to upload thumbnail'
-        };
-      }
-
-      return {
-        success: true,
-        thumbnailUrl: result.thumbnailUrl
-      };
-
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Removes a thumbnail from a video
-   * @param videoId - ID of the video
-   * @param userId - ID of the user
-   * @returns Promise resolving to success status
-   */
-  async removeThumbnail(videoId: string, userId: string): Promise<boolean> {
-    try {
-
-      // Verify user owns this video
-      const canModify = await thumbnailService.canModifyThumbnail(videoId, userId);
-      if (!canModify) {
-        return false;
-      }
-
-      const success = await thumbnailService.removeThumbnail(videoId, userId);
-      
-      if (success) {
-      }
-
-      return success;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Refreshes a video's thumbnail URL (useful after thumbnail changes)
-   * @param video - Video object to refresh
-   * @returns Promise resolving to updated video with fresh thumbnail URL
-   */
-  async refreshVideoThumbnail(video: VideoWithMetadata): Promise<VideoWithMetadata> {
-    try {
-      let thumbnailUrl: string | undefined;
-
-      if (video.thumbnail_path) {
-        thumbnailUrl = await thumbnailService.getThumbnailUrl(video.thumbnail_path) || undefined;
-      }
-
-      return {
-        ...video,
-        thumbnailUrl
-      };
-    } catch (error) {
-      return video; // Return original video if refresh fails
-    }
-  }
-
-  /**
-   * Gets thumbnail usage statistics for a user
-   * @param userId - ID of the user
-   * @returns Promise resolving to usage statistics
-   */
-  async getThumbnailUsage(userId: string): Promise<{
-    count: number;
-    totalSize: number;
-  } | null> {
-    return thumbnailService.getThumbnailUsage(userId);
-  }
-
-  /**
-   * Bulk refreshes thumbnail URLs for multiple videos
-   * @param videos - Array of videos to refresh
-   * @returns Promise resolving to updated videos array
-   */
-  async refreshMultipleThumbnails(videos: VideoWithMetadata[]): Promise<VideoWithMetadata[]> {
-    try {
-      const refreshedVideos = await Promise.all(
-        videos.map(video => this.refreshVideoThumbnail(video))
-      );
-      return refreshedVideos;
-    } catch (error) {
-      return videos; // Return original array if refresh fails
-    }
-  }
 }
 
 export const videoService = new VideoService();
