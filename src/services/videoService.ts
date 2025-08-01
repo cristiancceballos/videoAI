@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { getNetworkStatus, getOfflineData, setOfflineData } from '../utils/pwaUtils';
+import { BunnyStreamService } from './BunnyStreamService';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 
@@ -202,7 +203,7 @@ class VideoService {
       // First get the video to know file paths
       const { data: video, error: fetchError } = await supabase
         .from('videos')
-        .select('storage_path, thumbnail_path')
+        .select('storage_path, thumbnail_path, bunny_video_id')
         .eq('id', videoId)
         .single();
 
@@ -210,6 +211,13 @@ class VideoService {
         return false;
       }
 
+      // Delete from Bunny.net if video exists there
+      if (video.bunny_video_id) {
+        const bunnyDeleted = await BunnyStreamService.deleteVideo(video.bunny_video_id);
+        if (!bunnyDeleted) {
+          console.warn(`Failed to delete video from Bunny.net, but continuing with local deletion`);
+        }
+      }
 
       // Delete from videos bucket
       if (video.storage_path) {

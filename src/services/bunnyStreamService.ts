@@ -147,4 +147,42 @@ export class BunnyStreamService {
       throw new Error(`Failed to upload video to Bunny Stream: ${error}`);
     }
   }
+
+  /**
+   * Delete video from Bunny Stream
+   */
+  static async deleteVideo(videoGuid: string): Promise<boolean> {
+    try {
+      if (!videoGuid || !BUNNY_STREAM_LIBRARY_ID || !BUNNY_STREAM_API_KEY) {
+        console.error('Missing required parameters for Bunny.net video deletion');
+        return false;
+      }
+
+      console.log(`Deleting video from Bunny.net: ${videoGuid}`);
+
+      const response = await fetch(
+        `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${videoGuid}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'AccessKey': BUNNY_STREAM_API_KEY
+          }
+        }
+      );
+
+      if (!response.ok) {
+        // Log error but don't throw - we still want to delete from our database
+        const errorText = await response.text();
+        console.error(`Failed to delete video from Bunny Stream: ${errorText}`);
+        return false;
+      }
+
+      console.log(`Successfully deleted video from Bunny.net: ${videoGuid}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting video from Bunny.net:', error);
+      return false;
+    }
+  }
 }

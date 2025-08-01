@@ -21,6 +21,8 @@ export interface Database {
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
           thumb_error_message?: string;
+          bunny_video_id?: string;
+          bunny_thumbnail_url?: string;
           created_at: string;
           updated_at: string;
         };
@@ -43,6 +45,8 @@ export interface Database {
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
           thumb_error_message?: string;
+          bunny_video_id?: string;
+          bunny_thumbnail_url?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -65,6 +69,8 @@ export interface Database {
           codec?: string;
           thumb_status?: 'pending' | 'processing' | 'ready' | 'error';
           thumb_error_message?: string;
+          bunny_video_id?: string;
+          bunny_thumbnail_url?: string;
           created_at?: string;
           updated_at?: string;
         };

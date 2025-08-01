@@ -18,7 +18,7 @@ import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
 import { TikTokVideoPlayer } from '../../components/TikTokVideoPlayer';
 import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
-import { BunnyStreamService } from '../../services/bunnyStreamService';
+import { BunnyStreamService } from '../../services/BunnyStreamService';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
