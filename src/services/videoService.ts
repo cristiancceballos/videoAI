@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
 import { getNetworkStatus, getOfflineData, setOfflineData } from '../utils/pwaUtils';
-import { BunnyStreamService } from './BunnyStreamService';
+import { BunnyStreamService } from './bunnyStreamService';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 
