@@ -73,7 +73,6 @@ export function TikTokVideoPlayer({
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
-      console.log('Modal opened - resetting state and preventing screen sleep');
       activateKeepAwake(); // Prevent screen from sleeping during video playback
       setVideoError(false);
       setShowDetailsSheet(false);
@@ -85,7 +84,6 @@ export function TikTokVideoPlayer({
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
     } else {
-      console.log('Modal closed - ensuring complete cleanup and allowing screen sleep');
       deactivateKeepAwake(); // Allow screen to sleep when video player closes
       // Ensure complete cleanup when modal closes
       if (videoRef.current) {
@@ -285,7 +283,6 @@ export function TikTokVideoPlayer({
     
     // Stop video immediately to prevent white screen
     if (videoRef.current) {
-      console.log('⏹️ Stopping video playback');
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
@@ -321,11 +318,8 @@ export function TikTokVideoPlayer({
   };
 
   const handleVideoError = (event: any) => {
-    console.error('❌ Video playback error:', event);
-    
     // Check if error might be due to expired URL
     if (event?.target?.error?.code === 4 || event?.target?.error?.code === 3) {
-      console.log('🔄 Video error might be expired URL, attempting refresh...');
       if (onUrlExpired) {
         onUrlExpired();
         return;
@@ -336,13 +330,11 @@ export function TikTokVideoPlayer({
   };
 
   const handleVideoLoad = () => {
-    console.log('✅ Video loaded successfully - starting autoplay');
     if (videoRef.current) {
       videoRef.current.play().catch(console.error);
       
       // Auto-unmute if user has previously chosen audio
       if (hasUserUnmuted) {
-        console.log('🔊 Auto-unmuting video based on user preference');
         videoRef.current.muted = false;
         setIsMuted(false);
       }
@@ -366,8 +358,6 @@ export function TikTokVideoPlayer({
   };
 
   const toggleMute = () => {
-    console.log('🔊 toggleMute called, current isMuted:', isMuted);
-    
     if (videoRef.current) {
       const newMutedState = !isMuted;
       videoRef.current.muted = newMutedState;
@@ -380,7 +370,6 @@ export function TikTokVideoPlayer({
       
       // Show brief feedback animation
       setShowMuteFeedback(true);
-      console.log('🔊 Mute state changed to:', newMutedState ? 'muted' : 'unmuted');
     }
   };
 

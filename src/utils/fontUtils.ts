@@ -56,8 +56,6 @@ export function getInterFont(weight: string | number = '200'): FontConfig {
     ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
     : interVariant;
 
-  console.log(`🔤 Font config for weight ${normalizedWeight}:`, { interVariant, letterSpacing });
-
   return { 
     fontFamily,
     letterSpacing
@@ -128,8 +126,6 @@ export function getInterFontConfigForInputs(weight: string | number = '200'): { 
     ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
     : interVariant;
 
-  console.log(`📝 INPUT Font config for weight ${normalizedWeight}:`, { interVariant, letterSpacing });
-
   return { fontFamily, letterSpacing };
 }
 
@@ -165,8 +161,6 @@ export function getInterFontConfigNonItalic(weight: string | number = '200'): { 
   const fontFamily = Platform.OS === 'web' 
     ? `${interVariant}, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
     : interVariant;
-
-  console.log(`🔤 NON-ITALIC Font config for weight ${normalizedWeight}:`, { interVariant, letterSpacing });
 
   return { fontFamily, letterSpacing };
 }
