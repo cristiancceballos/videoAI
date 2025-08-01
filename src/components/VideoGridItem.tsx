@@ -97,6 +97,13 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
         )}
 
 
+        {/* Processing Indicator */}
+        {(video.status === 'processing' || video.status === 'uploading') && (
+          <View style={styles.processingOverlay}>
+            <ActivityIndicator size="small" color="#fff" />
+          </View>
+        )}
+
         {/* Delete Button - Always show for all videos */}
         {onDelete && !isDeleting && (
           <TouchableOpacity 
@@ -104,15 +111,8 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
             onPress={handleDelete}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <X size={12} color="#fff" />
+            <X size={14} color="#fff" />
           </TouchableOpacity>
-        )}
-
-        {/* Processing Indicator */}
-        {(video.status === 'processing' || video.status === 'uploading') && (
-          <View style={styles.processingOverlay}>
-            <ActivityIndicator size="small" color="#fff" />
-          </View>
         )}
 
         {/* Deleting Indicator */}
@@ -209,12 +209,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     right: 4,
-    width: 20,
-    height: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10, // Ensure delete button is above all overlays
+    elevation: 10, // For Android shadow
+    shadowColor: '#000', // For iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
   processingOverlay: {
     position: 'absolute',
