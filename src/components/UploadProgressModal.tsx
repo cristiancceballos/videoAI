@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { UploadProgress } from '../services/uploadService';
+import { UploadProgress } from '../services/webUploadService';
 import { getInterFontConfig } from '../utils/fontUtils';
 
 interface UploadProgressModalProps {

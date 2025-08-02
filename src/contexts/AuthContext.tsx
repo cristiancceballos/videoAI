@@ -61,7 +61,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -78,7 +77,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting sign in for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -87,7 +85,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         console.error('Sign in error:', error);
       } else {
-        console.log('Sign in successful:', data.user?.email);
       }
       
       return { error };
@@ -99,7 +96,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      console.log('Attempting sign up for:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -108,7 +104,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         console.error('Sign up error:', error);
       } else {
-        console.log('Sign up successful:', data.user?.email);
       }
       
       return { error };

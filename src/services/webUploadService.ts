@@ -266,7 +266,6 @@ class WebUploadService {
     }
   }
 
-  // Note: Removed complex Cloudinary fallback - now using reliable client-side extraction
 
   // Validate video file
   private validateVideoFile(asset: WebMediaAsset): { valid: boolean; error?: string } {

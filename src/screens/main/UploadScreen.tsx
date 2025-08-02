@@ -89,7 +89,6 @@ export function UploadScreen() {
             onPress: () => {
               setShowProgress(false);
               setSelectedAsset(null);
-              console.log('Navigating to Home tab after successful upload');
               // Navigate to Home tab to see the uploaded video
               navigation.navigate('Home' as never);
             },

@@ -158,7 +158,6 @@ export class BunnyStreamService {
         return false;
       }
 
-      console.log(`Deleting video from Bunny.net: ${videoGuid}`);
 
       const response = await fetch(
         `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${videoGuid}`,
@@ -178,7 +177,6 @@ export class BunnyStreamService {
         return false;
       }
 
-      console.log(`Successfully deleted video from Bunny.net: ${videoGuid}`);
       return true;
     } catch (error) {
       console.error('Error deleting video from Bunny.net:', error);

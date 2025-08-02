@@ -19,8 +19,6 @@ if (typeof globalThis.structuredClone === 'undefined') {
   };
 }
 
-// Uncomment this line to test basic Supabase connection
-import TestApp from './TestApp';
 
 import { AuthProvider } from './src/contexts/AuthContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
@@ -99,7 +97,4 @@ export default function App() {
       )}
     </AuthProvider>
   );
-  
-  // TestApp available if needed for debugging
-  // return <TestApp />;
 }

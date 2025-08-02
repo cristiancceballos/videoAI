@@ -9,7 +9,6 @@ export const registerServiceWorker = async (): Promise<void> => {
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered successfully:', registration);
       
       // Check for updates
       registration.addEventListener('updatefound', () => {
@@ -18,7 +17,6 @@ export const registerServiceWorker = async (): Promise<void> => {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New content available, refresh page
-              console.log('New content available, reloading...');
               window.location.reload();
             }
           });
