@@ -5,10 +5,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { House } from 'lucide-react-native';
 import { SquarePlus } from 'lucide-react-native';
 import { User } from 'lucide-react-native';
+import * as Linking from 'expo-linking';
 
 import { useAuth } from '../contexts/AuthContext';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
+import { EmailConfirmationScreen } from '../screens/auth/EmailConfirmationScreen';
 import { HomeScreen } from '../screens/main/HomeScreen';
 import { UploadScreen } from '../screens/main/UploadScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
@@ -26,6 +28,7 @@ function AuthStack() {
     >
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="EmailConfirmation" component={EmailConfirmationScreen} />
     </Stack.Navigator>
   );
 }
@@ -68,6 +71,22 @@ function MainTabs() {
   );
 }
 
+const prefix = Linking.createURL('/');
+
+const linking = {
+  prefixes: [prefix],
+  config: {
+    screens: {
+      Login: 'auth/login',
+      SignUp: 'auth/signup',
+      EmailConfirmation: 'auth/confirm',
+      Home: 'home',
+      Upload: 'upload',
+      Profile: 'profile',
+    },
+  },
+};
+
 export function AppNavigator() {
   const { user, loading } = useAuth();
 
@@ -76,7 +95,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {user ? <MainTabs /> : <AuthStack />}
     </NavigationContainer>
   );

@@ -10,6 +10,7 @@ import {
   Inter_400Regular 
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 import 'react-native-url-polyfill/auto';
 
 // Polyfill for structuredClone (not available in older mobile browsers)
