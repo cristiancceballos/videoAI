@@ -196,8 +196,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: isSmallScreen ? 24 : 40,
-    paddingVertical: 40,
-    minHeight: screenHeight * 0.9,
+    paddingVertical: 20,
   },
   form: {
     width: '100%',
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   header: {
-    marginBottom: 60,
+    marginBottom: 32,
   },
   title: {
     fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
@@ -215,10 +214,10 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   inputContainer: {
-    marginBottom: 40,
+    marginBottom: 24,
   },
   inputWrapper: {
-    marginBottom: 32,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: isSmallScreen ? 13 : 14,
@@ -255,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: isSmallScreen ? 14 : 16,
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
     minHeight: 48,
     justifyContent: 'center',
   },
@@ -271,7 +270,7 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   divider: {
     flex: 1,
@@ -291,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: isSmallScreen ? 14 : 16,
-    marginBottom: 24,
+    marginBottom: 16,
     minHeight: 48,
     borderWidth: 1,
     borderColor: '#333',
