@@ -26,7 +26,7 @@ export function EmailConfirmationScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Thank you!</Text>
+        <Text style={styles.title}>{`Thank you <3`}</Text>
         <Text style={styles.subtitle}>Your email has been confirmed.</Text>
         
         <TouchableOpacity
@@ -34,7 +34,7 @@ export function EmailConfirmationScreen() {
           onPress={handleGoToDashboard}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>Go to Dashboard</Text>
+          <Text style={styles.buttonText}>Go to VideoAI</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
