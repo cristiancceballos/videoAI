@@ -159,47 +159,47 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: isSmallScreen ? 20 : 32,
+    paddingHorizontal: isSmallScreen ? 24 : 40,
     paddingVertical: 40,
     minHeight: screenHeight * 0.9,
   },
   form: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 360,
     alignSelf: 'center',
   },
   header: {
-    marginBottom: 48,
+    marginBottom: 60,
   },
   title: {
-    fontSize: isVerySmallScreen ? 28 : isSmallScreen ? 32 : 36,
+    fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 28 : 32,
     fontWeight: 'bold',
     ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
     color: '#fff',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   inputContainer: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   inputWrapper: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   inputLabel: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 13 : 14,
     ...getInterFontConfig('200'), // ExtraLight 200 Italic
     color: '#ccc',
     marginBottom: 8,
   },
   input: {
     backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: isSmallScreen ? 16 : 18,
+    borderRadius: 8,
+    padding: isSmallScreen ? 14 : 16,
     fontSize: isSmallScreen ? 15 : 16,
     ...getInterFontConfigForInputs('200'), // Regular Inter for better input readability
     color: '#fff',
     borderWidth: 1,
     borderColor: '#333',
-    minHeight: 56,
+    minHeight: 48,
   },
   passwordContainer: {
     position: 'relative',
@@ -225,11 +225,11 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: isSmallScreen ? 16 : 18,
+    borderRadius: 8,
+    padding: isSmallScreen ? 14 : 16,
     alignItems: 'center',
-    marginBottom: 32,
-    minHeight: 56,
+    marginBottom: 40,
+    minHeight: 48,
     justifyContent: 'center',
   },
   buttonDisabled: {
@@ -237,14 +237,14 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: isSmallScreen ? 16 : 17,
+    fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
     ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   divider: {
     flex: 1,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
   },
   dividerText: {
-    fontSize: isSmallScreen ? 13 : 14,
+    fontSize: isSmallScreen ? 12 : 13,
     ...getInterFontConfig('200'),
     color: '#666',
     paddingHorizontal: 16,
@@ -262,10 +262,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: isSmallScreen ? 16 : 18,
-    marginBottom: 32,
-    minHeight: 56,
+    borderRadius: 8,
+    padding: isSmallScreen ? 14 : 16,
+    marginBottom: 24,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: '#333',
   },
