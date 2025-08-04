@@ -34,6 +34,7 @@ export function HomeScreen() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [urlRetryCount, setUrlRetryCount] = useState(0);
+  const [videoUrlCache, setVideoUrlCache] = useState<Map<string, string>>(new Map());
   
   // Profile tab navigation state
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
@@ -185,15 +186,39 @@ export function HomeScreen() {
     handleRefresh();
   };
 
-  const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<void> => {
+  const loadVideoUrl = async (video: VideoWithMetadata, retryCount: number = 0): Promise<string | null> => {
     try {
+      // Check cache first
+      const cachedUrl = videoUrlCache.get(video.id);
+      if (cachedUrl) {
+        setVideoUrl(cachedUrl);
+        return cachedUrl;
+      }
+
       const url = await videoService.getVideoUrl(video);
       if (url) {
         setVideoUrl(url);
         setUrlRetryCount(0); // Reset retry count on success
+        
+        // Update cache
+        setVideoUrlCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(video.id, url);
+          
+          // Keep only last 10 URLs in cache
+          if (newCache.size > 10) {
+            const firstKey = newCache.keys().next().value;
+            newCache.delete(firstKey);
+          }
+          
+          return newCache;
+        });
+        
+        return url;
       } else {
         setVideoError('Unable to generate secure video link. Please check your permissions.');
         // Failed to get secure video URL
+        return null;
       }
     } catch (error) {
       console.error('Error loading video URL:', error);
@@ -201,6 +226,43 @@ export function HomeScreen() {
         setVideoError('Access denied. You can only view videos you uploaded.');
       } else {
         setVideoError('Failed to load video. Please check your connection and try again.');
+      }
+      return null;
+    }
+  };
+
+  const preloadAdjacentVideos = async (currentIndex: number) => {
+    // Preload previous and next video URLs
+    const prevIndex = currentIndex - 1;
+    const nextIndex = currentIndex + 1;
+    
+    if (prevIndex >= 0 && videos[prevIndex]) {
+      const prevVideo = videos[prevIndex];
+      if (!videoUrlCache.has(prevVideo.id)) {
+        videoService.getVideoUrl(prevVideo).then(url => {
+          if (url) {
+            setVideoUrlCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(prevVideo.id, url);
+              return newCache;
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+    
+    if (nextIndex < videos.length && videos[nextIndex]) {
+      const nextVideo = videos[nextIndex];
+      if (!videoUrlCache.has(nextVideo.id)) {
+        videoService.getVideoUrl(nextVideo).then(url => {
+          if (url) {
+            setVideoUrlCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(nextVideo.id, url);
+              return newCache;
+            });
+          }
+        }).catch(() => {});
       }
     }
   };
@@ -219,15 +281,32 @@ export function HomeScreen() {
 
     // Opening video player
     setSelectedVideo(video);
-    setVideoLoading(true);
+    
+    // Check if URL is cached
+    const cachedUrl = videoUrlCache.get(video.id);
+    if (cachedUrl) {
+      setVideoUrl(cachedUrl);
+      setVideoLoading(false);
+    } else {
+      setVideoLoading(true);
+      setVideoUrl(null);
+    }
+    
     setVideoError(null);
-    setVideoUrl(null); // Clear previous URL
     setUrlRetryCount(0);
     setShowVideoPlayer(true);
 
-    // Load fresh URL every time video is opened
-    await loadVideoUrl(video);
-    setVideoLoading(false);
+    // Load URL if not cached
+    if (!cachedUrl) {
+      await loadVideoUrl(video);
+      setVideoLoading(false);
+    }
+    
+    // Preload adjacent videos
+    const videoIndex = videos.findIndex(v => v.id === video.id);
+    if (videoIndex !== -1) {
+      preloadAdjacentVideos(videoIndex);
+    }
   };
 
   const handleVideoChange = async (newIndex: number) => {
@@ -235,13 +314,22 @@ export function HomeScreen() {
     
     const newVideo = videos[newIndex];
     setSelectedVideo(newVideo);
-    setVideoLoading(true);
     setVideoError(null);
-    setVideoUrl(null);
     
-    // Load new video URL
-    await loadVideoUrl(newVideo);
-    setVideoLoading(false);
+    // Check if URL is cached
+    const cachedUrl = videoUrlCache.get(newVideo.id);
+    if (cachedUrl) {
+      setVideoUrl(cachedUrl);
+      setVideoLoading(false);
+    } else {
+      setVideoLoading(true);
+      setVideoUrl(null);
+      await loadVideoUrl(newVideo);
+      setVideoLoading(false);
+    }
+    
+    // Preload adjacent videos
+    preloadAdjacentVideos(newIndex);
   };
 
   const handleVideoUrlExpired = async () => {

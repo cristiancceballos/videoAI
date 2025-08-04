@@ -216,10 +216,10 @@ export function TikTokVideoPlayer({
         
         // Check for horizontal navigation swipes
         if (horizontal && Math.abs(gestureState.dx) > 50) {
-          if (gestureState.dx < 0 && gestureState.vx < -0.25) {
+          if (gestureState.dx < -50) {
             // Swipe left - go to next video
             handleNavigateToVideo(currentIndex + 1);
-          } else if (gestureState.dx > 0 && gestureState.vx > 0.25) {
+          } else if (gestureState.dx > 50) {
             // Swipe right - go to previous video or exit if first
             if (currentIndex > 0) {
               handleNavigateToVideo(currentIndex - 1);
