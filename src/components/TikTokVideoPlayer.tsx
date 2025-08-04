@@ -104,6 +104,24 @@ export function TikTokVideoPlayer({
     }
   }, [visible]);
 
+  // Reset video state when video prop changes
+  useEffect(() => {
+    if (video && visible) {
+      // Reset error state for new video
+      setVideoError(false);
+      setCurrentTime(0);
+      setDuration(0);
+      
+      // Reset video element if it exists
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        // Force reload for new video
+        videoRef.current.load();
+      }
+    }
+  }, [video?.id]);
+
   // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
   const unifiedPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
@@ -151,7 +169,7 @@ export function TikTokVideoPlayer({
       const diagonal = gestureState.dx > 20 && gestureState.dy > 20; // Top-left to bottom-right
       
       // Only capture gestures with significant movement (actual swipes)
-      if (horizontal && gestureState.dx > 20) {
+      if (horizontal && Math.abs(gestureState.dx) > 20) {
         return true;
       }
       
@@ -511,7 +529,7 @@ export function TikTokVideoPlayer({
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoad}
                 preload="auto"
-                key={videoUrl}
+                key={`${video?.id}-${videoUrl}`}
               />
             </TouchableOpacity>
           )}
