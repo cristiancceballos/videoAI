@@ -93,6 +93,15 @@ export function TikTokVideoPlayer({
       deactivateKeepAwake(); // Allow screen to sleep when video player closes
       // Ensure complete cleanup when modal closes
       if (videoRef.current) {
+        // Remove event listeners
+        if (updateTimeRef.current) {
+          videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+          updateTimeRef.current = null;
+        }
+        if (loadedMetadataRef.current) {
+          videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+          loadedMetadataRef.current = null;
+        }
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
       }
@@ -114,6 +123,15 @@ export function TikTokVideoPlayer({
       
       // Reset video element if it exists
       if (videoRef.current) {
+        // Clean up existing event listeners
+        if (updateTimeRef.current) {
+          videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+          updateTimeRef.current = null;
+        }
+        if (loadedMetadataRef.current) {
+          videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+          loadedMetadataRef.current = null;
+        }
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
         // Force reload for new video
@@ -369,8 +387,16 @@ export function TikTokVideoPlayer({
       return;
     }
 
-    // Stop current video
+    // Stop current video and clean up listeners
     if (videoRef.current) {
+      if (updateTimeRef.current) {
+        videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+        updateTimeRef.current = null;
+      }
+      if (loadedMetadataRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+        loadedMetadataRef.current = null;
+      }
       videoRef.current.pause();
     }
 
@@ -400,8 +426,20 @@ export function TikTokVideoPlayer({
     setVideoError(true);
   };
 
+  // Store event listeners for cleanup
+  const updateTimeRef = useRef<(() => void) | null>(null);
+  const loadedMetadataRef = useRef<(() => void) | null>(null);
+
   const handleVideoLoad = () => {
     if (videoRef.current) {
+      // Clean up any existing listeners first
+      if (updateTimeRef.current) {
+        videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+      }
+      if (loadedMetadataRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+      }
+
       videoRef.current.play().catch(console.error);
       
       // Auto-unmute if user has previously chosen audio
@@ -413,18 +451,20 @@ export function TikTokVideoPlayer({
       // Set up video progress tracking
       setDuration(videoRef.current.duration || 0);
       
-      const updateTime = () => {
+      updateTimeRef.current = () => {
         if (videoRef.current) {
           setCurrentTime(videoRef.current.currentTime);
         }
       };
       
-      videoRef.current.addEventListener('timeupdate', updateTime);
-      videoRef.current.addEventListener('loadedmetadata', () => {
+      loadedMetadataRef.current = () => {
         if (videoRef.current) {
           setDuration(videoRef.current.duration);
         }
-      });
+      };
+      
+      videoRef.current.addEventListener('timeupdate', updateTimeRef.current);
+      videoRef.current.addEventListener('loadedmetadata', loadedMetadataRef.current);
     }
   };
 

@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Image as ImageIcon, ChevronDown, ChevronUp } from 'lucide-react-native';
+// Removed unused imports
 import { WebMediaAsset } from '../services/webMediaService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 
@@ -30,8 +30,7 @@ export function WebVideoPreviewModal({
   const [title, setTitle] = React.useState('');
   const titleInputRef = React.useRef<any>(null);
   
-  // Server-side thumbnail message
-  const [showThumbnailInfo, setShowThumbnailInfo] = React.useState(false);
+  // Removed thumbnail-related state
   
   // Cleanup blob URL when component unmounts
   React.useEffect(() => {
@@ -104,11 +103,10 @@ export function WebVideoPreviewModal({
           style={styles.content}
           activeOpacity={1}
         >
-          {/* Updated Layout: Title Input | Thumbnail Preview */}
+          {/* Simplified Layout: Title Input Only */}
           
-          {/* 1. Combined Title and Thumbnail Section */}
-          <View style={styles.titleThumbnailSection}>
-            {/* Title Input (Left Side) */}
+          {/* Title Input Section */}
+          <View style={styles.titleSection}>
             <View style={styles.titleContainer}>
               <TextInput
                 ref={titleInputRef}
@@ -136,71 +134,7 @@ export function WebVideoPreviewModal({
                 }}
               />
             </View>
-            
-            {/* Server Thumbnail Info (Right Side) */}
-            <TouchableOpacity 
-              style={styles.thumbnailPreviewContainer}
-              activeOpacity={1}
-              onPress={(e) => {
-                e.stopPropagation();
-                setShowThumbnailInfo(!showThumbnailInfo);
-              }}
-            >
-              <View style={styles.thumbnailPreview}>
-                <View style={styles.thumbnailPlaceholder}>
-                  <ImageIcon size={24} color="#666" />
-                </View>
-                
-                <TouchableOpacity 
-                  style={styles.editCoverButton}
-                  onPress={() => setShowThumbnailInfo(!showThumbnailInfo)}
-                  disabled={uploading}
-                >
-                  <Text style={styles.editCoverText}>Auto thumbnails</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Expand/Collapse indicator */}
-              <TouchableOpacity 
-                style={styles.expandButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setShowThumbnailInfo(!showThumbnailInfo);
-                }}
-                disabled={uploading}
-              >
-                {showThumbnailInfo ? (
-                  <ChevronUp size={20} color="#666" />
-                ) : (
-                  <ChevronDown size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </TouchableOpacity>
           </View>
-            
-          {/* 2. Server Thumbnail Info (Expandable) */}
-          {showThumbnailInfo && (
-            <View style={styles.thumbnailEditor}>
-              <Text style={styles.editorTitle}>🤖 Automatic Thumbnail Generation</Text>
-              
-              <View style={styles.serverThumbnailInfo}>
-                <Text style={styles.serverInfoText}>
-                  After upload, our AI will automatically generate multiple thumbnail options for your video:
-                </Text>
-                
-                <View style={styles.serverInfoList}>
-                  <Text style={styles.serverInfoItem}>• First frame (0%)</Text>
-                  <Text style={styles.serverInfoItem}>• Quarter point (25%)</Text>
-                  <Text style={styles.serverInfoItem}>• Midpoint (50%)</Text>
-                  <Text style={styles.serverInfoItem}>• Three-quarter point (75%)</Text>
-                </View>
-                
-                <Text style={styles.serverInfoFooter}>
-                  The best thumbnail will be automatically selected as your video cover.
-                </Text>
-              </View>
-            </View>
-          )}
 
           {/* 3. AI Summary Section (Placeholder) */}
           <View style={styles.aiSummarySection}>
@@ -272,16 +206,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   
-  // 1. Title Section (TikTok-style)
-  // 1. Combined Title and Thumbnail Section
-  titleThumbnailSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  // Title Section
+  titleSection: {
     marginBottom: 24,
-    gap: 16,
   },
   titleContainer: {
-    flex: 1,
+    width: '100%',
   },
   titleInput: {
     backgroundColor: '#1a1a1a',
@@ -295,290 +225,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     minHeight: 80,
   },
-  
-  // Thumbnail Preview (Right Side)
-  thumbnailPreviewContainer: {
-    alignItems: 'center',
-  },
-  thumbnailPreview: {
-    width: 80,
-    height: 120,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: '#333',
-    alignSelf: 'flex-start',
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  } as any,
-  thumbnailPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#333',
-  },
-  expandButton: {
-    marginTop: 8,
-    padding: 4,
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  editCoverButton: {
-    position: 'absolute',
-    bottom: 6,
-    left: 6,
-    right: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  editCoverText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '500',
-    ...getInterFontConfig('200'),
-    textAlign: 'center',
-    letterSpacing: 0.2,
-  },
-  
-  // Inline Thumbnail Editor
-  thumbnailEditor: {
-    marginTop: 16,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-  },
-  editorTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    ...getInterFontConfig('300'),
-    color: '#fff',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  editorContent: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  editorPlaceholder: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: '#666',
-    textAlign: 'center',
-  },
-  
-  // Inline Thumbnail Options
-  thumbnailOptions: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'center',
-  },
-  thumbnailOptionCard: {
-    width: 80,
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: '#2a2a2a',
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  thumbnailOptionSelected: {
-    backgroundColor: 'rgba(0, 122, 255, 0.15)',
-    borderColor: '#007AFF',
-    transform: [{ scale: 1.02 }],
-  },
-  optionPreview: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  optionImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  } as any,
-  optionLabel: {
-    fontSize: 12,
-    ...getInterFontConfig('200'),
-    color: '#fff',
-    textAlign: 'center',
-  },
-  selectedIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
-  },
-  
-  // Full Video Player Interface Styles
-  fullVideoScrubber: {
-    marginTop: 20,
-    backgroundColor: '#000',
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  videoScrubberTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    ...getInterFontConfig('300'),
-    color: '#fff',
-    padding: 20,
-    paddingBottom: 16,
-    textAlign: 'center',
-  },
-  largeVideoContainer: {
-    aspectRatio: 16/9,
-    backgroundColor: '#1a1a1a',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  largeVideoPreview: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  fullVideo: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  } as any,
-  videoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  playButtonContainer: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  playButtonText: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    zIndex: 1,
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    ...getInterFontConfig('200'),
-  },
-  // Prominent Timeline Controls
-  prominentTimelineContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 16,
-    gap: 16,
-    backgroundColor: '#1a1a1a',
-  },
-  prominentTimeText: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: '#fff',
-    minWidth: 45,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  prominentTimeline: {
-    flex: 1,
-    height: 40,
-    justifyContent: 'center',
-  },
-  prominentSlider: {
-    width: '100%',
-    height: 6,
-    backgroundColor: '#333',
-    borderRadius: 3,
-    outline: 'none',
-    appearance: 'none',
-    cursor: 'pointer',
-    accentColor: '#007AFF',
-  } as any,
-  selectionConfirmation: {
-    padding: 16,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderTopWidth: 1,
-    borderTopColor: '#007AFF',
-  },
-  confirmationText: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: '#007AFF',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  
-  // Server Thumbnail Info Styles
-  serverThumbnailInfo: {
-    alignItems: 'center',
-  },
-  serverInfoText: {
-    fontSize: 14,
-    ...getInterFontConfig('200'),
-    color: '#ccc',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  serverInfoList: {
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  serverInfoItem: {
-    fontSize: 13,
-    ...getInterFontConfig('200'),
-    color: '#999',
-    marginBottom: 4,
-    textAlign: 'left',
-  },
-  serverInfoFooter: {
-    fontSize: 12,
-    ...getInterFontConfig('200'),
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  
-  // 3. AI Summary Section
+  // AI Summary Section
   aiSummarySection: {
     marginBottom: 20,
   },
