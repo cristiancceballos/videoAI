@@ -58,7 +58,7 @@ export function LoginScreen({ navigation }: any) {
               <Text style={styles.inputLabel}>Email address</Text>
               <TextInput
                 style={styles.input}
-                placeholder="name@example.com"
+                placeholder="Email"
                 placeholderTextColor="#666"
                 value={email}
                 onChangeText={setEmail}
@@ -73,7 +73,7 @@ export function LoginScreen({ navigation }: any) {
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   placeholderTextColor="#666"
                   value={password}
                   onChangeText={setPassword}

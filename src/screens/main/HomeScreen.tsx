@@ -230,6 +230,20 @@ export function HomeScreen() {
     setVideoLoading(false);
   };
 
+  const handleVideoChange = async (newIndex: number) => {
+    if (newIndex < 0 || newIndex >= videos.length) return;
+    
+    const newVideo = videos[newIndex];
+    setSelectedVideo(newVideo);
+    setVideoLoading(true);
+    setVideoError(null);
+    setVideoUrl(null);
+    
+    // Load new video URL
+    await loadVideoUrl(newVideo);
+    setVideoLoading(false);
+  };
+
   const handleVideoUrlExpired = async () => {
     if (!selectedVideo || urlRetryCount >= 2) {
       console.error('Max retries reached or no video selected');
@@ -344,7 +358,7 @@ export function HomeScreen() {
       <Video size={48} color="#fff" style={styles.emptyIcon} />
       <Text style={styles.emptyTitle}>No videos yet</Text>
       <Text style={styles.emptySubtitle}>
-        Upload your first video to get started (:
+        Upload your first video to get started
       </Text>
     </View>
   );
@@ -384,6 +398,9 @@ export function HomeScreen() {
         loading={videoLoading}
         error={videoError || undefined}
         onUrlExpired={handleVideoUrlExpired}
+        videos={videos}
+        currentIndex={selectedVideo ? videos.findIndex(v => v.id === selectedVideo.id) : 0}
+        onVideoChange={handleVideoChange}
       />
     </View>
   );

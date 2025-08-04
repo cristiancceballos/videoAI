@@ -26,6 +26,9 @@ interface TikTokVideoPlayerProps {
   loading?: boolean;
   error?: string;
   onUrlExpired?: () => void;
+  videos?: VideoWithMetadata[];
+  currentIndex?: number;
+  onVideoChange?: (index: number) => void;
 }
 
 export function TikTokVideoPlayer({
@@ -36,6 +39,9 @@ export function TikTokVideoPlayer({
   loading = false,
   error,
   onUrlExpired,
+  videos = [],
+  currentIndex = 0,
+  onVideoChange,
 }: TikTokVideoPlayerProps) {
   const [videoError, setVideoError] = useState(false);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
@@ -207,9 +213,20 @@ export function TikTokVideoPlayer({
         const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
         const diagonal = gestureState.dx > 0 && gestureState.dy > 0; // Moving right and down
         
-        if (horizontal && gestureState.dx > 50 && gestureState.vx > 0.25) {
-          // Horizontal swipe right threshold met - exit (50% easier)
-          handleExit();
+        // Check for horizontal navigation swipes
+        if (horizontal && Math.abs(gestureState.dx) > 50) {
+          if (gestureState.dx < 0 && gestureState.vx < -0.25) {
+            // Swipe left - go to next video
+            handleNavigateToVideo(currentIndex + 1);
+          } else if (gestureState.dx > 0 && gestureState.vx > 0.25) {
+            // Swipe right - go to previous video or exit if first
+            if (currentIndex > 0) {
+              handleNavigateToVideo(currentIndex - 1);
+            } else {
+              // First video - exit on swipe right
+              handleExit();
+            }
+          }
         } else if (vertical && gestureState.dy > 50 && gestureState.vy > 0.25) {
           // Vertical swipe down threshold met - exit (50% easier)
           handleExit();
@@ -314,6 +331,34 @@ export function TikTokVideoPlayer({
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
       onClose();
+    });
+  };
+
+  const handleNavigateToVideo = (newIndex: number) => {
+    if (!onVideoChange || newIndex < 0 || newIndex >= videos.length) {
+      // Can't navigate, snap back
+      Animated.spring(panRef, {
+        toValue: { x: 0, y: 0 },
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
+
+    // Stop current video
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+
+    // Animate slide transition
+    const direction = newIndex > currentIndex ? -1 : 1;
+    Animated.timing(panRef.x, {
+      toValue: direction * Dimensions.get('window').width,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => {
+      // Reset position and notify parent
+      panRef.setValue({ x: 0, y: 0 });
+      onVideoChange(newIndex);
     });
   };
 
