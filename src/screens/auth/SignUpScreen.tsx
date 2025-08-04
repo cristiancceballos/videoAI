@@ -15,6 +15,7 @@ import {
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../../utils/fontUtils';
+import { EmailConfirmationModal } from '../../components/EmailConfirmationModal';
 
 export function SignUpScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -23,6 +24,7 @@ export function SignUpScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { signUp } = useAuth();
 
   const handleSignUp = async () => {
@@ -48,12 +50,13 @@ export function SignUpScreen({ navigation }: any) {
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      Alert.alert(
-        'Success',
-        'Account created! Please check your email to verify your account.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+      setShowConfirmModal(true);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowConfirmModal(false);
+    navigation.navigate('Login');
   };
 
   return (
@@ -179,6 +182,12 @@ export function SignUpScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <EmailConfirmationModal
+        visible={showConfirmModal}
+        onClose={handleModalClose}
+        email={email}
+      />
     </KeyboardAvoidingView>
   );
 }

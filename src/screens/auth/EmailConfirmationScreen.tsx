@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,53 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { getInterFontConfig } from '../../utils/fontUtils';
+import { supabase } from '../../services/supabase';
 
 export function EmailConfirmationScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const [verifying, setVerifying] = useState(true);
+  const [verified, setVerified] = useState(false);
+
+  useEffect(() => {
+    // Check if we have a hash with tokens (from email confirmation)
+    const verifyEmail = async () => {
+      try {
+        // In a web environment, we would parse the URL hash
+        // The tokens are automatically handled by Supabase when the user clicks the link
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          setVerified(true);
+        }
+      } catch (error) {
+        console.error('Error verifying email:', error);
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyEmail();
+  }, []);
 
   const handleGoToDashboard = () => {
     // This will navigate to the main app since user should be authenticated
     // The AppNavigator will handle showing MainTabs for authenticated users
     navigation.navigate('Home' as never);
   };
+
+  if (verifying) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.verifyingText}>Verifying your email...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView 
@@ -48,6 +83,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContent: {
     flexGrow: 1,
@@ -89,5 +128,11 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
     ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
+  },
+  verifyingText: {
+    fontSize: isSmallScreen ? 16 : 18,
+    ...getInterFontConfig('200'),
+    color: '#ccc',
+    marginTop: 16,
   },
 });
