@@ -141,7 +141,7 @@ export function WebVideoPreviewModal({
             <Text style={styles.aiSummaryTitle}>AI Summary</Text>
             <View style={styles.aiSummaryContent}>
               <Text style={styles.aiSummaryPlaceholder}>
-                AI-generated summary will appear here automatically after upload.
+                AI-generated slob will appear here automatically after upload... just not today
               </Text>
             </View>
           </View>

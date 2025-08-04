@@ -48,6 +48,18 @@ export function HomeScreen() {
     }
   }, [user]);
 
+  // Clean up video URL cache on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up any blob URLs in cache
+      videoUrlCache.forEach((url) => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
+
   // Refresh videos when screen comes into focus (e.g., after uploading)
   useFocusEffect(
     React.useCallback(() => {
@@ -205,9 +217,14 @@ export function HomeScreen() {
           const newCache = new Map(prev);
           newCache.set(video.id, url);
           
-          // Keep only last 10 URLs in cache
-          if (newCache.size > 10) {
+          // Keep last 20 URLs in cache (increased for better performance)
+          if (newCache.size > 20) {
             const firstKey = newCache.keys().next().value;
+            // If it's a blob URL, revoke it to free memory
+            const oldUrl = newCache.get(firstKey);
+            if (oldUrl && oldUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(oldUrl);
+            }
             newCache.delete(firstKey);
           }
           
