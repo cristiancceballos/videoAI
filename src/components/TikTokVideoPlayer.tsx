@@ -179,6 +179,7 @@ export function TikTokVideoPlayer({
       const diagonal = gestureState.dx > 0 && gestureState.dy > 0 && 
                       Math.abs(gestureState.dx - gestureState.dy) < 50; // Similar X and Y movement
       
+      // Only show visual feedback for exit gestures, not navigation
       if (diagonal) {
         // Handle diagonal swipe (top-left to bottom-right) for exit
         panRef.setValue({ x: gestureState.dx, y: gestureState.dy });
@@ -186,8 +187,8 @@ export function TikTokVideoPlayer({
         const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
         const opacity = Math.max(0.3, 1 - distance / 280); // Adjusted for diagonal distance
         fadeAnim.setValue(opacity);
-      } else if (horizontal && gestureState.dx > 0) {
-        // Handle horizontal swipe for exit
+      } else if (horizontal && gestureState.dx > 0 && currentIndex === 0) {
+        // Only show exit animation if swiping right on first video
         panRef.setValue({ x: gestureState.dx, y: 0 });
         // Fade out as user swipes right
         const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
@@ -199,7 +200,7 @@ export function TikTokVideoPlayer({
         const opacity = Math.max(0.3, 1 - gestureState.dy / 200);
         fadeAnim.setValue(opacity);
       }
-      // Vertical up gestures don't need visual feedback during move
+      // No visual feedback for horizontal navigation swipes
     },
     onPanResponderRelease: (evt, gestureState) => {
       panRef.flattenOffset();
@@ -337,10 +338,16 @@ export function TikTokVideoPlayer({
   const handleNavigateToVideo = (newIndex: number) => {
     if (!onVideoChange || newIndex < 0 || newIndex >= videos.length) {
       // Can't navigate, snap back
-      Animated.spring(panRef, {
-        toValue: { x: 0, y: 0 },
-        useNativeDriver: false,
-      }).start();
+      Animated.parallel([
+        Animated.spring(panRef, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: false,
+        }),
+        Animated.spring(fadeAnim, {
+          toValue: 1,
+          useNativeDriver: false,
+        }),
+      ]).start();
       return;
     }
 
@@ -356,8 +363,9 @@ export function TikTokVideoPlayer({
       duration: 200,
       useNativeDriver: false,
     }).start(() => {
-      // Reset position and notify parent
+      // Reset all animations before loading new video
       panRef.setValue({ x: 0, y: 0 });
+      fadeAnim.setValue(1); // Reset opacity to full
       onVideoChange(newIndex);
     });
   };
