@@ -115,14 +115,6 @@ export function TikTokVideoPlayer({
     }
   }, [visible]);
 
-  // Update video src when URL changes
-  useEffect(() => {
-    if (videoUrl && videoRef.current && visible) {
-      // Update the src attribute dynamically
-      videoRef.current.src = videoUrl;
-      videoRef.current.load();
-    }
-  }, [videoUrl, visible]);
 
   // Reset video state when video prop changes
   useEffect(() => {
@@ -138,7 +130,7 @@ export function TikTokVideoPlayer({
         videoLoadTimeoutRef.current = null;
       }
       
-      // Properly dispose of existing video element
+      // Clean up existing video element
       if (videoRef.current) {
         // Clean up existing event listeners
         if (updateTimeRef.current) {
@@ -150,11 +142,10 @@ export function TikTokVideoPlayer({
           loadedMetadataRef.current = null;
         }
         
-        // Properly dispose of video to free memory
+        // Reset video state without removing src
         videoRef.current.pause();
-        videoRef.current.removeAttribute('src');
-        videoRef.current.load(); // Forces browser to release resources
         videoRef.current.currentTime = 0;
+        // Don't remove src here - let the new videoUrl prop update it
       }
     }
   }, [video?.id]);
@@ -406,7 +397,7 @@ export function TikTokVideoPlayer({
       return;
     }
 
-    // Properly dispose of current video
+    // Clean up current video
     if (videoRef.current) {
       if (updateTimeRef.current) {
         videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
@@ -417,9 +408,7 @@ export function TikTokVideoPlayer({
         loadedMetadataRef.current = null;
       }
       videoRef.current.pause();
-      // Clear src to release resources
-      videoRef.current.removeAttribute('src');
-      videoRef.current.load();
+      // Don't clear src when navigating - the new video URL will update it
     }
 
     // Animate slide transition
@@ -595,6 +584,7 @@ export function TikTokVideoPlayer({
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoad}
                 preload="metadata"
+                key={video?.id}
               />
             </TouchableOpacity>
           )}
