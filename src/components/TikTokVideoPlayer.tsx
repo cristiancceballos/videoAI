@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
-import { Volume2, VolumeX, AlertTriangle } from 'lucide-react-native';
+import { Volume2, VolumeX, AlertTriangle, FastForward } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { VideoDetailsSheet } from './VideoDetailsSheet';
 import { getInterFontConfig } from '../utils/fontUtils';
@@ -51,6 +51,7 @@ export function TikTokVideoPlayer({
   const [showProgressBar, setShowProgressBar] = useState(false); // Progress bar visibility
   const [currentTime, setCurrentTime] = useState(0); // Video current time
   const [duration, setDuration] = useState(0); // Video total duration
+  const [is2xSpeed, setIs2xSpeed] = useState(false); // 2x speed state
   const videoRef = useRef<HTMLVideoElement>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
@@ -531,6 +532,20 @@ export function TikTokVideoPlayer({
     }
   };
 
+  const handle2xSpeedStart = () => {
+    if (videoRef.current && !is2xSpeed) {
+      videoRef.current.playbackRate = 2.0;
+      setIs2xSpeed(true);
+    }
+  };
+
+  const handle2xSpeedEnd = () => {
+    if (videoRef.current && is2xSpeed) {
+      videoRef.current.playbackRate = 1.0;
+      setIs2xSpeed(false);
+    }
+  };
+
 
   // Helper function to format time
   const formatTime = (seconds: number) => {
@@ -598,13 +613,7 @@ export function TikTokVideoPlayer({
           )}
 
           {videoUrl && !loading && !error && (
-            <TouchableOpacity
-              style={styles.videoTouchArea}
-              onPress={() => {
-                toggleMute();
-              }}
-              activeOpacity={1}
-            >
+            <View style={styles.videoWrapper}>
               <video
                 ref={videoRef}
                 src={videoUrl}
@@ -617,7 +626,22 @@ export function TikTokVideoPlayer({
                 onLoadedData={handleVideoLoad}
                 preload="metadata"
               />
-            </TouchableOpacity>
+              
+              {/* Touch areas for mute (left) and 2x speed (right) */}
+              <View style={styles.touchOverlay}>
+                <TouchableOpacity
+                  style={styles.leftTouchArea}
+                  onPress={toggleMute}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity
+                  style={styles.rightTouchArea}
+                  onPressIn={handle2xSpeedStart}
+                  onPressOut={handle2xSpeedEnd}
+                  activeOpacity={1}
+                />
+              </View>
+            </View>
           )}
 
           {/* Instagram-style persistent mute button */}
@@ -657,6 +681,16 @@ export function TikTokVideoPlayer({
                 </Text>
               </View>
             </Animated.View>
+          )}
+          
+          {/* 2x speed indicator */}
+          {is2xSpeed && (
+            <View style={styles.speedIndicator}>
+              <View style={styles.speedIndicatorContainer}>
+                <Text style={styles.speedIndicatorText}>2x speed</Text>
+                <FastForward size={16} color="#fff" style={styles.speedIndicatorIcon} />
+              </View>
+            </View>
           )}
           
           {/* Debug overlay to verify render conditions */}
@@ -712,11 +746,6 @@ const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
     backgroundColor: '#000',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   container: {
     flex: 1,
@@ -727,17 +756,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  videoTouchArea: {
+  videoWrapper: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   video: {
     width: '100%',
     height: '100%',
     objectFit: 'contain',
   } as any,
+  touchOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+  },
+  leftTouchArea: {
+    flex: 1,
+    height: '100%',
+  },
+  rightTouchArea: {
+    flex: 1,
+    height: '100%',
+  },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -877,5 +923,30 @@ const styles = StyleSheet.create({
     right: 0,
     height: screenHeight * 0.08, // Bottom 8% of screen for progress detection
     backgroundColor: 'transparent',
+  },
+  speedIndicator: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  speedIndicatorContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  speedIndicatorText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+  },
+  speedIndicatorIcon: {
+    marginLeft: 4,
   },
 });
