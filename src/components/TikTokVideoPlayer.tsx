@@ -55,6 +55,8 @@ export function TikTokVideoPlayer({
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
   const gestureStartTime = useRef(0);
+  const lastMoveTime = useRef(0);
+  const THROTTLE_MS = 16; // ~60fps
 
   // Auto-hide mute feedback after animation
   useEffect(() => {
@@ -142,9 +144,11 @@ export function TikTokVideoPlayer({
       
       // Wait for video to be ready then play
       const handleCanPlay = () => {
-        video.play().catch(err => {
-          console.error('Autoplay failed:', err);
-          // If autoplay fails, the user can tap to play
+        requestAnimationFrame(() => {
+          video.play().catch(err => {
+            console.error('Autoplay failed:', err);
+            // If autoplay fails, the user can tap to play
+          });
         });
         video.removeEventListener('canplay', handleCanPlay);
       };
@@ -169,6 +173,26 @@ export function TikTokVideoPlayer({
       }
     }
   }, [video?.id]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up all refs and listeners
+      if (videoRef.current) {
+        if (updateTimeRef.current) {
+          videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+        }
+        if (loadedMetadataRef.current) {
+          videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+        }
+        videoRef.current.pause();
+        videoRef.current.src = '';
+      }
+      if (videoLoadTimeoutRef.current) {
+        clearTimeout(videoLoadTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Unified gesture handler for both horizontal (exit) and vertical (details) gestures
   const unifiedPanResponder = PanResponder.create({
@@ -240,31 +264,31 @@ export function TikTokVideoPlayer({
       });
     },
     onPanResponderMove: (evt, gestureState) => {
+      // Throttle gesture handling for better performance
+      const now = Date.now();
+      if (now - lastMoveTime.current < THROTTLE_MS) {
+        return;
+      }
+      lastMoveTime.current = now;
+      
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       const diagonal = gestureState.dx > 0 && gestureState.dy > 0 && 
-                      Math.abs(gestureState.dx - gestureState.dy) < 50; // Similar X and Y movement
+                      Math.abs(gestureState.dx - gestureState.dy) < 50;
       
       // Only show visual feedback for exit gestures, not navigation
       if (diagonal) {
         // Handle diagonal swipe (top-left to bottom-right) for exit
         panRef.setValue({ x: gestureState.dx, y: gestureState.dy });
-        // Fade out based on diagonal distance
-        const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
-        const opacity = Math.max(0.3, 1 - distance / 280); // Adjusted for diagonal distance
-        fadeAnim.setValue(opacity);
+        // Keep opacity at 1 to prevent white flash
       } else if (horizontal && gestureState.dx > 0 && currentIndex === 0) {
         // Only show exit animation if swiping right on first video
         panRef.setValue({ x: gestureState.dx, y: 0 });
-        // Fade out as user swipes right
-        const opacity = Math.max(0.3, 1 - gestureState.dx / 200);
-        fadeAnim.setValue(opacity);
+        // Keep opacity at 1 to prevent white flash
       } else if (vertical && gestureState.dy > 0) {
         // Handle vertical swipe down for exit
         panRef.setValue({ x: 0, y: gestureState.dy });
-        // Fade out as user swipes down
-        const opacity = Math.max(0.3, 1 - gestureState.dy / 200);
-        fadeAnim.setValue(opacity);
+        // Keep opacity at 1 to prevent white flash
       }
       // No visual feedback for horizontal navigation swipes
     },
@@ -313,16 +337,12 @@ export function TikTokVideoPlayer({
           }
           
           // Snap back to original position
-          Animated.parallel([
-            Animated.spring(panRef, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: false,
-            }),
-            Animated.spring(fadeAnim, {
-              toValue: 1,
-              useNativeDriver: false,
-            }),
-          ]).start();
+          Animated.spring(panRef, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            tension: 40,
+            friction: 7,
+          }).start();
         }
       }
     },
@@ -376,21 +396,16 @@ export function TikTokVideoPlayer({
     setVideoError(false);
     
     
-    // Quick exit animation
+    // Quick exit animation without opacity change
     Animated.parallel([
       Animated.timing(panRef.x, {
         toValue: Dimensions.get('window').width,
-        duration: 150, // Faster animation to reduce white screen chance
+        duration: 200,
         useNativeDriver: false,
       }),
       Animated.timing(panRef.y, {
         toValue: Dimensions.get('window').height,
-        duration: 150,
-        useNativeDriver: false,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
+        duration: 200,
         useNativeDriver: false,
       }),
     ]).start(() => {
@@ -404,16 +419,12 @@ export function TikTokVideoPlayer({
   const handleNavigateToVideo = (newIndex: number) => {
     if (!onVideoChange || newIndex < 0 || newIndex >= videos.length) {
       // Can't navigate, snap back
-      Animated.parallel([
-        Animated.spring(panRef, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false,
-        }),
-        Animated.spring(fadeAnim, {
-          toValue: 1,
-          useNativeDriver: false,
-        }),
-      ]).start();
+      Animated.spring(panRef, {
+        toValue: { x: 0, y: 0 },
+        useNativeDriver: false,
+        tension: 40,
+        friction: 7,
+      }).start();
       return;
     }
 
@@ -476,8 +487,12 @@ export function TikTokVideoPlayer({
       
       // Only add listeners if they don't exist
       if (!updateTimeRef.current) {
+        let lastUpdateTime = 0;
         updateTimeRef.current = () => {
-          if (videoRef.current) {
+          const now = Date.now();
+          // Throttle updates to 4 times per second
+          if (now - lastUpdateTime > 250 && videoRef.current) {
+            lastUpdateTime = now;
             setCurrentTime(videoRef.current.currentTime);
           }
         };
@@ -524,17 +539,17 @@ export function TikTokVideoPlayer({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="none"
       presentationStyle="fullScreen"
       onRequestClose={handleExit}
       statusBarTranslucent={true}
+      style={{ backgroundColor: '#000' }}
     >
       <StatusBar hidden />
       <Animated.View 
         style={[
           styles.container,
           {
-            opacity: fadeAnim,
             transform: panRef.getTranslateTransform(),
           }
         ]}
