@@ -379,11 +379,7 @@ export function TikTokVideoPlayer({
           const gestureDuration = Date.now() - gestureStartTime.current;
           const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
           
-          if (gestureDuration < 500 && totalMovement < 50 && !isHoldingForSpeed.current) {
-            // This was a tap (not a long press) - toggle mute
-            toggleMute();
-          } else {
-          }
+          // Taps are now handled by the touch zones
           
           // Snap back to original position
           Animated.spring(panRef, {
@@ -590,15 +586,29 @@ export function TikTokVideoPlayer({
   };
 
   const handle2xSpeedStart = () => {
-    if (videoRef.current && !is2xSpeed) {
-      videoRef.current.playbackRate = 2.0;
-      setIs2xSpeed(true);
-    }
+    // Start timer for long press
+    speedHoldTimeout.current = setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.playbackRate = 2.0;
+        setIs2xSpeed(true);
+        isHoldingForSpeed.current = true;
+      }
+    }, LONG_PRESS_DELAY);
   };
 
   const handle2xSpeedEnd = () => {
-    if (videoRef.current && is2xSpeed) {
-      videoRef.current.playbackRate = 1.0;
+    // Clear timeout if released before delay
+    if (speedHoldTimeout.current) {
+      clearTimeout(speedHoldTimeout.current);
+      speedHoldTimeout.current = null;
+    }
+    
+    // If was holding for speed, reset it
+    if (isHoldingForSpeed.current) {
+      isHoldingForSpeed.current = false;
+      if (videoRef.current) {
+        videoRef.current.playbackRate = 1.0;
+      }
       setIs2xSpeed(false);
     }
   };
@@ -693,6 +703,7 @@ export function TikTokVideoPlayer({
                 />
                 <TouchableOpacity
                   style={styles.rightTouchArea}
+                  onPress={toggleMute}
                   onPressIn={handle2xSpeedStart}
                   onPressOut={handle2xSpeedEnd}
                   activeOpacity={1}
