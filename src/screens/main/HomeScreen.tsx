@@ -523,8 +523,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   header: {
-    paddingHorizontal: isSmallScreen ? 16 : 20,
-    paddingTop: Platform.OS === 'web' ? 20 : 60,
+    paddingHorizontal: isSmallScreen ? 12 : 16,
+    paddingTop: Platform.OS === 'web' ? 20 : 44,
     paddingBottom: 6, // Reduced from 12px
     backgroundColor: '#000',
   },
