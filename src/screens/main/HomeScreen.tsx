@@ -13,7 +13,6 @@ import {
 import { getInterFontConfig } from '../../utils/fontUtils';
 import { useFocusEffect } from '@react-navigation/native';
 import { Video, Search, Check, RotateCcw } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
@@ -23,7 +22,6 @@ import { BunnyStreamService } from '../../services/bunnyStreamService';
 
 export function HomeScreen() {
   const { user, signOut } = useAuth();
-  const insets = useSafeAreaInsets();
   const [videos, setVideos] = useState<VideoWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -473,7 +471,7 @@ export function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
-        <View style={[styles.header, { paddingTop: Math.max(60, insets.top + 20) }]}>
+        <View style={styles.header}>
           <Text style={styles.title}>VideoAI</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity 
@@ -530,7 +528,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: isSmallScreen ? 16 : 20,
-    // paddingTop is now set dynamically using safe area insets
+    paddingTop: Platform.OS === 'web' ? 20 : 60,
     paddingBottom: 16,
     backgroundColor: '#000',
     minHeight: 44, // Ensure minimum touch target
