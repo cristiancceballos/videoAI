@@ -57,7 +57,11 @@ export function TikTokVideoPlayer({
   const panRef = useRef(new Animated.ValueXY()).current;
   const gestureStartTime = useRef(0);
   const lastMoveTime = useRef(0);
+  const speedHoldTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isHoldingForSpeed = useRef(false);
+  const touchStartX = useRef(0);
   const THROTTLE_MS = 16; // ~60fps
+  const LONG_PRESS_DELAY = 200; // ms to detect long press
 
   // Auto-hide mute feedback after animation
   useEffect(() => {
@@ -92,6 +96,11 @@ export function TikTokVideoPlayer({
       setIsMuted(hasUserUnmuted ? false : true); // Respect user's audio preference
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1);
+      // Reset speed state
+      setIs2xSpeed(false);
+      if (videoRef.current) {
+        videoRef.current.playbackRate = 1;
+      }
     } else {
       deactivateKeepAwake(); // Allow screen to sleep when video player closes
       // Ensure complete cleanup when modal closes
@@ -212,8 +221,25 @@ export function TikTokVideoPlayer({
         return false;
       }
       
-      toggleMute();
+      // Store touch position and start time
+      touchStartX.current = evt.nativeEvent.pageX;
       gestureStartTime.current = Date.now();
+      
+      // Set up long press detection for right side
+      const screenWidth = Dimensions.get('window').width;
+      const isRightSide = evt.nativeEvent.pageX > screenWidth / 2;
+      
+      if (isRightSide) {
+        speedHoldTimeout.current = setTimeout(() => {
+          // Long press detected on right side - activate 2x speed
+          isHoldingForSpeed.current = true;
+          if (videoRef.current) {
+            videoRef.current.playbackRate = 2;
+            setIs2xSpeed(true);
+          }
+        }, LONG_PRESS_DELAY);
+      }
+      
       return true;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -296,6 +322,22 @@ export function TikTokVideoPlayer({
     onPanResponderRelease: (evt, gestureState) => {
       panRef.flattenOffset();
       
+      // Clean up speed hold
+      if (speedHoldTimeout.current) {
+        clearTimeout(speedHoldTimeout.current);
+        speedHoldTimeout.current = null;
+      }
+      
+      if (isHoldingForSpeed.current) {
+        // Was holding for speed - reset to normal
+        isHoldingForSpeed.current = false;
+        if (videoRef.current) {
+          videoRef.current.playbackRate = 1;
+        }
+        setIs2xSpeed(false);
+        return; // Don't process other gestures
+      }
+      
       // Prioritize swipe-up detection first (matches capture logic)
       if (gestureState.dy < -30 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 0.7) {
         // Vertical swipe up threshold met - show details (prioritized)
@@ -331,8 +373,8 @@ export function TikTokVideoPlayer({
           const gestureDuration = Date.now() - gestureStartTime.current;
           const totalMovement = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
           
-          if (gestureDuration < 500 && totalMovement < 50) {
-            // This was a tap - toggle mute
+          if (gestureDuration < 500 && totalMovement < 50 && !isHoldingForSpeed.current) {
+            // This was a tap (not a long press) - toggle mute
             toggleMute();
           } else {
           }
@@ -440,7 +482,16 @@ export function TikTokVideoPlayer({
         loadedMetadataRef.current = null;
       }
       videoRef.current.pause();
+      videoRef.current.playbackRate = 1; // Reset speed
       // Don't clear src when navigating - the new video URL will update it
+    }
+    
+    // Reset speed state
+    setIs2xSpeed(false);
+    isHoldingForSpeed.current = false;
+    if (speedHoldTimeout.current) {
+      clearTimeout(speedHoldTimeout.current);
+      speedHoldTimeout.current = null;
     }
 
     // Set black background during transition
@@ -932,18 +983,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   speedIndicatorContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   speedIndicatorText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     ...getInterFontConfig('300'),
   },
   speedIndicatorIcon: {
