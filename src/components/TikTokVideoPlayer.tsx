@@ -298,6 +298,12 @@ export function TikTokVideoPlayer({
       }
       lastMoveTime.current = now;
       
+      // Cancel speed hold if user moves (indicates not a hold but a swipe)
+      if (speedHoldTimeout.current && (Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5)) {
+        clearTimeout(speedHoldTimeout.current);
+        speedHoldTimeout.current = null;
+      }
+      
       const horizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       const vertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       const diagonal = gestureState.dx > 0 && gestureState.dy > 0 && 
@@ -977,7 +983,7 @@ const styles = StyleSheet.create({
   },
   speedIndicator: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 15,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -991,7 +997,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '500',
-    ...getInterFontConfig('300'),
+    fontFamily: 'sans-serif',
   },
   speedIndicatorIcon: {
     marginLeft: 4,

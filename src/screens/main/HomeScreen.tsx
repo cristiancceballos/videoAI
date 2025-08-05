@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: isSmallScreen ? 16 : 20,
-    paddingTop: Platform.OS === 'web' ? 20 : 60,
+    paddingTop: Platform.OS === 'web' ? 60 : 60,
     paddingBottom: 16,
     backgroundColor: '#000',
     minHeight: 44, // Ensure minimum touch target
