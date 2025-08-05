@@ -9,10 +9,11 @@ import {
   Alert,
   Dimensions,
   Platform,
+  TextInput,
 } from 'react-native';
 import { getInterFontConfig } from '../../utils/fontUtils';
 import { useFocusEffect } from '@react-navigation/native';
-import { Video, Search, Check, RotateCcw } from 'lucide-react-native';
+import { Video, Search, Check } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
@@ -21,7 +22,7 @@ import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavi
 import { BunnyStreamService } from '../../services/bunnyStreamService';
 
 export function HomeScreen() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [videos, setVideos] = useState<VideoWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -472,18 +473,16 @@ export function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>VideoAI</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              onPress={() => loadVideos(true)} 
-              style={styles.refreshButton}
-              disabled={loading}
-            >
-              <RotateCcw size={16} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-              <Text style={styles.logoutText}>Sign Out</Text>
-            </TouchableOpacity>
+          <View style={styles.searchBarContainer}>
+            <View style={styles.searchBar}>
+              <Search size={20} color="#8e8e8e" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search with VideoAI"
+                placeholderTextColor="#8e8e8e"
+                editable={false} // For now, just visual
+              />
+            </View>
           </View>
         </View>
         <ProfileTabNavigator
@@ -524,55 +523,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: isSmallScreen ? 16 : 20,
     paddingTop: Platform.OS === 'web' ? 20 : 60,
-    paddingBottom: 16,
+    paddingBottom: 12,
     backgroundColor: '#000',
-    minHeight: 44, // Ensure minimum touch target
   },
-  headerButtons: {
+  searchBarContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  refreshButton: {
+    backgroundColor: '#1c1c1c',
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 36,
+    width: '100%',
+    // Subtle shadow for depth
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  refreshText: {
-    fontSize: 16,
+  searchIcon: {
+    marginRight: 8,
   },
-  title: {
-    fontSize: isSmallScreen ? 20 : 24,
-    fontWeight: 'bold',
-    ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
-    color: '#fff',
+  searchInput: {
     flex: 1,
-  },
-  logoutButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    minWidth: 80,
-    minHeight: 44, // Improved touch target
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoutText: {
+    fontSize: 16,
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium -1.0 letterSpacing
+    ...getInterFontConfig('200'),
+    padding: 0,
   },
   content: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
