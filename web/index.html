@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    
+    <style>
+      /* Immediate black background to prevent white flash */
+      html, body {
+        background-color: #000000 !important;
+        margin: 0;
+        padding: 0;
+      }
+      
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+        background-color: #000000 !important;
+      }
+      
+      /* Ensure all elements default to black background */
+      * {
+        background-color: transparent;
+      }
+      
+      /* Loading state styles */
+      .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #000000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+    </style>
+
+    <!--
+      Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
+      However, body scrolling is often nice to have for mobile web. If you want to enable it, remove this line.
+    -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <title>%WEB_TITLE%</title>
+  </head>
+
+  <body style="background-color: #000000;">
+    <!-- Loading container to show while app loads -->
+    <div id="loading" class="loading-container">
+      <div style="color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        Loading...
+      </div>
+    </div>
+    
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    %REACT_NATIVE_WEB%
+    
+    <!-- Remove loading screen once app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loader = document.getElementById('loading');
+          if (loader) {
+            loader.style.display = 'none';
+          }
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

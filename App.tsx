@@ -13,6 +13,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import 'react-native-url-polyfill/auto';
 
+// Import global CSS for web
+if (Platform.OS === 'web') {
+  require('./src/styles/global.css');
+}
+
 // Polyfill for structuredClone (not available in older mobile browsers)
 if (typeof globalThis.structuredClone === 'undefined') {
   globalThis.structuredClone = (obj: any) => {
