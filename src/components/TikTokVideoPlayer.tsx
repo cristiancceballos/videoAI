@@ -116,36 +116,56 @@ export function TikTokVideoPlayer({
   }, [visible]);
 
 
-  // Reset video state when video prop changes
+  // Handle video URL changes and ensure autoplay
   useEffect(() => {
-    if (video && visible) {
-      // Reset error state for new video
+    if (videoUrl && videoRef.current && visible) {
+      // Clean up existing event listeners first
+      if (updateTimeRef.current) {
+        videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
+        updateTimeRef.current = null;
+      }
+      if (loadedMetadataRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
+        loadedMetadataRef.current = null;
+      }
+      
+      // Reset video state
       setVideoError(false);
       setCurrentTime(0);
       setDuration(0);
       
+      // Update src and ensure play
+      const video = videoRef.current;
+      video.pause();
+      video.currentTime = 0;
+      video.src = videoUrl;
+      
+      // Wait for video to be ready then play
+      const handleCanPlay = () => {
+        video.play().catch(err => {
+          console.error('Autoplay failed:', err);
+          // If autoplay fails, the user can tap to play
+        });
+        video.removeEventListener('canplay', handleCanPlay);
+      };
+      
+      video.addEventListener('canplay', handleCanPlay);
+      video.load();
+      
+      // Cleanup function
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+      };
+    }
+  }, [videoUrl, visible]);
+
+  // Reset video state when video prop changes
+  useEffect(() => {
+    if (video && visible) {
       // Clear any pending load timeout
       if (videoLoadTimeoutRef.current) {
         clearTimeout(videoLoadTimeoutRef.current);
         videoLoadTimeoutRef.current = null;
-      }
-      
-      // Clean up existing video element
-      if (videoRef.current) {
-        // Clean up existing event listeners
-        if (updateTimeRef.current) {
-          videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
-          updateTimeRef.current = null;
-        }
-        if (loadedMetadataRef.current) {
-          videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
-          loadedMetadataRef.current = null;
-        }
-        
-        // Reset video state without removing src
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-        // Don't remove src here - let the new videoUrl prop update it
       }
     }
   }, [video?.id]);
@@ -421,10 +441,8 @@ export function TikTokVideoPlayer({
       // Reset all animations before loading new video
       panRef.setValue({ x: 0, y: 0 });
       fadeAnim.setValue(1); // Reset opacity to full
-      // Small delay to ensure cleanup completes
-      setTimeout(() => {
-        onVideoChange(newIndex);
-      }, 50);
+      // Immediate navigation for better UX
+      onVideoChange(newIndex);
     });
   };
 
@@ -447,16 +465,6 @@ export function TikTokVideoPlayer({
 
   const handleVideoLoad = () => {
     if (videoRef.current) {
-      // Clean up any existing listeners first
-      if (updateTimeRef.current) {
-        videoRef.current.removeEventListener('timeupdate', updateTimeRef.current);
-      }
-      if (loadedMetadataRef.current) {
-        videoRef.current.removeEventListener('loadedmetadata', loadedMetadataRef.current);
-      }
-
-      videoRef.current.play().catch(console.error);
-      
       // Auto-unmute if user has previously chosen audio
       if (hasUserUnmuted) {
         videoRef.current.muted = false;
@@ -466,20 +474,24 @@ export function TikTokVideoPlayer({
       // Set up video progress tracking
       setDuration(videoRef.current.duration || 0);
       
-      updateTimeRef.current = () => {
-        if (videoRef.current) {
-          setCurrentTime(videoRef.current.currentTime);
-        }
-      };
+      // Only add listeners if they don't exist
+      if (!updateTimeRef.current) {
+        updateTimeRef.current = () => {
+          if (videoRef.current) {
+            setCurrentTime(videoRef.current.currentTime);
+          }
+        };
+        videoRef.current.addEventListener('timeupdate', updateTimeRef.current);
+      }
       
-      loadedMetadataRef.current = () => {
-        if (videoRef.current) {
-          setDuration(videoRef.current.duration);
-        }
-      };
-      
-      videoRef.current.addEventListener('timeupdate', updateTimeRef.current);
-      videoRef.current.addEventListener('loadedmetadata', loadedMetadataRef.current);
+      if (!loadedMetadataRef.current) {
+        loadedMetadataRef.current = () => {
+          if (videoRef.current) {
+            setDuration(videoRef.current.duration);
+          }
+        };
+        videoRef.current.addEventListener('loadedmetadata', loadedMetadataRef.current);
+      }
     }
   };
 
@@ -584,7 +596,6 @@ export function TikTokVideoPlayer({
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoad}
                 preload="metadata"
-                key={video?.id}
               />
             </TouchableOpacity>
           )}
