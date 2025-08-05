@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
     paddingTop: Platform.OS === 'web' ? 20 : 60,
-    paddingBottom: 12,
+    paddingBottom: 6, // Reduced from 12px
     backgroundColor: '#000',
   },
   searchBarContainer: {
@@ -536,9 +536,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1c1c1c',
-    borderRadius: 10,
+    borderRadius: 19, // Fully rounded edges
     paddingHorizontal: 12,
-    height: 36,
+    height: 38, // Increased by 5% from 36px
     width: '100%',
     // Subtle shadow for depth
     shadowColor: '#000',
