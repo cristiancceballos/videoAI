@@ -736,18 +736,11 @@ export function TikTokVideoPlayer({
           {/* Mute toggle feedback */}
           {showMuteFeedback && (
             <Animated.View style={styles.muteFeedback}>
-              <View style={styles.muteFeedbackContainer}>
-                <View style={styles.muteFeedbackIcon}>
-                  {isMuted ? (
-                    <VolumeX size={24} color="#fff" />
-                  ) : (
-                    <Volume2 size={24} color="#fff" />
-                  )}
-                </View>
-                <Text style={styles.muteFeedbackText}>
-                  {isMuted ? 'Muted' : 'Unmuted'}
-                </Text>
-              </View>
+              {isMuted ? (
+                <VolumeX size={24} color="#fff" />
+              ) : (
+                <Volume2 size={24} color="#fff" />
+              )}
             </Animated.View>
           )}
           
@@ -914,24 +907,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  muteFeedbackContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  muteFeedbackIcon: {
-    marginBottom: 8,
-    alignItems: 'center',
-  },
-  muteFeedbackText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
   },
   progressTimeContainer: {
     position: 'absolute',

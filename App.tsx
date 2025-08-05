@@ -27,6 +27,7 @@ if (typeof globalThis.structuredClone === 'undefined') {
 
 
 import { AuthProvider } from './src/contexts/AuthContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { PWAInstallPrompt } from './src/components/PWAInstallPrompt';
 import { NetworkStatus } from './src/components/NetworkStatus';
@@ -87,20 +88,22 @@ export default function App() {
 
   // Switch back to main app - diagnostics passed!
   return (
-    <AuthProvider>
-      <AppNavigator />
-      <StatusBar style="light" />
-      
-      {/* PWA-specific components (web only) */}
-      {Platform.OS === 'web' && (
-        <>
-          <NetworkStatus onNetworkChange={handleNetworkChange} />
-          <PWAInstallPrompt 
-            onInstallSuccess={handleInstallSuccess}
-            onInstallDismiss={handleInstallDismiss}
-          />
-        </>
-      )}
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AppNavigator />
+        <StatusBar style="light" />
+        
+        {/* PWA-specific components (web only) */}
+        {Platform.OS === 'web' && (
+          <>
+            <NetworkStatus onNetworkChange={handleNetworkChange} />
+            <PWAInstallPrompt 
+              onInstallSuccess={handleInstallSuccess}
+              onInstallDismiss={handleInstallDismiss}
+            />
+          </>
+        )}
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
