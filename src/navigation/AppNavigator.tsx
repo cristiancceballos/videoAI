@@ -41,15 +41,10 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: '#1a1a1a',
           borderTopColor: '#333',
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
         },
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#888',
       }}
-      safeAreaInsets={{ bottom: 0 }}
     >
       <Tab.Screen 
         name="Home" 

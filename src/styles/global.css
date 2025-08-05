@@ -1,38 +1,26 @@
 /* Global styles to ensure black background everywhere */
 html, body {
-  background-color: #000000 !important;
+  background-color: #000000;
   margin: 0;
   padding: 0;
-  height: 100%;
-  width: 100%;
 }
 
 /* Ensure root element has black background */
 #root {
-  background-color: #000000 !important;
-  min-height: 100vh;
-  position: relative;
+  background-color: #000000;
 }
 
-/* Modal and overlay backgrounds */
-.react-native-modal,
-[data-testid="modal-backdrop"],
-[role="dialog"] {
-  background-color: #000000 !important;
+/* Ensure video elements have black background */
+video {
+  background-color: #000000;
 }
 
 /* Prevent white flash during transitions */
 * {
   -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
 }
 
-/* Ensure video elements fill their containers */
-video {
-  background-color: #000000;
-}
-
-/* Prevent any white backgrounds from showing through */
+/* Override any white backgrounds */
 div[style*="background-color: rgb(255, 255, 255)"],
 div[style*="background-color: white"],
 div[style*="backgroundColor: rgb(255, 255, 255)"],
