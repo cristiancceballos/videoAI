@@ -23,6 +23,10 @@ export interface Database {
           thumb_error_message?: string;
           bunny_video_id?: string;
           bunny_thumbnail_url?: string;
+          ai_status?: 'pending' | 'processing' | 'completed' | 'error';
+          tags?: string[];
+          ai_error?: string;
+          ai_processed_at?: string;
           created_at: string;
           updated_at: string;
         };
@@ -47,6 +51,10 @@ export interface Database {
           thumb_error_message?: string;
           bunny_video_id?: string;
           bunny_thumbnail_url?: string;
+          ai_status?: 'pending' | 'processing' | 'completed' | 'error';
+          tags?: string[];
+          ai_error?: string;
+          ai_processed_at?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -71,6 +79,10 @@ export interface Database {
           thumb_error_message?: string;
           bunny_video_id?: string;
           bunny_thumbnail_url?: string;
+          ai_status?: 'pending' | 'processing' | 'completed' | 'error';
+          tags?: string[];
+          ai_error?: string;
+          ai_processed_at?: string;
           created_at?: string;
           updated_at?: string;
         };
