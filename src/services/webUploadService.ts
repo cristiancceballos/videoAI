@@ -303,19 +303,19 @@ class WebUploadService {
     videoTitle?: string
   ): Promise<void> {
     try {
-      // Get the video URL for AI processing
-      const { data: { publicUrl } } = supabase.storage
+      // Create a signed URL for private storage access
+      const { data, error: urlError } = await supabase.storage
         .from('videos')
-        .getPublicUrl(storagePath);
+        .createSignedUrl(storagePath, 3600); // 1 hour expiry
 
-      if (!publicUrl) {
-        console.error('Failed to get public URL for AI processing');
+      if (urlError || !data?.signedUrl) {
+        console.error('Failed to create signed URL for AI processing:', urlError);
         return;
       }
 
       // For now, we'll pass the video URL directly
       // In production with videos > 25MB, Trigger.dev would extract audio first
-      const audioUrl = publicUrl;
+      const audioUrl = data.signedUrl;
 
       // Call the Edge Function
       const { data, error } = await supabase.functions.invoke('ai-processor', {

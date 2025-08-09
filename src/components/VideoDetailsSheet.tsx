@@ -98,6 +98,12 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -168,9 +174,9 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             {video.title}
           </Text>
 
-          {/* Upload Date and Duration */}
+          {/* Upload Date, Duration, and File Size */}
           <Text style={styles.subtitle}>
-            {formatDate(video.created_at)} • {formatDuration(video.duration)}
+            {formatDate(video.created_at)} • {formatDuration(video.duration)} • {formatFileSize(video.file_size)}
           </Text>
 
           {/* AI Summary Placeholder */}
