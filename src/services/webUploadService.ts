@@ -318,7 +318,7 @@ class WebUploadService {
       const audioUrl = data.signedUrl;
 
       // Call the Edge Function
-      const { data, error } = await supabase.functions.invoke('ai-processor', {
+      const { data: functionData, error } = await supabase.functions.invoke('ai-processor', {
         body: {
           videoId,
           userId,
