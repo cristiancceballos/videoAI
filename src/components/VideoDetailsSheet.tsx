@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   Dimensions,
   Animated,
   PanResponder,
+  ActivityIndicator,
 } from 'react-native';
-import { VideoWithMetadata } from '../services/videoService';
+import { VideoWithMetadata, videoService } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
+import { Sparkles } from 'lucide-react-native';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -22,6 +24,9 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
+  
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -39,6 +44,17 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           useNativeDriver: false,
         }),
       ]).start();
+      
+      // Fetch AI summary if available
+      if (video.ai_status === 'completed') {
+        setLoadingSummary(true);
+        videoService.getVideoSummary(video.id).then(content => {
+          setSummary(content);
+          setLoadingSummary(false);
+        }).catch(() => {
+          setLoadingSummary(false);
+        });
+      }
     } else {
       // Slide down animation
       Animated.parallel([
@@ -53,8 +69,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           useNativeDriver: false,
         }),
       ]).start();
+      
+      // Reset summary when closing
+      setSummary(null);
     }
-  }, [visible]);
+  }, [visible, video.id, video.ai_status]);
 
   // Pan gesture for dragging sheet down
   const panResponder = PanResponder.create({
@@ -179,10 +198,51 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             {formatDate(video.created_at)} • {formatDuration(video.duration)} • {formatFileSize(video.file_size)}
           </Text>
 
-          {/* AI Summary Placeholder */}
-          <View style={styles.metadataSection}>
-            <Text style={styles.aiPlaceholder}>ai generated slob coming soon !</Text>
-          </View>
+          {/* AI Summary Section */}
+          {video.ai_status === 'completed' && (
+            <View style={styles.metadataSection}>
+              <View style={styles.sectionHeader}>
+                <Sparkles size={20} color="#34C759" />
+                <Text style={styles.sectionTitle}>AI Summary</Text>
+              </View>
+              
+              {loadingSummary ? (
+                <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
+              ) : summary ? (
+                <Text style={styles.summaryText}>{summary}</Text>
+              ) : (
+                <Text style={styles.errorText}>Summary not available</Text>
+              )}
+              
+              {/* Tags */}
+              {video.tags && video.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  {video.tags.map((tag, index) => (
+                    <View key={index} style={styles.tagChip}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+          
+          {/* AI Processing Status */}
+          {video.ai_status === 'processing' && (
+            <View style={styles.metadataSection}>
+              <View style={styles.processingContainer}>
+                <ActivityIndicator size="small" color="#FF9500" />
+                <Text style={styles.processingText}>AI is analyzing your video...</Text>
+              </View>
+            </View>
+          )}
+          
+          {/* AI Not Started */}
+          {(!video.ai_status || video.ai_status === 'pending') && (
+            <View style={styles.metadataSection}>
+              <Text style={styles.pendingText}>AI analysis will begin shortly</Text>
+            </View>
+          )}
 
 
           {/* Add some bottom spacing for better UX */}
@@ -257,20 +317,70 @@ const styles = StyleSheet.create({
   metadataSection: {
     marginBottom: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
     color: '#fff',
+    marginLeft: 8,
+  },
+  summaryText: {
+    fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#e5e5e7',
+    lineHeight: 24,
     marginBottom: 16,
   },
-  aiPlaceholder: {
-    fontSize: 18,
-    fontWeight: '600',
-    ...getInterFontConfig('300'), // Light 300 Italic with premium spacing
-    color: '#fff',
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  tagChip: {
+    backgroundColor: '#2c2c2e',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  tagText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#8e8e93',
+  },
+  processingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  processingText: {
+    fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#FF9500',
+    marginLeft: 12,
+  },
+  pendingText: {
+    fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#8e8e93',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
+    color: '#8e8e93',
+    fontStyle: 'italic',
+  },
+  loadingIndicator: {
+    marginVertical: 20,
   },
   metadataRow: {
     flexDirection: 'row',

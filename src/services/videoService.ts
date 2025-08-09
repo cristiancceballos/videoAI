@@ -297,6 +297,50 @@ class VideoService {
     }
   }
 
+  // Get AI-generated summary for a video
+  async getVideoSummary(videoId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('summaries')
+        .select('content')
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data.content;
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+      return null;
+    }
+  }
+
+  // Get transcript for a video
+  async getVideoTranscript(videoId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('transcripts')
+        .select('content')
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data.content;
+    } catch (error) {
+      console.error('Error fetching transcript:', error);
+      return null;
+    }
+  }
+
 }
 
 export const videoService = new VideoService();
