@@ -24,9 +24,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const panRef = useRef(new Animated.ValueXY()).current;
+  const scrollRef = useRef<ScrollView>(null);
   
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
 
   useEffect(() => {
     if (visible) {
@@ -77,14 +79,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
 
   // Pan gesture for dragging sheet down
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to downward drags from the top area
-      const isDragHandleArea = evt.nativeEvent.pageY < 100;
-      const isDownwardDrag = gestureState.dy > 10;
-      return isDragHandleArea && isDownwardDrag;
-    },
-    onMoveShouldSetPanResponderCapture: () => false,
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
       panRef.setOffset({
         x: panRef.x._value,
@@ -180,18 +176,27 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             ],
           }
         ]}
-        {...panResponder.panHandlers}
       >
         {/* Drag Handle */}
-        <View style={styles.dragHandle} />
+        <View style={styles.dragHandle} {...panResponder.panHandlers} />
 
         {/* Sheet Content */}
         <ScrollView 
+          ref={scrollRef}
           style={styles.content}
           showsVerticalScrollIndicator={false}
           bounces={true}
           scrollEventThrottle={16}
           contentContainerStyle={styles.scrollContent}
+          onScroll={(event) => {
+            const offsetY = event.nativeEvent.contentOffset.y;
+            setIsAtTop(offsetY <= 0);
+            
+            // Close sheet on overscroll
+            if (offsetY < -50 && isAtTop) {
+              onClose();
+            }
+          }}
         >
           {/* Video Title */}
           <Text style={styles.title} numberOfLines={2}>
@@ -298,7 +303,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 12,
+    // Make the touch target larger
+    paddingVertical: 10,
+    paddingHorizontal: 50,
   },
   content: {
     flex: 1,
