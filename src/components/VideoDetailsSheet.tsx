@@ -6,8 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Animated,
-  PanResponder,
+  Modal,
   ActivityIndicator,
 } from 'react-native';
 import { VideoWithMetadata, videoService } from '../services/videoService';
@@ -21,93 +20,23 @@ interface VideoDetailsSheetProps {
 }
 
 export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheetProps) {
-  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-  const panRef = useRef(new Animated.ValueXY()).current;
-  const scrollRef = useRef<ScrollView>(null);
-  
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
-  const [isAtTop, setIsAtTop] = useState(true);
 
   useEffect(() => {
-    if (visible) {
-      // Slide up animation
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: screenHeight * 0.3, // Show 70% of screen
-          useNativeDriver: false,
-          tension: 100,
-          friction: 8,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-      
-      // Fetch AI summary if available
-      if (video.ai_status === 'completed') {
-        setLoadingSummary(true);
-        videoService.getVideoSummary(video.id).then(content => {
-          setSummary(content);
-          setLoadingSummary(false);
-        }).catch(() => {
-          setLoadingSummary(false);
-        });
-      }
-    } else {
-      // Slide down animation
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: screenHeight,
-          duration: 250,
-          useNativeDriver: false,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: false,
-        }),
-      ]).start();
-      
+    if (visible && video.ai_status === 'completed') {
+      setLoadingSummary(true);
+      videoService.getVideoSummary(video.id).then(content => {
+        setSummary(content);
+        setLoadingSummary(false);
+      }).catch(() => {
+        setLoadingSummary(false);
+      });
+    } else if (!visible) {
       // Reset summary when closing
       setSummary(null);
     }
   }, [visible, video.id, video.ai_status]);
-
-  // Pan gesture for dragging sheet down
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      panRef.setOffset({
-        x: panRef.x._value,
-        y: panRef.y._value,
-      });
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Only allow downward drags
-      if (gestureState.dy > 0) {
-        panRef.setValue({ x: 0, y: gestureState.dy });
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      panRef.flattenOffset();
-      
-      if (gestureState.dy > 100 || gestureState.vy > 0.5) {
-        // Drag threshold met - close sheet
-        onClose();
-      } else {
-        // Snap back to original position
-        Animated.spring(panRef, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false,
-        }).start();
-      }
-    },
-  });
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -144,60 +73,38 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   };
 
 
-  if (!visible) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <Animated.View 
-        style={[
-          styles.backdrop,
-          {
-            opacity: backdropAnim,
-          }
-        ]}
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.modalContainer}
+        activeOpacity={1}
+        onPress={onClose}
       >
+        {/* Bottom Sheet */}
         <TouchableOpacity 
-          style={styles.backdropTouch}
-          onPress={onClose}
+          style={styles.sheet}
           activeOpacity={1}
-        />
-      </Animated.View>
-
-      {/* Bottom Sheet */}
-      <Animated.View
-        style={[
-          styles.sheet,
-          {
-            transform: [
-              { 
-                translateY: Animated.add(slideAnim, panRef.y)
-              }
-            ],
-          }
-        ]}
-      >
-        {/* Drag Handle */}
-        <View style={styles.dragHandle} {...panResponder.panHandlers} />
-
-        {/* Sheet Content */}
-        <ScrollView 
-          ref={scrollRef}
-          style={styles.content}
-          showsVerticalScrollIndicator={false}
-          bounces={true}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles.scrollContent}
-          onScroll={(event) => {
-            const offsetY = event.nativeEvent.contentOffset.y;
-            setIsAtTop(offsetY <= 0);
-            
-            // Close sheet on overscroll
-            if (offsetY < -50 && isAtTop) {
-              onClose();
-            }
-          }}
+          onPress={(e) => e.stopPropagation()}
         >
+          {/* Drag Handle */}
+          <TouchableOpacity onPress={onClose} style={styles.dragHandleContainer}>
+            <View style={styles.dragHandle} />
+          </TouchableOpacity>
+
+          {/* Sheet Content */}
+          <ScrollView 
+            style={styles.content}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+            contentContainerStyle={styles.scrollContent}
+            scrollEventThrottle={16}
+            nestedScrollEnabled={true}
+          >
           {/* Video Title */}
           <Text style={styles.title} numberOfLines={2}>
             {video.title}
@@ -258,35 +165,29 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           {/* Add some bottom spacing for better UX */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
-      </Animated.View>
-
-    </>
+        </TouchableOpacity>
+      </TouchableOpacity>
+  </Modal>
   );
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  backdropTouch: {
-    flex: 1,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: screenHeight,
     backgroundColor: '#1c1c1e',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    maxHeight: screenHeight * 0.85,
+    minHeight: screenHeight * 0.4,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -296,24 +197,24 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
   dragHandle: {
     width: 40,
     height: 4,
     backgroundColor: '#48484a',
     borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 12,
-    // Make the touch target larger
-    paddingVertical: 10,
-    paddingHorizontal: 50,
   },
   content: {
     flex: 1,
+    maxHeight: screenHeight * 0.75,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 60,
+    flexGrow: 1,
   },
   title: {
     fontSize: 22,
