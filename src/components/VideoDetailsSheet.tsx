@@ -8,6 +8,8 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { VideoWithMetadata, videoService } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
@@ -22,6 +24,66 @@ interface VideoDetailsSheetProps {
 export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheetProps) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  
+  // Animation values
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scrollOffset = useRef(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Backdrop opacity based on sheet position
+  const backdropOpacity = translateY.interpolate({
+    inputRange: [0, screenHeight],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  
+  // Pan responder for swipe gestures
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt) => {
+        // Allow immediate response on drag handle area
+        const touchY = evt.nativeEvent.locationY;
+        return touchY < 50; // Drag handle area
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Check if touch is on drag handle or if scrolled to top
+        const touchY = evt.nativeEvent.locationY;
+        const isOnDragHandle = touchY < 50;
+        const isSwipingDown = gestureState.dy > 0;
+        const isAtTop = scrollOffset.current <= 0;
+        
+        return isOnDragHandle || (isSwipingDown && isAtTop && Math.abs(gestureState.dy) > 10);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Move the sheet with the finger
+        translateY.setValue(Math.max(0, gestureState.dy));
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // Determine if we should close or snap back
+        const shouldClose = gestureState.dy > 100 || gestureState.vy > 0.5;
+        
+        if (shouldClose) {
+          // Animate out and close
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            translateY.setValue(0);
+            onClose();
+          });
+        } else {
+          // Snap back to position
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 10,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (visible && video.ai_status === 'completed') {
@@ -37,6 +99,13 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       setSummary(null);
     }
   }, [visible, video.id, video.ai_status]);
+  
+  // Reset animation when modal opens/closes
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible, translateY]);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -80,30 +149,49 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity 
-        style={styles.modalContainer}
-        activeOpacity={1}
-        onPress={onClose}
-      >
+      <View style={styles.modalContainer}>
+        {/* Animated Backdrop */}
+        <Animated.View 
+          style={[
+            styles.backdrop,
+            {
+              opacity: backdropOpacity,
+            },
+          ]}
+        >
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={onClose}
+          />
+        </Animated.View>
         {/* Bottom Sheet */}
-        <TouchableOpacity 
-          style={styles.sheet}
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
+        <Animated.View 
+          style={[
+            styles.sheet,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
+          {...panResponder.panHandlers}
         >
           {/* Drag Handle */}
-          <TouchableOpacity onPress={onClose} style={styles.dragHandleContainer}>
+          <View style={styles.dragHandleContainer}>
             <View style={styles.dragHandle} />
-          </TouchableOpacity>
+          </View>
 
           {/* Sheet Content */}
           <ScrollView 
+            ref={scrollViewRef}
             style={styles.content}
             showsVerticalScrollIndicator={true}
             bounces={true}
             contentContainerStyle={styles.scrollContent}
             scrollEventThrottle={16}
             nestedScrollEnabled={true}
+            onScroll={(event) => {
+              scrollOffset.current = event.nativeEvent.contentOffset.y;
+            }}
           >
           {/* Video Title */}
           <Text style={styles.title} numberOfLines={2}>
@@ -165,8 +253,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           {/* Add some bottom spacing for better UX */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </Animated.View>
+      </View>
   </Modal>
   );
 }
@@ -177,10 +265,10 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   sheet: {
     backgroundColor: '#1c1c1e',
