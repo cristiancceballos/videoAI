@@ -175,36 +175,41 @@ async function generateSummaryAndTags(
   const prompt = `
     Analyze the following video transcript and provide:
     1. A concise summary (2-3 paragraphs)
-    2. 5-10 relevant tags for categorization
+    2. Exactly 3-5 relevant tags for categorization (most important only)
 
     ${videoTitle ? `Video Title: ${videoTitle}` : ''}
     
     Transcript:
     ${transcript}
 
-    Format your response as JSON with the following structure:
+    IMPORTANT: Return ONLY valid JSON without any markdown formatting or code blocks.
+    Format your response as plain JSON:
     {
       "summary": "Your summary here",
-      "tags": ["tag1", "tag2", ...]
+      "tags": ["tag1", "tag2", "tag3"]
     }
   `
 
   const result = await model.generateContent(prompt)
   const response = await result.response
-  const text = response.text()
+  let text = response.text()
+
+  // Clean up common markdown formatting
+  text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
 
   try {
     // Try to parse as JSON
     const parsed = JSON.parse(text)
     return {
       summary: parsed.summary || '',
-      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [], // Limit to 5 tags
     }
-  } catch {
+  } catch (error) {
+    console.error('Failed to parse Gemini response:', text)
     // Fallback if not valid JSON
     return {
       summary: text.substring(0, 500),
-      tags: extractBasicTags(text),
+      tags: extractBasicTags(text).slice(0, 5),
     }
   }
 }

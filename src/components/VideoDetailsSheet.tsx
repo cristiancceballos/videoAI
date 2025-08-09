@@ -77,9 +77,12 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
 
   // Pan gesture for dragging sheet down
   const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to vertical drags
-      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 10;
+      // Only respond to downward drags from the top area
+      const isDragHandleArea = evt.nativeEvent.pageY < 100;
+      const isDownwardDrag = gestureState.dy > 10;
+      return isDragHandleArea && isDownwardDrag;
     },
     onMoveShouldSetPanResponderCapture: () => false,
     onPanResponderGrant: () => {
@@ -186,7 +189,9 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
         <ScrollView 
           style={styles.content}
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          bounces={true}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.scrollContent}
         >
           {/* Video Title */}
           <Text style={styles.title} numberOfLines={2}>
@@ -297,7 +302,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 22,
@@ -402,6 +410,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   bottomSpacer: {
-    height: 40,
+    height: 20,
   },
 });
