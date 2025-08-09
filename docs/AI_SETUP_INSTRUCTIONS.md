@@ -20,12 +20,6 @@ Before running the AI features, you need to set up the following services:
 
 ### 3. Supabase Configuration
 
-#### Enable Queues
-1. Go to your Supabase Dashboard
-2. Navigate to Settings → Queues
-3. Enable "Expose Queues via PostgREST"
-4. Click Save
-
 #### Run Database Migration
 ```bash
 npx supabase db push
@@ -43,8 +37,11 @@ npx supabase secrets set GOOGLE_AI_API_KEY=AIza...
 npx supabase functions deploy ai-processor
 ```
 
-### 4. Trigger.dev Setup (For Audio Extraction)
+### 4. Trigger.dev Setup (Optional - For Videos > 25MB)
 
+**Note**: For MVP with videos under 25MB, this step is optional. The system will process videos directly.
+
+For production with larger videos:
 1. Create account at [trigger.dev](https://trigger.dev)
 2. Create a new project
 3. Install CLI: `npm install -g @trigger.dev/cli`
@@ -82,6 +79,14 @@ Deploy your Trigger.dev project:
 npx trigger.dev@latest deploy
 ```
 
+## How It Works
+
+1. **Automatic Processing**: When you upload a video, AI processing starts automatically
+2. **Status Tracking**: The video grid shows AI status with icons:
+   - 🟠 Orange spinner = Processing
+   - ✨ Green sparkle = Completed
+   - ❌ Red alert = Error
+
 ## Testing the Integration
 
 ### 1. Test Locally
@@ -89,15 +94,22 @@ npx trigger.dev@latest deploy
 # Start Supabase locally
 npx supabase start
 
-# In another terminal, serve functions
+# In another terminal, serve functions with environment variables
 npx supabase functions serve ai-processor --env-file .env.local
 ```
 
+Create `.env.local` file:
+```
+OPENAI_API_KEY=sk-...
+GOOGLE_AI_API_KEY=AIza...
+```
+
 ### 2. Test with a Video
-1. Upload a video through the app
-2. Check Supabase Dashboard → Table Editor → videos
-3. Look for `ai_status` column changing from 'pending' → 'processing' → 'completed'
-4. Check `transcripts` and `summaries` tables for results
+1. Upload a video through the app (< 25MB for now)
+2. AI processing will start automatically
+3. Check Supabase Dashboard → Table Editor → videos
+4. Look for `ai_status` column changing from 'pending' → 'processing' → 'completed'
+5. Check `transcripts` and `summaries` tables for results
 
 ### 3. Manual Testing
 You can manually trigger AI processing by calling the Edge Function:

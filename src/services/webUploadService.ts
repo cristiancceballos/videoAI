@@ -260,6 +260,12 @@ class WebUploadService {
       // Note: Thumbnail generation is handled by Bunny.net after upload
       // The video will have thumb_status: 'pending' until Bunny processes it
 
+      // 6. Trigger AI processing (fire and forget)
+      this.triggerAIProcessing(videoId, userId, uploadUrl.path, title).catch(error => {
+        console.error('AI processing trigger failed:', error);
+        // Don't fail the upload if AI processing fails
+      });
+
       return { success: true, videoId };
     } catch (error) {
       return { success: false, error: 'Unexpected error during upload' };
@@ -287,6 +293,48 @@ class WebUploadService {
     }
 
     return { valid: true };
+  }
+
+  // Trigger AI processing for a video
+  private async triggerAIProcessing(
+    videoId: string,
+    userId: string,
+    storagePath: string,
+    videoTitle?: string
+  ): Promise<void> {
+    try {
+      // Get the video URL for AI processing
+      const { data: { publicUrl } } = supabase.storage
+        .from('videos')
+        .getPublicUrl(storagePath);
+
+      if (!publicUrl) {
+        console.error('Failed to get public URL for AI processing');
+        return;
+      }
+
+      // For now, we'll pass the video URL directly
+      // In production with videos > 25MB, Trigger.dev would extract audio first
+      const audioUrl = publicUrl;
+
+      // Call the Edge Function
+      const { data, error } = await supabase.functions.invoke('ai-processor', {
+        body: {
+          videoId,
+          userId,
+          audioUrl,
+          videoTitle
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+      } else {
+        console.log('AI processing started for video:', videoId);
+      }
+    } catch (error) {
+      console.error('Failed to trigger AI processing:', error);
+    }
   }
 
   // Validate YouTube/TikTok URLs
