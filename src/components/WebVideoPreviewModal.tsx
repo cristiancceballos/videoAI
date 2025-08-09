@@ -11,6 +11,7 @@ import {
 // Removed unused imports
 import { WebMediaAsset } from '../services/webMediaService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
+import { AlertCircle } from 'lucide-react-native';
 
 interface WebVideoPreviewModalProps {
   visible: boolean;
@@ -140,9 +141,25 @@ export function WebVideoPreviewModal({
           <View style={styles.aiSummarySection}>
             <Text style={styles.aiSummaryTitle}>AI Summary</Text>
             <View style={styles.aiSummaryContent}>
-              <Text style={styles.aiSummaryPlaceholder}>
-                AI-generated slob will appear here automatically after upload... just not today
-              </Text>
+              {asset.fileSize > 50 * 1024 * 1024 ? (
+                <View style={styles.warningContainer}>
+                  <AlertCircle size={20} color="#FF9500" />
+                  <Text style={styles.warningText}>
+                    Large video (&gt;50MB) - AI features will not be available
+                  </Text>
+                </View>
+              ) : asset.fileSize > 25 * 1024 * 1024 ? (
+                <View style={styles.warningContainer}>
+                  <AlertCircle size={20} color="#FFD60A" />
+                  <Text style={styles.warningText}>
+                    AI features may be limited for this video size
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.aiSummaryPlaceholder}>
+                  AI-generated summary will appear here after upload
+                </Text>
+              )}
             </View>
           </View>
         </TouchableOpacity>
@@ -247,6 +264,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     ...getInterFontConfig('200'),
     color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#FFD60A',
+    marginLeft: 8,
     textAlign: 'center',
     lineHeight: 20,
   },

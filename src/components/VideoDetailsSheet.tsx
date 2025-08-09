@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { VideoWithMetadata, videoService } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
-import { Sparkles } from 'lucide-react-native';
+import { Sparkles, AlertCircle } from 'lucide-react-native';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -27,13 +27,14 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   
   // Animation values
   const translateY = useRef(new Animated.Value(0)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
   const scrollOffset = useRef(0);
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Backdrop opacity based on sheet position
-  const backdropOpacity = translateY.interpolate({
+  // Backdrop opacity based on sheet position during swipe
+  const swipeBackdropOpacity = translateY.interpolate({
     inputRange: [0, screenHeight],
-    outputRange: [1, 0],
+    outputRange: [0.4, 0],
     extrapolate: 'clamp',
   });
   
@@ -56,7 +57,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       },
       onPanResponderMove: (_, gestureState) => {
         // Move the sheet with the finger
-        translateY.setValue(Math.max(0, gestureState.dy));
+        const newValue = Math.max(0, gestureState.dy);
+        translateY.setValue(newValue);
+        // Update backdrop opacity during swipe
+        const opacity = 0.4 * (1 - newValue / screenHeight);
+        backdropOpacity.setValue(opacity);
       },
       onPanResponderRelease: (_, gestureState) => {
         // Determine if we should close or snap back
@@ -64,22 +69,37 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
         
         if (shouldClose) {
           // Animate out and close
-          Animated.timing(translateY, {
-            toValue: screenHeight,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => {
+          Animated.parallel([
+            Animated.timing(translateY, {
+              toValue: screenHeight,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(backdropOpacity, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
             translateY.setValue(0);
+            backdropOpacity.setValue(0);
             onClose();
           });
         } else {
           // Snap back to position
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 10,
-          }).start();
+          Animated.parallel([
+            Animated.spring(translateY, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 100,
+              friction: 10,
+            }),
+            Animated.timing(backdropOpacity, {
+              toValue: 0.4,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
         }
       },
     })
@@ -100,12 +120,31 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     }
   }, [visible, video.id, video.ai_status]);
   
-  // Reset animation when modal opens/closes
+  // Handle entrance/exit animations
   useEffect(() => {
     if (visible) {
-      translateY.setValue(0);
+      // Reset positions
+      translateY.setValue(screenHeight);
+      backdropOpacity.setValue(0);
+      
+      // Animate entrance
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropOpacity, {
+          toValue: 0.4,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset for next open
+      backdropOpacity.setValue(0);
     }
-  }, [visible, translateY]);
+  }, [visible, translateY, backdropOpacity]);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -146,7 +185,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
@@ -158,6 +197,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
               opacity: backdropOpacity,
             },
           ]}
+          pointerEvents={visible ? 'auto' : 'none'}
         >
           <TouchableOpacity 
             style={StyleSheet.absoluteFillObject}
@@ -203,33 +243,60 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             {formatDate(video.created_at)} • {formatDuration(video.duration)} • {formatFileSize(video.file_size)}
           </Text>
 
-          {/* AI Summary Section */}
-          {video.ai_status === 'completed' && (
+          {/* File Size Limitations Warning */}
+          {video.file_size && video.file_size > 50 * 1024 * 1024 ? (
             <View style={styles.metadataSection}>
-              <View style={styles.sectionHeader}>
-                <Sparkles size={20} color="#34C759" />
-                <Text style={styles.sectionTitle}>AI Summary</Text>
-              </View>
-              
-              {loadingSummary ? (
-                <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
-              ) : summary ? (
-                <Text style={styles.summaryText}>{summary}</Text>
-              ) : (
-                <Text style={styles.errorText}>Summary not available</Text>
-              )}
-              
-              {/* Tags */}
-              {video.tags && video.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
-                  {video.tags.map((tag, index) => (
-                    <View key={index} style={styles.tagChip}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
+              <View style={styles.warningContainer}>
+                <AlertCircle size={24} color="#FF9500" />
+                <View style={styles.warningTextContainer}>
+                  <Text style={styles.warningTitle}>Large Video File</Text>
+                  <Text style={styles.warningText}>
+                    This video is over 50MB. Playback and AI features may be limited. Consider uploading a smaller file for the best experience.
+                  </Text>
                 </View>
-              )}
+              </View>
             </View>
+          ) : video.file_size && video.file_size > 25 * 1024 * 1024 ? (
+            <View style={styles.metadataSection}>
+              <View style={styles.warningContainer}>
+                <AlertCircle size={24} color="#FFD60A" />
+                <View style={styles.warningTextContainer}>
+                  <Text style={styles.warningTitle}>Limited AI Features</Text>
+                  <Text style={styles.warningText}>
+                    Videos over 25MB have limited AI processing. Summary and tags may not be available.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            /* AI Summary Section */
+            video.ai_status === 'completed' && (
+              <View style={styles.metadataSection}>
+                <View style={styles.sectionHeader}>
+                  <Sparkles size={20} color="#34C759" />
+                  <Text style={styles.sectionTitle}>AI Summary</Text>
+                </View>
+                
+                {loadingSummary ? (
+                  <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
+                ) : summary ? (
+                  <Text style={styles.summaryText}>{summary}</Text>
+                ) : (
+                  <Text style={styles.errorText}>Summary not available</Text>
+                )}
+                
+                {/* Tags */}
+                {video.tags && video.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {video.tags.map((tag, index) => (
+                      <View key={index} style={styles.tagChip}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )
           )}
           
           {/* AI Processing Status */}
@@ -268,7 +335,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 1)',
   },
   sheet: {
     backgroundColor: '#1c1c1e',
@@ -408,5 +475,29 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 20,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#2c2c2e',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'flex-start',
+  },
+  warningTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#FFD60A',
+    marginBottom: 4,
+  },
+  warningText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#e5e5e7',
+    lineHeight: 20,
   },
 });
