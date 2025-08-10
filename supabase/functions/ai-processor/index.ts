@@ -175,7 +175,18 @@ async function generateSummaryAndTags(
   const prompt = `
     Analyze the following video transcript and provide:
     1. A concise summary (2-3 paragraphs)
-    2. Exactly 3-5 relevant tags for categorization (most important only)
+    2. Generate 4-6 relevant tags following this pattern:
+       - 1-2 specific tags about the exact topic/subject
+       - 2-3 broader category tags from: education, technology, programming, cooking, 
+         fitness, health, motivation, lifestyle, business, science, entertainment, 
+         gaming, music, art, travel, sports, diy, tutorial, review, comedy, news
+       - Choose tags that accurately represent the content
+    
+    Example patterns:
+    - Cooking video: ["pasta recipes", "italian cuisine", "cooking", "food", "lifestyle"]
+    - Programming video: ["react hooks", "web development", "programming", "technology", "education"]
+    - Workout video: ["hiit workout", "cardio", "fitness", "health", "lifestyle"]
+    - Motivational speech: ["success mindset", "personal growth", "motivation", "education", "lifestyle"]
 
     ${videoTitle ? `Video Title: ${videoTitle}` : ''}
     
@@ -186,7 +197,7 @@ async function generateSummaryAndTags(
     Format your response as plain JSON:
     {
       "summary": "Your summary here",
-      "tags": ["tag1", "tag2", "tag3"]
+      "tags": ["specific_tag1", "specific_tag2", "broad_category1", "broad_category2"]
     }
   `
 
