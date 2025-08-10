@@ -30,7 +30,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   // Editing states
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(video.title);
-  const [showTagOptions, setShowTagOptions] = useState(false);
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [editedTags, setEditedTags] = useState<string[]>(video.tags || []);
   const [newTag, setNewTag] = useState('');
@@ -131,7 +130,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     setEditedTags(video.tags || []);
     setIsEditingTitle(false);
     setIsEditingTags(false);
-    setShowTagOptions(false);
   }, [video]);
   
   // Handle entrance/exit animations
@@ -195,7 +193,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     if (success) {
       video.tags = editedTags; // Update local reference
       setIsEditingTags(false);
-      setShowTagOptions(false);
     }
     setIsSaving(false);
   };
@@ -370,53 +367,31 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                 
                 {/* Tags Section */}
                 {(video.tags && video.tags.length > 0) || isEditingTags ? (
-                  <View style={styles.tagsSection}>
+                  <View style={[styles.tagsSection, isEditingTags && styles.tagsSectionEditing]}>
                     <View style={styles.tagsSectionHeader}>
                       <Text style={styles.tagsSectionTitle}>Tags</Text>
-                      <TouchableOpacity 
-                        onPress={() => {
-                          if (isEditingTags) {
-                            handleSaveTags();
-                          } else {
-                            setShowTagOptions(!showTagOptions);
-                          }
-                        }}
-                        style={styles.iconButton}
-                      >
-                        {isEditingTags ? (
-                          <Check size={20} color="#34C759" />
-                        ) : (
+                      {isEditingTags ? (
+                        <TouchableOpacity 
+                          onPress={handleSaveTags}
+                          disabled={isSaving}
+                          style={styles.saveButton}
+                        >
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity 
+                          onPress={() => setIsEditingTags(true)}
+                          style={styles.iconButton}
+                        >
                           <MoreVertical size={20} color="#8e8e93" />
-                        )}
-                      </TouchableOpacity>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                    
-                    {showTagOptions && !isEditingTags && (
-                      <TouchableOpacity 
-                        style={styles.tagOptionsMenu}
-                        onPress={() => {
-                          setIsEditingTags(true);
-                          setShowTagOptions(false);
-                        }}
-                      >
-                        <Text style={styles.tagOptionText}>Edit Tags</Text>
-                      </TouchableOpacity>
-                    )}
                     
                     <View style={styles.tagsContainer}>
                       {isEditingTags ? (
                         <>
-                          {editedTags.map((tag, index) => (
-                            <View key={index} style={styles.editableTagChip}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                              <TouchableOpacity 
-                                onPress={() => removeTag(index)}
-                                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                              >
-                                <X size={14} color="#8e8e93" />
-                              </TouchableOpacity>
-                            </View>
-                          ))}
+                          {/* Add tag input at the top */}
                           <View style={styles.addTagContainer}>
                             <TextInput
                               style={styles.addTagInput}
@@ -428,9 +403,21 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                               returnKeyType="done"
                             />
                             <TouchableOpacity onPress={addTag}>
-                              <Plus size={16} color="#8e8e93" />
+                              <Plus size={18} color="#34C759" />
                             </TouchableOpacity>
                           </View>
+                          {/* Existing tags with delete option */}
+                          {editedTags.map((tag, index) => (
+                            <View key={index} style={styles.editableTagChip}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                              <TouchableOpacity 
+                                onPress={() => removeTag(index)}
+                                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                              >
+                                <X size={14} color="#FF3B30" />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
                         </>
                       ) : (
                         editedTags.map((tag, index) => (
@@ -464,6 +451,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           )}
 
 
+          {/* Helper text about tags */}
+          <Text style={styles.helperText}>
+            Tags help improve search 
+          </Text>
+          
           {/* Add some bottom spacing for better UX */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -682,6 +674,12 @@ const styles = StyleSheet.create({
   },
   tagsSection: {
     marginTop: 16,
+    padding: 0,
+    borderRadius: 12,
+  },
+  tagsSectionEditing: {
+    backgroundColor: '#1a1a1a',
+    padding: 12,
   },
   tagsSectionHeader: {
     flexDirection: 'row',
@@ -695,15 +693,16 @@ const styles = StyleSheet.create({
     ...getInterFontConfig('300'),
     color: '#fff',
   },
-  tagOptionsMenu: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+  saveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: '#34C759',
+    borderRadius: 6,
   },
-  tagOptionText: {
+  saveButtonText: {
     fontSize: 14,
-    ...getInterFontConfig('200'),
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
     color: '#fff',
   },
   editableTagChip: {
@@ -738,5 +737,13 @@ const styles = StyleSheet.create({
         outlineStyle: 'none',
       },
     }),
+  },
+  helperText: {
+    fontSize: 12,
+    ...getInterFontConfig('200'),
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 10,
   },
 });
