@@ -20,13 +20,18 @@ import { VideoGridItem } from '../../components/VideoGridItem';
 import { TikTokVideoPlayer } from '../../components/TikTokVideoPlayer';
 import { ProfileTabNavigator, ProfileTab } from '../../components/ProfileTabNavigator';
 import { BunnyStreamService } from '../../services/bunnyStreamService';
+import { SearchBar } from '../../components/SearchBar';
+import { searchService } from '../../services/searchService';
 
 export function HomeScreen() {
   const { user } = useAuth();
   const [videos, setVideos] = useState<VideoWithMetadata[]>([]);
+  const [filteredVideos, setFilteredVideos] = useState<VideoWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
   
   // Video player state
   const [selectedVideo, setSelectedVideo] = useState<VideoWithMetadata | null>(null);
@@ -48,6 +53,15 @@ export function HomeScreen() {
       return cleanup;
     }
   }, [user]);
+
+  // Update filtered videos when videos or search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      performSearch(searchQuery);
+    } else {
+      setFilteredVideos(videos);
+    }
+  }, [videos, searchQuery]);
 
   // Clean up video URL cache on unmount
   useEffect(() => {
@@ -104,6 +118,34 @@ export function HomeScreen() {
     };
   }, [user, videos]);
 
+  const performSearch = async (query: string) => {
+    if (!user) return;
+    
+    setSearching(true);
+    try {
+      const results = await searchService.searchVideos(user.id, query);
+      setFilteredVideos(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      // Fallback to client-side filtering
+      const filtered = videos.filter(video => {
+        const lowerQuery = query.toLowerCase();
+        const titleMatch = video.title?.toLowerCase().includes(lowerQuery);
+        const tagMatch = video.tags?.some(tag => 
+          tag.toLowerCase().includes(lowerQuery)
+        );
+        return titleMatch || tagMatch;
+      });
+      setFilteredVideos(filtered);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
   const loadVideos = async (showLoading = false) => {
     if (!user) return;
     
@@ -112,6 +154,10 @@ export function HomeScreen() {
     try {
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
+      // Update filtered videos if no search is active
+      if (!searchQuery) {
+        setFilteredVideos(userVideos);
+      }
       
       
       // Process any pending thumbnails with Bunny
@@ -132,6 +178,10 @@ export function HomeScreen() {
       const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
         // Real-time update received
         setVideos(updatedVideos);
+        // Update filtered videos if no search is active
+        if (!searchQuery) {
+          setFilteredVideos(updatedVideos);
+        }
       });
 
       return () => {
@@ -421,7 +471,7 @@ export function HomeScreen() {
       case 'posts':
         return (
           <FlatList
-            data={videos}
+            data={filteredVideos}
             renderItem={renderVideoGridItem}
             keyExtractor={(item) => item.id}
             numColumns={3}
@@ -459,31 +509,39 @@ export function HomeScreen() {
     }
   };
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Video size={48} color="#fff" style={styles.emptyIcon} />
-      <Text style={styles.emptyTitle}>No videos yet</Text>
-      <Text style={styles.emptySubtitle}>
-        Upload your first video to get started
-      </Text>
-    </View>
-  );
+  const renderEmptyState = () => {
+    if (searchQuery) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Search size={48} color="#666" style={styles.emptyIcon} />
+          <Text style={styles.emptyTitle}>No results found</Text>
+          <Text style={styles.emptySubtitle}>
+            Try searching with different keywords
+          </Text>
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.emptyContainer}>
+        <Video size={48} color="#fff" style={styles.emptyIcon} />
+        <Text style={styles.emptyTitle}>No videos yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Upload your first video to get started
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <View style={styles.header}>
-          <View style={styles.searchBarContainer}>
-            <View style={styles.searchBar}>
-              <Search size={20} color="#8e8e8e" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search with VideoAI"
-                placeholderTextColor="#8e8e8e"
-                editable={false} // For now, just visual
-              />
-            </View>
-          </View>
+          {/* Search Bar */}
+          <SearchBar 
+            onSearch={handleSearch}
+            placeholder="Search videos, tags, cs, ml, ai..."
+          />
         </View>
         <ProfileTabNavigator
           activeTab={activeTab}
@@ -523,42 +581,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   header: {
-    paddingHorizontal: isSmallScreen ? 12 : 16,
     paddingTop: Platform.OS === 'web' ? 20 : 20,
-    paddingBottom: 6, // Reduced from 12px
+    paddingBottom: 6,
     backgroundColor: '#000',
-  },
-  searchBarContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1c1c1c',
-    borderRadius: 19, // Fully rounded edges
-    paddingHorizontal: 12,
-    height: 38, // Increased by 5% from 36px
-    width: '100%',
-    // Subtle shadow for depth
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#fff',
-    ...getInterFontConfig('200'),
-    padding: 0,
   },
   content: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
