@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   Animated,
   PanResponder,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { VideoWithMetadata, videoService } from '../services/videoService';
-import { getInterFontConfig } from '../utils/fontUtils';
-import { Sparkles, AlertCircle } from 'lucide-react-native';
+import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
+import { Sparkles, AlertCircle, Edit2, MoreVertical, Plus, X, Check } from 'lucide-react-native';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -25,18 +27,21 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   
+  // Editing states
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(video.title);
+  const [showTagOptions, setShowTagOptions] = useState(false);
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [editedTags, setEditedTags] = useState<string[]>(video.tags || []);
+  const [newTag, setNewTag] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  
   // Animation values
   const translateY = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const scrollOffset = useRef(0);
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Backdrop opacity based on sheet position during swipe
-  const swipeBackdropOpacity = translateY.interpolate({
-    inputRange: [0, screenHeight],
-    outputRange: [0.4, 0],
-    extrapolate: 'clamp',
-  });
   
   // Pan responder for swipe gestures
   const panResponder = useRef(
@@ -120,6 +125,15 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     }
   }, [visible, video.id, video.ai_status]);
   
+  // Reset editing states when video changes
+  useEffect(() => {
+    setEditedTitle(video.title);
+    setEditedTags(video.tags || []);
+    setIsEditingTitle(false);
+    setIsEditingTags(false);
+    setShowTagOptions(false);
+  }, [video]);
+  
   // Handle entrance/exit animations
   useEffect(() => {
     if (visible) {
@@ -157,6 +171,44 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     if (!bytes) return '';
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
+  };
+
+  // Handler functions for editing
+  const handleSaveTitle = async () => {
+    if (!editedTitle.trim() || editedTitle === video.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    
+    setIsSaving(true);
+    const success = await videoService.updateVideo(video.id, { title: editedTitle });
+    if (success) {
+      video.title = editedTitle; // Update local reference
+      setIsEditingTitle(false);
+    }
+    setIsSaving(false);
+  };
+
+  const handleSaveTags = async () => {
+    setIsSaving(true);
+    const success = await videoService.updateVideo(video.id, { tags: editedTags });
+    if (success) {
+      video.tags = editedTags; // Update local reference
+      setIsEditingTags(false);
+      setShowTagOptions(false);
+    }
+    setIsSaving(false);
+  };
+
+  const removeTag = (index: number) => {
+    setEditedTags(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && !editedTags.includes(newTag.trim())) {
+      setEditedTags(prev => [...prev, newTag.trim()]);
+      setNewTag('');
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -234,9 +286,40 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             }}
           >
           {/* Video Title */}
-          <Text style={styles.title} numberOfLines={2}>
-            {video.title}
-          </Text>
+          <View style={styles.titleContainer}>
+            {isEditingTitle ? (
+              <View style={styles.titleEditContainer}>
+                <TextInput
+                  style={styles.titleInput}
+                  value={editedTitle}
+                  onChangeText={setEditedTitle}
+                  autoFocus
+                  multiline
+                  numberOfLines={2}
+                  editable={!isSaving}
+                />
+                <TouchableOpacity 
+                  onPress={handleSaveTitle}
+                  disabled={isSaving}
+                  style={styles.iconButton}
+                >
+                  <Check size={20} color="#34C759" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.titleDisplayContainer}>
+                <Text style={styles.title} numberOfLines={2}>
+                  {video.title}
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => setIsEditingTitle(true)}
+                  style={styles.iconButton}
+                >
+                  <Edit2 size={18} color="#8e8e93" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           {/* Upload Date, Duration, and File Size */}
           <Text style={styles.subtitle}>
@@ -285,16 +368,80 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                   <Text style={styles.errorText}>Summary not available</Text>
                 )}
                 
-                {/* Tags */}
-                {video.tags && video.tags.length > 0 && (
-                  <View style={styles.tagsContainer}>
-                    {video.tags.map((tag, index) => (
-                      <View key={index} style={styles.tagChip}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
+                {/* Tags Section */}
+                {(video.tags && video.tags.length > 0) || isEditingTags ? (
+                  <View style={styles.tagsSection}>
+                    <View style={styles.tagsSectionHeader}>
+                      <Text style={styles.tagsSectionTitle}>Tags</Text>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          if (isEditingTags) {
+                            handleSaveTags();
+                          } else {
+                            setShowTagOptions(!showTagOptions);
+                          }
+                        }}
+                        style={styles.iconButton}
+                      >
+                        {isEditingTags ? (
+                          <Check size={20} color="#34C759" />
+                        ) : (
+                          <MoreVertical size={20} color="#8e8e93" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {showTagOptions && !isEditingTags && (
+                      <TouchableOpacity 
+                        style={styles.tagOptionsMenu}
+                        onPress={() => {
+                          setIsEditingTags(true);
+                          setShowTagOptions(false);
+                        }}
+                      >
+                        <Text style={styles.tagOptionText}>Edit Tags</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    <View style={styles.tagsContainer}>
+                      {isEditingTags ? (
+                        <>
+                          {editedTags.map((tag, index) => (
+                            <View key={index} style={styles.editableTagChip}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                              <TouchableOpacity 
+                                onPress={() => removeTag(index)}
+                                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                              >
+                                <X size={14} color="#8e8e93" />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                          <View style={styles.addTagContainer}>
+                            <TextInput
+                              style={styles.addTagInput}
+                              placeholder="Add tag"
+                              placeholderTextColor="#666"
+                              value={newTag}
+                              onChangeText={setNewTag}
+                              onSubmitEditing={addTag}
+                              returnKeyType="done"
+                            />
+                            <TouchableOpacity onPress={addTag}>
+                              <Plus size={16} color="#8e8e93" />
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      ) : (
+                        editedTags.map((tag, index) => (
+                          <View key={index} style={styles.tagChip}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))
+                      )}
+                    </View>
                   </View>
-                )}
+                ) : null}
               </View>
             )
           )}
@@ -499,5 +646,97 @@ const styles = StyleSheet.create({
     ...getInterFontConfig('200'),
     color: '#e5e5e7',
     lineHeight: 20,
+  },
+  titleContainer: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  titleDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  titleEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  titleInput: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '600',
+    ...getInterFontConfigForInputs('300'),
+    color: '#fff',
+    lineHeight: 28,
+    padding: 0,
+    marginRight: 8,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      },
+    }),
+  },
+  iconButton: {
+    padding: 4,
+    marginTop: 2,
+  },
+  tagsSection: {
+    marginTop: 16,
+  },
+  tagsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tagsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+  },
+  tagOptionsMenu: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  tagOptionText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#fff',
+  },
+  editableTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2c2c2e',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+    gap: 6,
+  },
+  addTagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2c2c2e',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  addTagInput: {
+    fontSize: 14,
+    ...getInterFontConfigForInputs('200'),
+    color: '#8e8e93',
+    minWidth: 60,
+    padding: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      },
+    }),
   },
 });

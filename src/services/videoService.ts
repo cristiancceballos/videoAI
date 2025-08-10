@@ -279,7 +279,7 @@ class VideoService {
   // Update video metadata
   async updateVideo(
     videoId: string, 
-    updates: Partial<Pick<Video, 'title' | 'description' | 'status'>>
+    updates: Partial<Pick<Video, 'title' | 'description' | 'status' | 'tags'>>
   ): Promise<boolean> {
     try {
       const { error } = await supabase

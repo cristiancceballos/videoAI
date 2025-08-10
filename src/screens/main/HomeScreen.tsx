@@ -583,6 +583,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     ...getInterFontConfig('200'),
     padding: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      },
+    }),
   },
   content: {
     paddingHorizontal: isSmallScreen ? 16 : 20,
