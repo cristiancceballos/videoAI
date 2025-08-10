@@ -175,10 +175,7 @@ async function generateSummaryAndTags(
   const prompt = `
     Analyze the following video transcript and provide:
     1. A concise summary (2-3 paragraphs)
-    2. 5-8 tags that include:
-       - 3-4 specific topic tags (e.g., "leetcode", "react hooks", "python basics")
-       - 2-3 broader category tags (e.g., "computer science", "programming", "education", "technology")
-       - 1-2 skill level or type tags when relevant (e.g., "beginner", "tutorial", "advanced")
+    2. Exactly 3-5 relevant tags for categorization (most important only)
 
     ${videoTitle ? `Video Title: ${videoTitle}` : ''}
     
@@ -186,12 +183,10 @@ async function generateSummaryAndTags(
     ${transcript}
 
     IMPORTANT: Return ONLY valid JSON without any markdown formatting or code blocks.
-    Think broadly about categories - if it's about coding, include "programming" and "computer science".
-    If it's about AI/ML, include "artificial intelligence" and "technology".
     Format your response as plain JSON:
     {
       "summary": "Your summary here",
-      "tags": ["specific_tag1", "specific_tag2", "category_tag1", "category_tag2"]
+      "tags": ["tag1", "tag2", "tag3"]
     }
   `
 
