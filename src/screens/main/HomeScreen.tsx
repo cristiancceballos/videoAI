@@ -24,6 +24,8 @@ import { BunnyStreamService } from '../../services/bunnyStreamService';
 export function HomeScreen() {
   const { user } = useAuth();
   const [videos, setVideos] = useState<VideoWithMetadata[]>([]);
+  const [filteredVideos, setFilteredVideos] = useState<VideoWithMetadata[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -60,6 +62,23 @@ export function HomeScreen() {
       });
     };
   }, []);
+
+  // Filter videos based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredVideos(videos);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = videos.filter(video => {
+        // Search in title
+        if (video.title?.toLowerCase().includes(query)) return true;
+        // Search in tags
+        if (video.tags?.some(tag => tag.toLowerCase().includes(query))) return true;
+        return false;
+      });
+      setFilteredVideos(filtered);
+    }
+  }, [searchQuery, videos]);
 
   // Refresh videos when screen comes into focus (e.g., after uploading)
   useFocusEffect(
@@ -112,6 +131,7 @@ export function HomeScreen() {
     try {
       const userVideos = await videoService.getUserVideos(user.id);
       setVideos(userVideos);
+      setFilteredVideos(userVideos);
       
       
       // Process any pending thumbnails with Bunny
@@ -132,6 +152,9 @@ export function HomeScreen() {
       const subscription = videoService.subscribeToVideoUpdates(user.id, (updatedVideos) => {
         // Real-time update received
         setVideos(updatedVideos);
+        if (searchQuery.trim() === '') {
+          setFilteredVideos(updatedVideos);
+        }
       });
 
       return () => {
@@ -421,7 +444,7 @@ export function HomeScreen() {
       case 'posts':
         return (
           <FlatList
-            data={videos}
+            data={filteredVideos}
             renderItem={renderVideoGridItem}
             keyExtractor={(item) => item.id}
             numColumns={3}
@@ -480,7 +503,8 @@ export function HomeScreen() {
                 style={styles.searchInput}
                 placeholder="Search with VideoAI"
                 placeholderTextColor="#8e8e8e"
-                editable={false} // For now, just visual
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
           </View>
