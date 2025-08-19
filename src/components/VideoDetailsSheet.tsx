@@ -140,8 +140,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   useEffect(() => {
     if (!visible || !video.id) return;
     
-    console.log(`[VideoDetailsSheet] Setting up realtime subscription for video ${video.id}`);
-    
     // Create channel for real-time updates
     const channel = supabase
       .channel(`video_details_${video.id}`)
@@ -154,10 +152,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           filter: `id=eq.${video.id}`
         },
         (payload) => {
-          console.log('[VideoDetailsSheet] Received video update:', payload);
           // Update AI status when video is updated
           if (payload.new && 'ai_status' in payload.new) {
-            console.log(`[VideoDetailsSheet] AI status changed: ${payload.new.ai_status}`);
             setCurrentAiStatus(payload.new.ai_status);
             
             // Update tags if they changed
@@ -176,10 +172,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           filter: `video_id=eq.${video.id}`
         },
         (payload) => {
-          console.log('[VideoDetailsSheet] Received summary insert:', payload);
           // New summary was inserted, fetch it
           if (payload.new && 'content' in payload.new) {
-            console.log('[VideoDetailsSheet] New summary received');
             setSummary(payload.new.content);
             setLoadingSummary(false);
           }
@@ -187,15 +181,12 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       )
       .subscribe((status, err) => {
         if (err) {
-          console.error('[VideoDetailsSheet] Subscription error:', err);
-        } else {
-          console.log(`[VideoDetailsSheet] Subscription status: ${status}`);
+          // Silently handle subscription errors
         }
       });
     
     // Cleanup subscription on unmount or when sheet closes
     return () => {
-      console.log(`[VideoDetailsSheet] Cleaning up subscription for video ${video.id}`);
       supabase.removeChannel(channel);
     };
   }, [visible, video.id]);
@@ -203,8 +194,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   // Fallback polling for AI status when processing
   useEffect(() => {
     if (!visible || !video.id || currentAiStatus !== 'processing') return;
-    
-    console.log('[VideoDetailsSheet] Starting fallback polling for AI status');
     
     const pollInterval = setInterval(async () => {
       try {
@@ -217,7 +206,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
         
         if (!videoError && videoData) {
           if (videoData.ai_status !== currentAiStatus) {
-            console.log(`[VideoDetailsSheet] Polling detected status change: ${videoData.ai_status}`);
             setCurrentAiStatus(videoData.ai_status);
             
             if (videoData.tags) {
@@ -236,7 +224,6 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
               .single();
             
             if (!summaryError && summaryData) {
-              console.log('[VideoDetailsSheet] Polling fetched summary');
               setSummary(summaryData.content);
               setLoadingSummary(false);
             }
@@ -244,17 +231,15 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           
           // Stop polling if status is no longer processing
           if (videoData.ai_status !== 'processing') {
-            console.log('[VideoDetailsSheet] Stopping polling - status is no longer processing');
             clearInterval(pollInterval);
           }
         }
       } catch (error) {
-        console.error('[VideoDetailsSheet] Polling error:', error);
+        // Silently handle polling errors
       }
     }, 2000); // Poll every 2 seconds
     
     return () => {
-      console.log('[VideoDetailsSheet] Cleaning up polling interval');
       clearInterval(pollInterval);
     };
   }, [visible, video.id, currentAiStatus]);

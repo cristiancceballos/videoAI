@@ -31,6 +31,11 @@ export function WebVideoPreviewModal({
   const [title, setTitle] = React.useState('');
   const titleInputRef = React.useRef<any>(null);
   
+  const formatFileSize = (bytes: number) => {
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+  
   // Removed thumbnail-related state
   
   // Cleanup blob URL when component unmounts
@@ -91,11 +96,11 @@ export function WebVideoPreviewModal({
           <Text style={styles.headerTitle}>Preview Video</Text>
           <TouchableOpacity 
             onPress={handleUpload} 
-            style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-            disabled={uploading}
+            style={[styles.uploadButton, (uploading || asset.fileSize > 50 * 1024 * 1024) && styles.uploadButtonDisabled]}
+            disabled={uploading || asset.fileSize > 50 * 1024 * 1024}
           >
             <Text style={styles.uploadText}>
-              {uploading ? 'Uploading...' : 'Upload'}
+              {uploading ? 'Uploading...' : asset.fileSize > 50 * 1024 * 1024 ? 'Too Large' : 'Upload'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -137,28 +142,44 @@ export function WebVideoPreviewModal({
             </View>
           </View>
 
-          {/* 3. AI Summary Section (Placeholder) */}
-          <View style={styles.aiSummarySection}>
-            <Text style={styles.aiSummaryTitle}>AI Summary</Text>
-            <View style={styles.aiSummaryContent}>
+          {/* Video Size and Restrictions Section */}
+          <View style={styles.sizeSection}>
+            <Text style={styles.sizeTitle}>Video Information</Text>
+            <View style={styles.sizeContent}>
+              <Text style={styles.sizeText}>
+                Size: {formatFileSize(asset.fileSize)}
+              </Text>
+              
               {asset.fileSize > 50 * 1024 * 1024 ? (
-                <View style={styles.warningContainer}>
-                  <AlertCircle size={20} color="#FF9500" />
-                  <Text style={styles.warningText}>
-                    Large video (&gt;50MB) - AI features will not be available
-                  </Text>
+                <View style={[styles.restrictionCard, styles.restrictionError]}>
+                  <AlertCircle size={20} color="#FF3B30" />
+                  <View style={styles.restrictionTextContainer}>
+                    <Text style={styles.restrictionTitle}>❌ File Too Large</Text>
+                    <Text style={styles.restrictionText}>
+                      Maximum upload size is 50MB. Please select a smaller video.
+                    </Text>
+                  </View>
                 </View>
               ) : asset.fileSize > 25 * 1024 * 1024 ? (
-                <View style={styles.warningContainer}>
+                <View style={[styles.restrictionCard, styles.restrictionWarning]}>
                   <AlertCircle size={20} color="#FFD60A" />
-                  <Text style={styles.warningText}>
-                    AI features may be limited for this video size
-                  </Text>
+                  <View style={styles.restrictionTextContainer}>
+                    <Text style={styles.restrictionTitle}>⚠️ Limited Features</Text>
+                    <Text style={styles.restrictionText}>
+                      AI processing not available for videos over 25MB
+                    </Text>
+                  </View>
                 </View>
               ) : (
-                <Text style={styles.aiSummaryPlaceholder}>
-                  AI-generated summary will appear here after upload
-                </Text>
+                <View style={[styles.restrictionCard, styles.restrictionSuccess]}>
+                  <AlertCircle size={20} color="#34C759" />
+                  <View style={styles.restrictionTextContainer}>
+                    <Text style={styles.restrictionTitle}>✅ Full AI Features Available</Text>
+                    <Text style={styles.restrictionText}>
+                      Your video will be processed with AI summary and tags
+                    </Text>
+                  </View>
+                </View>
               )}
             </View>
           </View>
@@ -242,43 +263,62 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     minHeight: 80,
   },
-  // AI Summary Section
-  aiSummarySection: {
+  // Size and Restrictions Section
+  sizeSection: {
     marginBottom: 20,
   },
-  aiSummaryTitle: {
+  sizeTitle: {
     fontSize: 16,
     fontWeight: '600',
     ...getInterFontConfig('300'),
     color: '#fff',
     marginBottom: 12,
   },
-  aiSummaryContent: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 16,
-    minHeight: 100,
-    justifyContent: 'center',
+  sizeContent: {
+    gap: 12,
   },
-  aiSummaryPlaceholder: {
-    fontSize: 14,
+  sizeText: {
+    fontSize: 16,
     ...getInterFontConfig('200'),
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
+    color: '#e5e5e7',
+    marginBottom: 8,
   },
-  warningContainer: {
+  restrictionCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
   },
-  warningText: {
+  restrictionSuccess: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.3)',
+  },
+  restrictionWarning: {
+    backgroundColor: 'rgba(255, 214, 10, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 10, 0.3)',
+  },
+  restrictionError: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  restrictionTextContainer: {
+    flex: 1,
+  },
+  restrictionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 4,
+  },
+  restrictionText: {
     fontSize: 14,
     ...getInterFontConfig('200'),
-    color: '#FFD60A',
-    marginLeft: 8,
-    textAlign: 'center',
+    color: '#e5e5e7',
     lineHeight: 20,
   },
 });

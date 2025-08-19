@@ -36,14 +36,9 @@ export function UploadScreen() {
   const handlePickFromDevice = async () => {
     const asset = await webMediaService.pickVideoFromDevice();
     if (asset) {
-      // Validate file size and duration
-      if (webMediaService.isFileTooLarge(asset.fileSize)) {
-        Alert.alert('File Too Large', 'Please select a video smaller than 100MB');
-        return;
-      }
-      
-      if (webMediaService.isDurationTooLong(asset.duration)) {
-        Alert.alert('Video Too Long', 'Please select a video shorter than 30 minutes');
+      // Validate file size (50MB max)
+      if (asset.fileSize > 50 * 1024 * 1024) {
+        Alert.alert('File Too Large', 'Please select a video smaller than 50MB');
         return;
       }
 
@@ -55,6 +50,12 @@ export function UploadScreen() {
   const handleRecordVideo = async () => {
     const asset = await webMediaService.recordVideoWithCamera();
     if (asset) {
+      // Validate file size (50MB max)
+      if (asset.fileSize > 50 * 1024 * 1024) {
+        Alert.alert('File Too Large', 'The recorded video is too large (>50MB). Please record a shorter video.');
+        return;
+      }
+      
       setSelectedAsset(asset);
       setShowPreview(true);
     }
@@ -147,6 +148,46 @@ export function UploadScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Limitations Info Section */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeader}>
+            <AlertTriangle size={20} color="#FFD60A" />
+            <Text style={styles.infoTitle}>Upload Guidelines</Text>
+          </View>
+          
+          <View style={styles.infoContent}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>File Size Limits:</Text>
+              <Text style={styles.infoText}>• Maximum upload size: 50MB</Text>
+              <Text style={styles.infoText}>• Videos under 25MB get full AI features</Text>
+              <Text style={styles.infoText}>• Videos 25-50MB: No AI processing</Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>For Best AI Results:</Text>
+              <Text style={styles.infoText}>• Clear audio quality is essential</Text>
+              <Text style={styles.infoText}>• Minimize background noise</Text>
+              <Text style={styles.infoText}>• Speak clearly and at normal pace</Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Recording vs Downloaded Videos:</Text>
+              <Text style={styles.infoText}>📱 Videos you record: ~2.5MB per second</Text>
+              <Text style={styles.infoText}>📥 Downloaded videos: ~0.5MB per second</Text>
+              <Text style={styles.infoText}>💡 Your camera records at cinema quality!</Text>
+              <Text style={styles.infoText}>🎯 A 20-sec recording ≈ 50MB limit</Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Tips for Success:</Text>
+              <Text style={styles.infoText}>• Downloaded videos work best (pre-optimized)</Text>
+              <Text style={styles.infoText}>• Use Medium quality for longer recordings</Text>
+              <Text style={styles.infoText}>• Good lighting improves thumbnails</Text>
+              <Text style={styles.infoText}>• AI summary appears after upload</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>From Device</Text>
           
@@ -268,5 +309,45 @@ const styles = StyleSheet.create({
     fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
     ...getInterFontConfig('300'), // Light 300 Italic with premium -1.8 letterSpacing
+  },
+  infoCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#FFD60A',
+    marginLeft: 8,
+  },
+  infoContent: {
+    gap: 16,
+  },
+  infoItem: {
+    gap: 6,
+  },
+  infoLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#fff',
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 14,
+    ...getInterFontConfig('200'),
+    color: '#e5e5e7',
+    lineHeight: 20,
+    marginLeft: 8,
   },
 });

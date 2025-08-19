@@ -191,13 +191,14 @@ class WebMediaService {
         'Camera recording is optimized for mobile browsers. On desktop, please use "Choose File" instead.',
         [
           {
-            text: 'Choose File Instead', 
-            onPress: () => this.pickVideoFromDevice(),
+            text: 'Use File Picker',
+            onPress: () => {
+              // Will be handled by the calling component
+            }
           },
           { text: 'Cancel', style: 'cancel' }
         ]
       );
-      
       return null;
     } catch (error) {
       console.error('Camera access error:', error);
