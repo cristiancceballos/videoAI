@@ -16,6 +16,7 @@ import {
 import { VideoWithMetadata, videoService } from '../services/videoService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 import { Sparkles, AlertCircle, Edit2, MoreVertical, Plus, X, Check } from 'lucide-react-native';
+import { supabase } from '../services/supabase';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -26,6 +27,7 @@ interface VideoDetailsSheetProps {
 export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheetProps) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [currentAiStatus, setCurrentAiStatus] = useState(video.ai_status);
   
   // Editing states
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -110,7 +112,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   ).current;
 
   useEffect(() => {
-    if (visible && video.ai_status === 'completed') {
+    if (visible && currentAiStatus === 'completed') {
       setLoadingSummary(true);
       videoService.getVideoSummary(video.id).then(content => {
         setSummary(content);
@@ -121,8 +123,9 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     } else if (!visible) {
       // Reset summary when closing
       setSummary(null);
+      setCurrentAiStatus(video.ai_status);
     }
-  }, [visible, video.id, video.ai_status]);
+  }, [visible, video.id, currentAiStatus]);
   
   // Reset editing states when video changes
   useEffect(() => {
@@ -130,7 +133,59 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     setEditedTags(video.tags || []);
     setIsEditingTitle(false);
     setIsEditingTags(false);
+    setCurrentAiStatus(video.ai_status);
   }, [video]);
+  
+  // Subscribe to real-time updates for video status and summaries
+  useEffect(() => {
+    if (!visible || !video.id) return;
+    
+    // Create channel for real-time updates
+    const channel = supabase
+      .channel(`video_details_${video.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'videos',
+          filter: `id=eq.${video.id}`
+        },
+        (payload) => {
+          // Update AI status when video is updated
+          if (payload.new && 'ai_status' in payload.new) {
+            setCurrentAiStatus(payload.new.ai_status);
+            
+            // Update tags if they changed
+            if ('tags' in payload.new) {
+              setEditedTags(payload.new.tags || []);
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'summaries',
+          filter: `video_id=eq.${video.id}`
+        },
+        (payload) => {
+          // New summary was inserted, fetch it
+          if (payload.new && 'content' in payload.new) {
+            setSummary(payload.new.content);
+            setLoadingSummary(false);
+          }
+        }
+      )
+      .subscribe();
+    
+    // Cleanup subscription on unmount or when sheet closes
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [visible, video.id]);
   
   // Handle entrance/exit animations
   useEffect(() => {
@@ -350,7 +405,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
             </View>
           ) : (
             /* AI Summary Section */
-            video.ai_status === 'completed' && (
+            currentAiStatus === 'completed' && (
               <View style={styles.metadataSection}>
                 <View style={styles.sectionHeader}>
                   <Sparkles size={20} color="#34C759" />
@@ -434,7 +489,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           )}
           
           {/* AI Processing Status */}
-          {video.ai_status === 'processing' && (
+          {currentAiStatus === 'processing' && (
             <View style={styles.metadataSection}>
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="small" color="#FF9500" />
@@ -444,7 +499,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           )}
           
           {/* AI Not Started */}
-          {(!video.ai_status || video.ai_status === 'pending') && (
+          {(!currentAiStatus || currentAiStatus === 'pending') && (
             <View style={styles.metadataSection}>
               <Text style={styles.pendingText}>AI analysis will begin shortly</Text>
             </View>
