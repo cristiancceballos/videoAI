@@ -148,45 +148,6 @@ export function UploadScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Limitations Info Section */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <AlertTriangle size={20} color="#FFD60A" />
-            <Text style={styles.infoTitle}>Upload Guidelines</Text>
-          </View>
-          
-          <View style={styles.infoContent}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>File Size Limits:</Text>
-              <Text style={styles.infoText}>• Maximum upload size: 50MB</Text>
-              <Text style={styles.infoText}>• Videos under 25MB get full AI features</Text>
-              <Text style={styles.infoText}>• Videos 25-50MB: No AI processing</Text>
-            </View>
-            
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>For Best AI Results:</Text>
-              <Text style={styles.infoText}>• Clear audio quality is essential</Text>
-              <Text style={styles.infoText}>• Minimize background noise</Text>
-              <Text style={styles.infoText}>• Speak clearly and at normal pace</Text>
-            </View>
-            
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Recording vs Downloaded Videos:</Text>
-              <Text style={styles.infoText}>📱 Videos you record: ~2.5MB per second</Text>
-              <Text style={styles.infoText}>📥 Downloaded videos: ~0.5MB per second</Text>
-              <Text style={styles.infoText}>💡 Your camera records at cinema quality!</Text>
-              <Text style={styles.infoText}>🎯 A 20-sec recording ≈ 50MB limit</Text>
-            </View>
-            
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Tips for Success:</Text>
-              <Text style={styles.infoText}>• Downloaded videos work best (pre-optimized)</Text>
-              <Text style={styles.infoText}>• Use Medium quality for longer recordings</Text>
-              <Text style={styles.infoText}>• Good lighting improves thumbnails</Text>
-              <Text style={styles.infoText}>• AI summary appears after upload</Text>
-            </View>
-          </View>
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>From Device</Text>
@@ -213,6 +174,47 @@ export function UploadScreen() {
             <Text style={styles.uploadButtonText}>Take Video</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Limitations Info Section */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeader}>
+            <AlertTriangle size={20} color="#FFD60A" />
+            <Text style={styles.infoTitle}>Upload Guidelines</Text>
+          </View>
+          
+          <View style={styles.infoContent}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Tips for Success:</Text>
+              <Text style={styles.infoText}>• Downloaded videos with clear audio work best</Text>
+              <Text style={styles.infoText}>• Download your faviote videos from tiktok/instagram onto your phone and upload here. </Text>
+              <Text style={styles.infoText}>• Once you uploaded your video from your gallary, delete the video off your phone to save storage (: </Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>File Size Limits:</Text>
+              <Text style={styles.infoText}>• Maximum upload size: 50MB</Text>
+              <Text style={styles.infoText}>• Videos under 25MB get full AI features</Text>
+              <Text style={styles.infoText}>• Videos 25-50MB: No AI processing</Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>For Best AI Results:</Text>
+              <Text style={styles.infoText}>• Clear audio quality is essential</Text>
+              <Text style={styles.infoText}>• Minimize background noise</Text>
+              <Text style={styles.infoText}>• Speaker speaking clearly and at normal pace</Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Recording vs Downloaded Videos:</Text>
+              <Text style={styles.infoText}> Videos you record: ~2.5MB per second</Text>
+              <Text style={styles.infoText}> Downloaded videos: ~0.5MB per second</Text>
+              <Text style={styles.infoText}> Your camera records at cinema quality!</Text>
+              <Text style={styles.infoText}> About a 20-sec recording you record ≈ 50MB limit</Text>
+            </View>
+          </View>
+        </View>
+
+        
 
       </ScrollView>
 
