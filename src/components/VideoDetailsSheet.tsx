@@ -532,11 +532,21 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                           ))}
                         </>
                       ) : (
-                        editedTags.map((tag, index) => (
-                          <View key={index} style={styles.tagChip}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                          </View>
-                        ))
+                        <>
+                          {editedTags.map((tag, index) => (
+                            <View key={index} style={styles.tagChip}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                            </View>
+                          ))}
+                          {/* Quick Add Tag Button */}
+                          <TouchableOpacity
+                            style={[styles.tagChip, styles.addTagChip]}
+                            onPress={() => setIsEditingTags(true)}
+                          >
+                            <Plus size={16} color="#34C759" />
+                            <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
+                          </TouchableOpacity>
+                        </>
                       )}
                     </View>
                   </View>
@@ -672,10 +682,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+  addTagChip: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   tagText: {
     fontSize: 14,
     ...getInterFontConfig('200'), // ExtraLight 200 Italic with premium spacing
     color: '#8e8e93',
+  },
+  addTagText: {
+    color: '#34C759',
   },
   processingContainer: {
     flexDirection: 'row',

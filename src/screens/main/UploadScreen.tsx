@@ -177,17 +177,12 @@ export function UploadScreen() {
 
         {/* Limitations Info Section */}
         <View style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <AlertTriangle size={20} color="#FFD60A" />
-            <Text style={styles.infoTitle}>Upload Guidelines</Text>
-          </View>
-          
           <View style={styles.infoContent}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Tips for Success:</Text>
               <Text style={styles.infoText}>• Downloaded videos with clear audio work best</Text>
-              <Text style={styles.infoText}>• Download your faviote videos from tiktok/instagram onto your phone and upload here. </Text>
-              <Text style={styles.infoText}>• Once you uploaded your video from your gallary, delete the video off your phone to save storage (: </Text>
+              <Text style={styles.infoText}>• Download your faviorite videos from tiktok/instagram onto your phone and upload here </Text>
+              <Text style={styles.infoText}>• Once you uploaded your video from your gallary, delete the video off your phone to save phone storage (: </Text>
             </View>
 
             <View style={styles.infoItem}>

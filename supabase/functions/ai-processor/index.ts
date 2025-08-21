@@ -66,7 +66,6 @@ serve(async (req: Request) => {
       console.log('Generating summary and tags...')
       const { summary, tags } = await generateSummaryAndTags(
         transcription.text,
-        videoTitle,
         geminiApiKey
       )
 
@@ -166,7 +165,6 @@ async function transcribeAudio(audioUrl: string, apiKey: string): Promise<{ text
 
 async function generateSummaryAndTags(
   transcript: string,
-  videoTitle: string | undefined,
   apiKey: string
 ): Promise<{ summary: string; tags: string[] }> {
   const genAI = new GoogleGenerativeAI(apiKey)
@@ -174,21 +172,21 @@ async function generateSummaryAndTags(
 
   const prompt = `
     Analyze the following video transcript and provide:
-    1. A concise summary (2-3 paragraphs)
-    2. Generate 4-6 relevant tags following this pattern:
+    1. A concise summary (2-3 paragraphs) based ONLY on the transcript content
+    2. Generate 5-7 relevant tags following this pattern:
        - 1-2 specific tags about the exact topic/subject
        - 2-3 broader category tags from: education, technology, programming, cooking, 
          fitness, health, motivation, lifestyle, business, science, entertainment, 
          gaming, music, art, travel, sports, diy, tutorial, review, comedy, news
-       - Choose tags that accurately represent the content
+       - 1 mood/tone tag if clearly identifiable from: inspirational, educational, humorous, 
+         serious, relaxing, energetic, informative, entertaining, emotional, calming, exciting
+       - Only include mood tag if it's clearly present in the content
     
     Example patterns:
-    - Cooking video: ["pasta recipes", "italian cuisine", "cooking", "food", "lifestyle"]
-    - Programming video: ["react hooks", "web development", "programming", "technology", "education"]
-    - Workout video: ["hiit workout", "cardio", "fitness", "health", "lifestyle"]
-    - Motivational speech: ["success mindset", "personal growth", "motivation", "education", "lifestyle"]
-
-    ${videoTitle ? `Video Title: ${videoTitle}` : ''}
+    - Cooking video: ["pasta recipes", "italian cuisine", "cooking", "food", "lifestyle", "relaxing"]
+    - Programming video: ["react hooks", "web development", "programming", "technology", "education", "informative"]
+    - Workout video: ["hiit workout", "cardio", "fitness", "health", "lifestyle", "energetic"]
+    - Motivational speech: ["success mindset", "personal growth", "motivation", "education", "lifestyle", "inspirational"]
     
     Transcript:
     ${transcript}
@@ -197,7 +195,7 @@ async function generateSummaryAndTags(
     Format your response as plain JSON:
     {
       "summary": "Your summary here",
-      "tags": ["specific_tag1", "specific_tag2", "broad_category1", "broad_category2"]
+      "tags": ["specific_tag1", "specific_tag2", "broad_category1", "broad_category2", "mood_tag_if_applicable"]
     }
   `
 
@@ -213,14 +211,14 @@ async function generateSummaryAndTags(
     const parsed = JSON.parse(text)
     return {
       summary: parsed.summary || '',
-      tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [], // Limit to 5 tags
+      tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 7) : [], // Limit to 7 tags
     }
   } catch (error) {
     console.error('Failed to parse Gemini response:', text)
     // Fallback if not valid JSON
     return {
       summary: text.substring(0, 500),
-      tags: extractBasicTags(text).slice(0, 5),
+      tags: extractBasicTags(text).slice(0, 7),
     }
   }
 }
