@@ -11,13 +11,13 @@ import {
 // Removed unused imports
 import { WebMediaAsset } from '../services/webMediaService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
-import { AlertCircle } from 'lucide-react-native';
+import { AlertCircle, Plus, X } from 'lucide-react-native';
 
 interface WebVideoPreviewModalProps {
   visible: boolean;
   asset: WebMediaAsset | null;
   onClose: () => void;
-  onUpload: (title: string, thumbnailData?: null, thumbnailOption?: 'server') => void;
+  onUpload: (title: string, tags?: string[], thumbnailData?: null, thumbnailOption?: 'server') => void;
   uploading: boolean;
 }
 
@@ -29,11 +29,25 @@ export function WebVideoPreviewModal({
   uploading,
 }: WebVideoPreviewModalProps) {
   const [title, setTitle] = React.useState('');
+  const [tags, setTags] = React.useState<string[]>([]);
+  const [newTag, setNewTag] = React.useState('');
+  const [isAddingTag, setIsAddingTag] = React.useState(false);
   const titleInputRef = React.useRef<any>(null);
   
   const formatFileSize = (bytes: number) => {
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
+  };
+  
+  const addTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag('');
+    }
+  };
+  
+  const removeTag = (index: number) => {
+    setTags(tags.filter((_, i) => i !== index));
   };
   
   // Removed thumbnail-related state
@@ -50,21 +64,9 @@ export function WebVideoPreviewModal({
 
   React.useEffect(() => {
     if (asset?.filename) {
-      
       // Set default title to simple 'title' for easy editing
       setTitle('title');
-      // Select all text after a short delay to ensure input is rendered
-      setTimeout(() => {
-        if (titleInputRef.current) {
-          titleInputRef.current.focus();
-          // Use React Native compatible selection method
-          if (titleInputRef.current.setNativeProps) {
-            titleInputRef.current.setNativeProps({
-              selection: { start: 0, end: 5 }
-            });
-          }
-        }
-      }, 100);
+      // Don't auto-focus or select - let user choose when to edit
     }
   }, [asset, visible]);
 
@@ -75,7 +77,7 @@ export function WebVideoPreviewModal({
     }
 
     // Server-side thumbnail generation - Edge Function will create multiple thumbnail options
-    onUpload(title.trim(), null, 'server');
+    onUpload(title.trim(), tags, null, 'server');
   };
 
 
@@ -123,22 +125,63 @@ export function WebVideoPreviewModal({
                 placeholderTextColor="#666"
                 maxLength={100}
                 editable={!uploading}
-                selectTextOnFocus={true}
-                autoFocus={true}
+                selectTextOnFocus={false}
+                autoFocus={false}
                 multiline={true}
                 numberOfLines={2}
-                onFocus={() => {
-                  setTimeout(() => {
-                    if (titleInputRef.current && title === 'title') {
-                      if (titleInputRef.current.setNativeProps) {
-                        titleInputRef.current.setNativeProps({
-                          selection: { start: 0, end: 5 }
-                        });
-                      }
-                    }
-                  }, 50);
-                }}
               />
+            </View>
+          </View>
+
+          {/* Tags Section */}
+          <View style={styles.metadataRow}>
+            <Text style={styles.label}>Tags</Text>
+            <View style={styles.tagsSection}>
+              <View style={styles.tagsContainer}>
+                {/* Tag input */}
+                {isAddingTag ? (
+                  <View style={styles.addTagContainer}>
+                    <TextInput
+                      style={styles.addTagInput}
+                      placeholder="Add tag"
+                      placeholderTextColor="#666"
+                      value={newTag}
+                      onChangeText={setNewTag}
+                      onSubmitEditing={addTag}
+                      onBlur={() => {
+                        addTag();
+                        setIsAddingTag(false);
+                      }}
+                      returnKeyType="done"
+                      autoFocus={true}
+                      editable={!uploading}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.tagChip, styles.addTagChip]}
+                    onPress={() => setIsAddingTag(true)}
+                    disabled={uploading}
+                  >
+                    <Plus size={16} color="#34C759" />
+                    <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
+                  </TouchableOpacity>
+                )}
+                
+                {/* Display tags */}
+                {tags.map((tag, index) => (
+                  <View key={index} style={styles.editableTagChip}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                    <TouchableOpacity 
+                      onPress={() => removeTag(index)}
+                      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                      disabled={uploading}
+                    >
+                      <X size={14} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
 
@@ -320,5 +363,72 @@ const styles = StyleSheet.create({
     ...getInterFontConfig('200'),
     color: '#e5e5e7',
     lineHeight: 20,
+  },
+  metadataRow: {
+    marginTop: 12,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    ...getInterFontConfig('300'),
+    color: '#8e8e93',
+    marginBottom: 8,
+  },
+  tagsSection: {
+    marginBottom: 8,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tagChip: {
+    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addTagChip: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.3)',
+    borderStyle: 'dashed' as any,
+    gap: 4,
+  },
+  editableTagChip: {
+    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tagText: {
+    fontSize: 13,
+    ...getInterFontConfig('200'),
+    color: '#34C759',
+  },
+  addTagText: {
+    fontWeight: '500',
+  },
+  addTagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 100,
+  },
+  addTagInput: {
+    flex: 1,
+    fontSize: 13,
+    ...getInterFontConfig('200'),
+    color: '#fff',
+    padding: 0,
+    minWidth: 60,
   },
 });

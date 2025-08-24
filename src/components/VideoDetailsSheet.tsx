@@ -461,98 +461,113 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
               </View>
             </View>
           ) : (
-            /* AI Summary Section */
-            currentAiStatus === 'completed' && (
-              <View style={styles.metadataSection}>
-                <View style={styles.sectionHeader}>
-                  <Sparkles size={20} color="#34C759" />
-                  <Text style={styles.sectionTitle}>AI Summary</Text>
+            <>
+              {/* AI Summary Section - Only show if AI completed */}
+              {currentAiStatus === 'completed' && (
+                <View style={styles.metadataSection}>
+                  <View style={styles.sectionHeader}>
+                    <Sparkles size={20} color="#34C759" />
+                    <Text style={styles.sectionTitle}>AI Summary</Text>
+                  </View>
+                  
+                  {loadingSummary ? (
+                    <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
+                  ) : summary ? (
+                    <Text style={styles.summaryText}>{summary}</Text>
+                  ) : (
+                    <Text style={styles.errorText}>Summary not available</Text>
+                  )}
                 </View>
-                
-                {loadingSummary ? (
-                  <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
-                ) : summary ? (
-                  <Text style={styles.summaryText}>{summary}</Text>
-                ) : (
-                  <Text style={styles.errorText}>Summary not available</Text>
-                )}
-                
-                {/* Tags Section */}
-                {(video.tags && video.tags.length > 0) || isEditingTags ? (
-                  <View style={[styles.tagsSection, isEditingTags && styles.tagsSectionEditing]}>
-                    <View style={styles.tagsSectionHeader}>
-                      <Text style={styles.tagsSectionTitle}>Tags</Text>
-                      {isEditingTags ? (
-                        <TouchableOpacity 
-                          onPress={handleSaveTags}
-                          disabled={isSaving}
-                          style={styles.saveButton}
-                        >
-                          <Text style={styles.saveButtonText}>Save</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity 
-                          onPress={() => setIsEditingTags(true)}
-                          style={styles.iconButton}
-                        >
-                          <MoreVertical size={20} color="#8e8e93" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    
-                    <View style={styles.tagsContainer}>
-                      {isEditingTags ? (
-                        <>
-                          {/* Add tag input at the top */}
-                          <View style={styles.addTagContainer}>
-                            <TextInput
-                              style={styles.addTagInput}
-                              placeholder="Add tag"
-                              placeholderTextColor="#666"
-                              value={newTag}
-                              onChangeText={setNewTag}
-                              onSubmitEditing={addTag}
-                              returnKeyType="done"
-                            />
-                            <TouchableOpacity onPress={addTag}>
-                              <Plus size={18} color="#34C759" />
+              )}
+              
+              {/* Tags Section - Always show for all videos */}
+              <View style={styles.metadataSection}>
+                <View style={[styles.tagsSection, isEditingTags && styles.tagsSectionEditing]}>
+                  <View style={styles.tagsSectionHeader}>
+                    <Text style={styles.tagsSectionTitle}>Tags</Text>
+                    {isEditingTags ? (
+                      <TouchableOpacity 
+                        onPress={handleSaveTags}
+                        disabled={isSaving}
+                        style={styles.saveButton}
+                      >
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity 
+                        onPress={() => setIsEditingTags(true)}
+                        style={styles.iconButton}
+                      >
+                        <MoreVertical size={20} color="#8e8e93" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  <View style={styles.tagsContainer}>
+                    {isEditingTags ? (
+                      <>
+                        {/* Add tag input at the top */}
+                        <View style={styles.addTagContainer}>
+                          <TextInput
+                            style={styles.addTagInput}
+                            placeholder="Add tag"
+                            placeholderTextColor="#666"
+                            value={newTag}
+                            onChangeText={setNewTag}
+                            onSubmitEditing={addTag}
+                            returnKeyType="done"
+                            autoFocus={false}
+                            onBlur={() => {
+                              // Reset viewport scale on blur to fix zoom issue
+                              if (Platform.OS === 'web' && typeof document !== 'undefined') {
+                                const viewport = document.querySelector('meta[name="viewport"]');
+                                if (viewport) {
+                                  viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+                                  setTimeout(() => {
+                                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                                  }, 100);
+                                }
+                              }
+                            }}
+                          />
+                          <TouchableOpacity onPress={addTag}>
+                            <Plus size={18} color="#34C759" />
+                          </TouchableOpacity>
+                        </View>
+                        {/* Existing tags with delete option */}
+                        {editedTags.map((tag, index) => (
+                          <View key={index} style={styles.editableTagChip}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                            <TouchableOpacity 
+                              onPress={() => removeTag(index)}
+                              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                            >
+                              <X size={14} color="#FF3B30" />
                             </TouchableOpacity>
                           </View>
-                          {/* Existing tags with delete option */}
-                          {editedTags.map((tag, index) => (
-                            <View key={index} style={styles.editableTagChip}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                              <TouchableOpacity 
-                                onPress={() => removeTag(index)}
-                                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                              >
-                                <X size={14} color="#FF3B30" />
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </>
-                      ) : (
-                        <>
-                          {editedTags.map((tag, index) => (
-                            <View key={index} style={styles.tagChip}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                            </View>
-                          ))}
-                          {/* Quick Add Tag Button */}
-                          <TouchableOpacity
-                            style={[styles.tagChip, styles.addTagChip]}
-                            onPress={() => setIsEditingTags(true)}
-                          >
-                            <Plus size={16} color="#34C759" />
-                            <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                    </View>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {editedTags.map((tag, index) => (
+                          <View key={index} style={styles.tagChip}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))}
+                        {/* Quick Add Tag Button */}
+                        <TouchableOpacity
+                          style={[styles.tagChip, styles.addTagChip]}
+                          onPress={() => setIsEditingTags(true)}
+                        >
+                          <Plus size={16} color="#34C759" />
+                          <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
-                ) : null}
+                </View>
               </View>
-            )
+            </>
           )}
           
           {/* AI Processing Status */}

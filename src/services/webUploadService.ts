@@ -114,7 +114,8 @@ class WebUploadService {
     storagePath: string,
     sourceType: 'device' | 'youtube' | 'tiktok',
     sourceUrl?: string,
-    title?: string
+    title?: string,
+    tags?: string[]
   ): Promise<string | null> {
     try {
       // Check if user is authenticated
@@ -140,6 +141,7 @@ class WebUploadService {
         original_filename: asset.filename,
         width: asset.width ? Math.round(asset.width) : undefined, // Ensure integer
         height: asset.height ? Math.round(asset.height) : undefined, // Ensure integer
+        tags: tags || [], // Add tags to video data
       };
 
       // Insert video data
@@ -212,7 +214,8 @@ class WebUploadService {
     asset: WebMediaAsset,
     userId: string,
     title: string,
-    onProgress?: (progress: UploadProgress) => void
+    onProgress?: (progress: UploadProgress) => void,
+    tags?: string[]
   ): Promise<UploadResult> {
     try {
       // 1. Validate video file
@@ -234,7 +237,8 @@ class WebUploadService {
         uploadUrl.path,
         'device',
         undefined,
-        title
+        title,
+        tags
       );
 
       if (!videoId) {

@@ -62,7 +62,7 @@ export function UploadScreen() {
   };
 
 
-  const handleUploadAsset = async (title: string, thumbnailData?: any, thumbnailOption?: 'first' | 'custom' | 'none' | 'server') => {
+  const handleUploadAsset = async (title: string, tags?: string[], thumbnailData?: any, thumbnailOption?: 'first' | 'custom' | 'none' | 'server') => {
     if (!selectedAsset || !user) return;
 
     setUploading(true);
@@ -78,7 +78,8 @@ export function UploadScreen() {
         title,
         (progress) => {
           setUploadProgress(progress);
-        }
+        },
+        tags
       );
 
       setUploading(false);
