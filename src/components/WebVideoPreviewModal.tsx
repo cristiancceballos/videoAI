@@ -67,6 +67,10 @@ export function WebVideoPreviewModal({
     if (asset?.filename) {
       // Set default title to simple 'title' for easy editing
       setTitle('title');
+      // Clear tags when new video is selected
+      setTags([]);
+      setNewTag('');
+      setIsAddingTag(false);
       // Don't auto-focus or select - let user choose when to edit
     }
   }, [asset, visible]);
@@ -430,7 +434,7 @@ const styles = StyleSheet.create({
   },
   addTagInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 16, // Prevent iOS zoom
     ...getInterFontConfig('200'),
     color: '#fff',
     padding: 0,

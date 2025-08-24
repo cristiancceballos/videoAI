@@ -455,117 +455,118 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                 </View>
               </View>
             </View>
-          ) : video.file_size && video.file_size > 25 * 1024 * 1024 ? (
+          ) : null}
+          
+          {/* File Size Warning for large videos */}
+          {video.file_size && video.file_size > 25 * 1024 * 1024 && (
             <View style={styles.metadataSection}>
               <View style={styles.warningContainer}>
                 <AlertCircle size={24} color="#FFD60A" />
                 <View style={styles.warningTextContainer}>
                   <Text style={styles.warningTitle}>Limited AI Features</Text>
                   <Text style={styles.warningText}>
-                    Videos over 25MB have limited AI processing. Summary and tags may not be available.
+                    Videos over 25MB have limited AI processing. Summary and AI-generated tags may not be available.
                   </Text>
                 </View>
               </View>
             </View>
-          ) : (
-            <>
-              {/* AI Summary Section - Only show if AI completed */}
-              {currentAiStatus === 'completed' && (
-                <View style={styles.metadataSection}>
-                  <View style={styles.sectionHeader}>
-                    <Sparkles size={20} color="#34C759" />
-                    <Text style={styles.sectionTitle}>AI Summary</Text>
-                  </View>
-                  
-                  {loadingSummary ? (
-                    <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
-                  ) : summary ? (
-                    <Text style={styles.summaryText}>{summary}</Text>
-                  ) : (
-                    <Text style={styles.errorText}>Summary not available</Text>
-                  )}
-                </View>
-              )}
-              
-              {/* Tags Section - Always show for all videos */}
-              <View style={styles.metadataSection}>
-                <View style={[styles.tagsSection, isEditingTags && styles.tagsSectionEditing]}>
-                  <View style={styles.tagsSectionHeader}>
-                    <Text style={styles.tagsSectionTitle}>Tags</Text>
-                    {isEditingTags ? (
-                      <TouchableOpacity 
-                        onPress={handleSaveTags}
-                        disabled={isSaving}
-                        style={styles.saveButton}
-                      >
-                        <Text style={styles.saveButtonText}>Save</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity 
-                        onPress={() => setIsEditingTags(true)}
-                        style={styles.iconButton}
-                      >
-                        <MoreVertical size={20} color="#8e8e93" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  
-                  <View style={styles.tagsContainer}>
-                    {isEditingTags ? (
-                      <>
-                        {/* Add tag input at the top */}
-                        <View style={styles.addTagContainer}>
-                          <TextInput
-                            style={styles.addTagInput}
-                            placeholder="Add tag"
-                            placeholderTextColor="#666"
-                            value={newTag}
-                            onChangeText={setNewTag}
-                            onSubmitEditing={addTag}
-                            returnKeyType="done"
-                            autoFocus={false}
-                            onFocus={preventViewportZoom}
-                            onBlur={resetViewportZoom}
-                          />
-                          <TouchableOpacity onPress={addTag}>
-                            <Plus size={18} color="#34C759" />
-                          </TouchableOpacity>
-                        </View>
-                        {/* Existing tags with delete option */}
-                        {editedTags.map((tag, index) => (
-                          <View key={index} style={styles.editableTagChip}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                            <TouchableOpacity 
-                              onPress={() => removeTag(index)}
-                              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                            >
-                              <X size={14} color="#FF3B30" />
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {editedTags.map((tag, index) => (
-                          <View key={index} style={styles.tagChip}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                          </View>
-                        ))}
-                        {/* Quick Add Tag Button */}
-                        <TouchableOpacity
-                          style={[styles.tagChip, styles.addTagChip]}
-                          onPress={() => setIsEditingTags(true)}
-                        >
-                          <Plus size={16} color="#34C759" />
-                          <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </>
           )}
+
+          {/* AI Summary Section - Only show if AI completed and file size is under 25MB */}
+          {currentAiStatus === 'completed' && (!video.file_size || video.file_size <= 25 * 1024 * 1024) && (
+            <View style={styles.metadataSection}>
+              <View style={styles.sectionHeader}>
+                <Sparkles size={20} color="#34C759" />
+                <Text style={styles.sectionTitle}>AI Summary</Text>
+              </View>
+              
+              {loadingSummary ? (
+                <ActivityIndicator size="small" color="#8e8e93" style={styles.loadingIndicator} />
+              ) : summary ? (
+                <Text style={styles.summaryText}>{summary}</Text>
+              ) : (
+                <Text style={styles.errorText}>Summary not available</Text>
+              )}
+            </View>
+          )}
+          
+          {/* Tags Section - Always show for all videos */}
+          <View style={styles.metadataSection}>
+            <View style={[styles.tagsSection, isEditingTags && styles.tagsSectionEditing]}>
+              <View style={styles.tagsSectionHeader}>
+                <Text style={styles.tagsSectionTitle}>Tags</Text>
+                {isEditingTags ? (
+                  <TouchableOpacity 
+                    onPress={handleSaveTags}
+                    disabled={isSaving}
+                    style={styles.saveButton}
+                  >
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    onPress={() => setIsEditingTags(true)}
+                    style={styles.iconButton}
+                  >
+                    <MoreVertical size={20} color="#8e8e93" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              <View style={styles.tagsContainer}>
+                {isEditingTags ? (
+                  <>
+                    {/* Add tag input at the top */}
+                    <View style={styles.addTagContainer}>
+                      <TextInput
+                        style={styles.addTagInput}
+                        placeholder="Add tag"
+                        placeholderTextColor="#666"
+                        value={newTag}
+                        onChangeText={setNewTag}
+                        onSubmitEditing={addTag}
+                        returnKeyType="done"
+                        autoFocus={false}
+                        onFocus={preventViewportZoom}
+                        onBlur={resetViewportZoom}
+                      />
+                      <TouchableOpacity onPress={addTag}>
+                        <Plus size={18} color="#34C759" />
+                      </TouchableOpacity>
+                    </View>
+                    {/* Existing tags with delete option */}
+                    {editedTags.map((tag, index) => (
+                      <View key={index} style={styles.editableTagChip}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                        <TouchableOpacity 
+                          onPress={() => removeTag(index)}
+                          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        >
+                          <X size={14} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {editedTags.map((tag, index) => (
+                      <View key={index} style={styles.tagChip}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                    {/* Quick Add Tag Button */}
+                    <TouchableOpacity
+                      style={[styles.tagChip, styles.addTagChip]}
+                      onPress={() => setIsEditingTags(true)}
+                    >
+                      <Plus size={16} color="#34C759" />
+                      <Text style={[styles.tagText, styles.addTagText]}>Add</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
           
           {/* AI Processing Status */}
           {currentAiStatus === 'processing' && (
@@ -872,7 +873,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   addTagInput: {
-    fontSize: 14,
+    fontSize: 16, // Prevent iOS zoom
     ...getInterFontConfigForInputs('200'),
     color: '#8e8e93',
     minWidth: 60,
