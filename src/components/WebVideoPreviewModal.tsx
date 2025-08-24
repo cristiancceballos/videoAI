@@ -12,6 +12,7 @@ import {
 import { WebMediaAsset } from '../services/webMediaService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 import { AlertCircle, Plus, X } from 'lucide-react-native';
+import { preventViewportZoom, resetViewportZoom } from '../utils/viewportUtils';
 
 interface WebVideoPreviewModalProps {
   visible: boolean;
@@ -129,6 +130,8 @@ export function WebVideoPreviewModal({
                 autoFocus={false}
                 multiline={true}
                 numberOfLines={2}
+                onFocus={preventViewportZoom}
+                onBlur={resetViewportZoom}
               />
             </View>
           </View>
@@ -148,9 +151,11 @@ export function WebVideoPreviewModal({
                       value={newTag}
                       onChangeText={setNewTag}
                       onSubmitEditing={addTag}
+                      onFocus={preventViewportZoom}
                       onBlur={() => {
                         addTag();
                         setIsAddingTag(false);
+                        resetViewportZoom();
                       }}
                       returnKeyType="done"
                       autoFocus={true}
@@ -430,5 +435,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     padding: 0,
     minWidth: 60,
+    outlineStyle: 'none' as any,
   },
 });

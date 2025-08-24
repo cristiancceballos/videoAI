@@ -17,6 +17,7 @@ import { VideoWithMetadata, videoService } from '../services/videoService';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../utils/fontUtils';
 import { Sparkles, AlertCircle, Edit2, MoreVertical, Plus, X, Check } from 'lucide-react-native';
 import { supabase } from '../services/supabase';
+import { preventViewportZoom, resetViewportZoom } from '../utils/viewportUtils';
 
 interface VideoDetailsSheetProps {
   visible: boolean;
@@ -156,9 +157,15 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (payload.new && 'ai_status' in payload.new) {
             setCurrentAiStatus(payload.new.ai_status);
             
-            // Update tags if they changed
-            if ('tags' in payload.new) {
-              setEditedTags(payload.new.tags || []);
+            // Update tags if they changed - merge with existing user tags
+            if ('tags' in payload.new && payload.new.tags) {
+              const newTags = payload.new.tags as string[];
+              // Preserve existing user tags and add new AI tags that don't already exist
+              setEditedTags(prevTags => {
+                const userTags = prevTags || [];
+                const aiTags = newTags.filter(tag => !userTags.includes(tag));
+                return [...userTags, ...aiTags];
+              });
             }
           }
         }
@@ -517,18 +524,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                             onSubmitEditing={addTag}
                             returnKeyType="done"
                             autoFocus={false}
-                            onBlur={() => {
-                              // Reset viewport scale on blur to fix zoom issue
-                              if (Platform.OS === 'web' && typeof document !== 'undefined') {
-                                const viewport = document.querySelector('meta[name="viewport"]');
-                                if (viewport) {
-                                  viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
-                                  setTimeout(() => {
-                                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-                                  }, 100);
-                                }
-                              }
-                            }}
+                            onFocus={preventViewportZoom}
+                            onBlur={resetViewportZoom}
                           />
                           <TouchableOpacity onPress={addTag}>
                             <Plus size={18} color="#34C759" />
