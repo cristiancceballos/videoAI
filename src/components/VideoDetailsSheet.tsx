@@ -37,7 +37,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const [editedTags, setEditedTags] = useState<string[]>(video.tags || []);
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [initialUserTags, setInitialUserTags] = useState<string[]>(video.tags || []);
+  const [initialUserTags, setInitialUserTags] = useState<string[]>([]);
+  const [hasCapturedInitialTags, setHasCapturedInitialTags] = useState(false);
   
   // Animation values
   const translateY = useRef(new Animated.Value(0)).current;
@@ -114,7 +115,8 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   ).current;
 
   useEffect(() => {
-    if (visible && currentAiStatus === 'completed') {
+    if (visible && currentAiStatus === 'completed' && !summary) {
+      // Only fetch summary if we don't already have it
       setLoadingSummary(true);
       videoService.getVideoSummary(video.id).then(content => {
         setSummary(content);
@@ -122,23 +124,37 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       }).catch(() => {
         setLoadingSummary(false);
       });
-    } else if (!visible) {
-      // Reset summary when closing
-      setSummary(null);
-      setCurrentAiStatus(video.ai_status);
     }
-  }, [visible, video.id, currentAiStatus]);
+    // Don't reset summary when closing - keep it for next open
+  }, [visible, video.id, currentAiStatus, summary]);
   
   // Reset editing states when video changes
   useEffect(() => {
     setEditedTitle(video.title);
     setEditedTags(video.tags || []);
-    setInitialUserTags(video.tags || []); // Store initial user tags
+    
+    // Only capture initial user tags once per video, before AI processing
+    if (video.id && !hasCapturedInitialTags) {
+      // If AI hasn't processed yet, these are the user's original tags
+      if (video.ai_status === 'pending' || video.ai_status === 'processing') {
+        setInitialUserTags(video.tags || []);
+        setHasCapturedInitialTags(true);
+      }
+    }
+    
     setIsEditingTitle(false);
     setIsEditingTags(false);
     setCurrentAiStatus(video.ai_status);
     setNewTag(''); // Clear new tag input
-  }, [video]);
+  }, [video, hasCapturedInitialTags]);
+  
+  // Reset captured state when video ID changes (different video)
+  useEffect(() => {
+    // Reset for new video
+    setHasCapturedInitialTags(false);
+    setInitialUserTags([]);
+    setSummary(null); // Reset summary for new video
+  }, [video.id]);
   
   // Subscribe to real-time updates for video status and summaries
   useEffect(() => {
