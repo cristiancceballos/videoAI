@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { getInterFontConfig } from '../../utils/fontUtils';
 import { useFocusEffect } from '@react-navigation/native';
-import { Video, Search, Check } from 'lucide-react-native';
+import { Video, Search, Check, X } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { videoService, VideoWithMetadata } from '../../services/videoService';
 import { VideoGridItem } from '../../components/VideoGridItem';
@@ -461,14 +461,6 @@ export function HomeScreen() {
             showsVerticalScrollIndicator={false}
           />
         );
-      case 'search':
-        return (
-          <View style={styles.tabContentContainer}>
-            <Search size={48} color="#fff" style={styles.emptyIcon} />
-            <Text style={styles.placeholderTitle}>Search</Text>
-            <Text style={styles.placeholderSubtitle}>Search functionality coming soon</Text>
-          </View>
-        );
       case 'select':
         return (
           <View style={styles.tabContentContainer}>
@@ -506,6 +498,15 @@ export function HomeScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <X size={18} color="#8e8e8e" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -576,6 +577,10 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     marginRight: 8,
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   searchInput: {
     flex: 1,

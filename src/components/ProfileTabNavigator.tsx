@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { getInterFontConfig } from '../utils/fontUtils';
 
-export type ProfileTab = 'posts' | 'search' | 'select';
+export type ProfileTab = 'posts' | 'select';
 
 interface ProfileTabNavigatorProps {
   activeTab: ProfileTab;
@@ -19,8 +19,6 @@ const getTabLabel = (key: ProfileTab, postCount?: number): string => {
   switch (key) {
     case 'posts':
       return postCount !== undefined ? `Posts (${postCount})` : 'Posts';
-    case 'search':
-      return 'Search';
     case 'select':
       return 'Select';
     default:
@@ -30,7 +28,6 @@ const getTabLabel = (key: ProfileTab, postCount?: number): string => {
 
 const tabs: { key: ProfileTab }[] = [
   { key: 'posts' },
-  { key: 'search' },
   { key: 'select' },
 ];
 

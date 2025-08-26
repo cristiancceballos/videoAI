@@ -157,14 +157,16 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (payload.new && 'ai_status' in payload.new) {
             setCurrentAiStatus(payload.new.ai_status);
             
-            // Update tags if they changed - merge with existing user tags
+            // Only update tags if they're currently empty (no user tags added)
+            // This prevents AI from overwriting user-added tags
             if ('tags' in payload.new && payload.new.tags) {
-              const newTags = payload.new.tags as string[];
-              // Preserve existing user tags and add new AI tags that don't already exist
               setEditedTags(prevTags => {
-                const userTags = prevTags || [];
-                const aiTags = newTags.filter(tag => !userTags.includes(tag));
-                return [...userTags, ...aiTags];
+                // If user has already added tags, don't replace them
+                if (prevTags && prevTags.length > 0) {
+                  return prevTags;
+                }
+                // Only set AI tags if no user tags exist
+                return payload.new.tags as string[];
               });
             }
           }
