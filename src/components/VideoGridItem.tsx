@@ -9,7 +9,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { Video, Play, X, Sparkles, AlertCircle } from 'lucide-react-native';
+import { Video, Play, X } from 'lucide-react-native';
 import { VideoWithMetadata } from '../services/videoService';
 import { getInterFontConfig } from '../utils/fontUtils';
 
@@ -101,26 +101,6 @@ export function VideoGridItem({ video, onPress, onDelete, isDeleting, columnInde
         {(video.status === 'processing' || video.status === 'uploading') && (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="small" color="#fff" />
-          </View>
-        )}
-
-        {/* AI Status Indicator */}
-        {video.ai_status && video.ai_status !== 'pending' && (
-          <View style={[
-            styles.aiStatusBadge,
-            video.ai_status === 'processing' && styles.aiProcessing,
-            video.ai_status === 'completed' && styles.aiCompleted,
-            video.ai_status === 'error' && styles.aiError,
-          ]}>
-            {video.ai_status === 'processing' && (
-              <ActivityIndicator size="small" color="#fff" />
-            )}
-            {video.ai_status === 'completed' && (
-              <Sparkles size={14} color="#fff" />
-            )}
-            {video.ai_status === 'error' && (
-              <AlertCircle size={14} color="#fff" />
-            )}
           </View>
         )}
 

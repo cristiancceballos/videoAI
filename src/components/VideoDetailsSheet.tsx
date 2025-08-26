@@ -37,6 +37,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const [editedTags, setEditedTags] = useState<string[]>(video.tags || []);
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [initialUserTags, setInitialUserTags] = useState<string[]>(video.tags || []);
   
   // Animation values
   const translateY = useRef(new Animated.Value(0)).current;
@@ -132,9 +133,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   useEffect(() => {
     setEditedTitle(video.title);
     setEditedTags(video.tags || []);
+    setInitialUserTags(video.tags || []); // Store initial user tags
     setIsEditingTitle(false);
     setIsEditingTags(false);
     setCurrentAiStatus(video.ai_status);
+    setNewTag(''); // Clear new tag input
   }, [video]);
   
   // Subscribe to real-time updates for video status and summaries
@@ -157,16 +160,18 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (payload.new && 'ai_status' in payload.new) {
             setCurrentAiStatus(payload.new.ai_status);
             
-            // Only update tags if they're currently empty (no user tags added)
-            // This prevents AI from overwriting user-added tags
+            // Merge AI tags with initial user tags
             if ('tags' in payload.new && payload.new.tags) {
+              const incomingTags = payload.new.tags as string[];
               setEditedTags(prevTags => {
-                // If user has already added tags, don't replace them
-                if (prevTags && prevTags.length > 0) {
-                  return prevTags;
-                }
-                // Only set AI tags if no user tags exist
-                return payload.new.tags as string[];
+                // Always preserve initial user tags
+                const userTagsToPreserve = initialUserTags || [];
+                // Filter AI tags that aren't already in user tags
+                const newAiTags = incomingTags.filter(tag => 
+                  !userTagsToPreserve.includes(tag)
+                );
+                // Merge: user tags first, then new AI tags
+                return [...userTagsToPreserve, ...newAiTags];
               });
             }
           }
@@ -309,10 +314,19 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   };
 
   const handleSaveTags = async () => {
+    // If there's text in newTag input, add it first
+    let tagsToSave = [...editedTags];
+    if (newTag.trim()) {
+      tagsToSave = [...editedTags, newTag.trim()];
+      setEditedTags(tagsToSave);
+      setNewTag('');
+    }
+    
     setIsSaving(true);
-    const success = await videoService.updateVideo(video.id, { tags: editedTags });
+    const success = await videoService.updateVideo(video.id, { tags: tagsToSave });
     if (success) {
-      video.tags = editedTags; // Update local reference
+      video.tags = tagsToSave; // Update local reference
+      setInitialUserTags(tagsToSave); // Update initial tags to preserve them
       setIsEditingTags(false);
     }
     setIsSaving(false);
