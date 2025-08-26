@@ -133,13 +133,13 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     setEditedTitle(video.title);
     setEditedTags(video.tags || []);
     
-    // Only capture initial user tags once per video, before AI processing
+    // Capture initial user tags on first mount of this video
+    // This preserves user tags that were added during upload
     if (video.id && !hasCapturedInitialTags) {
-      // If AI hasn't processed yet, these are the user's original tags
-      if (video.ai_status === 'pending' || video.ai_status === 'processing') {
-        setInitialUserTags(video.tags || []);
-        setHasCapturedInitialTags(true);
-      }
+      // Capture current tags as initial if we haven't done so yet
+      // These are the user's tags before any potential AI updates
+      setInitialUserTags(video.tags || []);
+      setHasCapturedInitialTags(true);
     }
     
     setIsEditingTitle(false);
@@ -176,19 +176,26 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (payload.new && 'ai_status' in payload.new) {
             setCurrentAiStatus(payload.new.ai_status);
             
-            // Merge AI tags with initial user tags
-            if ('tags' in payload.new && payload.new.tags) {
+            // Merge AI tags with initial user tags when AI completes
+            if ('tags' in payload.new && payload.new.tags && payload.new.ai_status === 'completed') {
               const incomingTags = payload.new.tags as string[];
-              setEditedTags(prevTags => {
-                // Always preserve initial user tags
-                const userTagsToPreserve = initialUserTags || [];
-                // Filter AI tags that aren't already in user tags
+              
+              // Only merge if we have initial user tags to preserve
+              if (initialUserTags && initialUserTags.length > 0) {
+                // The incoming tags are AI-generated, we need to merge with user tags
                 const newAiTags = incomingTags.filter(tag => 
-                  !userTagsToPreserve.includes(tag)
+                  !initialUserTags.includes(tag)
                 );
                 // Merge: user tags first, then new AI tags
-                return [...userTagsToPreserve, ...newAiTags];
-              });
+                const mergedTags = [...initialUserTags, ...newAiTags];
+                setEditedTags(mergedTags);
+                
+                // Also update the video's tags to reflect the merge
+                video.tags = mergedTags;
+              } else {
+                // No initial user tags, just use the incoming tags
+                setEditedTags(incomingTags);
+              }
             }
           }
         }
