@@ -333,10 +333,14 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     }
     
     setIsSaving(true);
-    // Only update user_tags, not the merged tags
-    const success = await videoService.updateVideo(video.id, { user_tags: updatedUserTags });
+    // Update both user_tags and ai_tags to persist deletions
+    const success = await videoService.updateVideo(video.id, { 
+      user_tags: updatedUserTags,
+      ai_tags: aiTags  // Save the current state of AI tags (with deletions)
+    });
     if (success) {
       video.user_tags = updatedUserTags; // Update local reference
+      video.ai_tags = aiTags; // Update local AI tags reference
       setIsEditingTags(false);
     }
     setIsSaving(false);
