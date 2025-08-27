@@ -68,10 +68,14 @@ export function UploadScreen() {
     setUploading(true);
     setShowPreview(false);
     setShowProgress(true);
+    // Reset progress for new upload
+    setUploadProgress({
+      loaded: 0,
+      total: 0,
+      percentage: 0,
+    });
 
     try {
-      // Starting video upload
-      
       const result = await webUploadService.uploadWebVideo(
         selectedAsset,
         user.id,
@@ -101,6 +105,7 @@ export function UploadScreen() {
             onPress: () => {
               setShowProgress(false);
               setSelectedAsset(null);
+              setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
             },
           },
         ]);

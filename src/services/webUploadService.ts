@@ -155,24 +155,12 @@ class WebUploadService {
         .single();
 
       if (error) {
-        console.error('Failed to create video record:', error);
-        
-        // Provide user-friendly error messages
-        if (error.code === '22P02') {
-          console.error('Database type mismatch error');
-        } else if (error.code === '23505') {
-          console.error('Duplicate video record error');
-        } else if (error.message?.includes('row-level security')) {
-          console.error('Row-level security error - user may not be authenticated');
-        }
-        
         return null;
       }
 
       // Video record created
       return data.id;
     } catch (error) {
-      console.error('Unexpected error creating video record:', error);
       return null;
     }
   }
@@ -203,7 +191,6 @@ class WebUploadService {
         .select('*');
 
       if (error) {
-        console.error('Failed to update video status:', error);
         return false;
       }
 
@@ -211,7 +198,6 @@ class WebUploadService {
       
       return true;
     } catch (error) {
-      console.error('Unexpected error updating video status:', error);
       return false;
     }
   }
@@ -275,7 +261,6 @@ class WebUploadService {
 
       // 6. Trigger AI processing (fire and forget)
       this.triggerAIProcessing(videoId, userId, uploadUrl.path, title).catch(error => {
-        console.error('AI processing trigger failed:', error);
         // Don't fail the upload if AI processing fails
       });
 
@@ -322,7 +307,6 @@ class WebUploadService {
         .createSignedUrl(storagePath, 3600); // 1 hour expiry
 
       if (urlError || !data?.signedUrl) {
-        console.error('Failed to create signed URL for AI processing:', urlError);
         return;
       }
 
@@ -340,13 +324,9 @@ class WebUploadService {
         }
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-      } else {
-        console.log('AI processing started for video:', videoId);
-      }
+      // AI processing triggered
     } catch (error) {
-      console.error('Failed to trigger AI processing:', error);
+      // Silently fail AI processing trigger
     }
   }
 

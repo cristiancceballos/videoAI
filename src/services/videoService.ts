@@ -324,13 +324,11 @@ class VideoService {
         .eq('id', videoId);
 
       if (error) {
-        console.error('Failed to update video:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error updating video:', error);
       return false;
     }
   }
@@ -352,7 +350,6 @@ class VideoService {
 
       return data.content;
     } catch (error) {
-      console.error('Error fetching summary:', error);
       return null;
     }
   }
@@ -374,7 +371,6 @@ class VideoService {
 
       return data.content;
     } catch (error) {
-      console.error('Error fetching transcript:', error);
       return null;
     }
   }
