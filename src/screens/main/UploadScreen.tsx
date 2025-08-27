@@ -81,6 +81,7 @@ export function UploadScreen() {
         user.id,
         title,
         (progress) => {
+          console.log('Progress callback received:', progress.percentage);
           setUploadProgress(progress);
         },
         tags

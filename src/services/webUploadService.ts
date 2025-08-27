@@ -62,6 +62,7 @@ class WebUploadService {
               total: event.total,
               percentage: (event.loaded / event.total) * 100,
             };
+            console.log('Upload progress:', Math.round(progress.percentage) + '%');
             onProgress(progress);
             // Upload progress tracked
           }

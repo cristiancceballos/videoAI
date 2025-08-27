@@ -348,7 +348,11 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
       // Remove it from userTags
       setUserTags(prev => prev.filter(tag => tag !== tagToRemove));
     }
-    // We don't allow removing AI-only tags
+    // Check if this tag is in aiTags
+    else if (aiTags.includes(tagToRemove)) {
+      // Remove it from aiTags
+      setAiTags(prev => prev.filter(tag => tag !== tagToRemove));
+    }
   };
 
   const addTag = () => {
