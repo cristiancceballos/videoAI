@@ -25,6 +25,8 @@ export interface Database {
           bunny_thumbnail_url?: string;
           ai_status?: 'pending' | 'processing' | 'completed' | 'error';
           tags?: string[];
+          user_tags?: string[];
+          ai_tags?: string[];
           ai_error?: string;
           ai_processed_at?: string;
           created_at: string;
@@ -53,6 +55,8 @@ export interface Database {
           bunny_thumbnail_url?: string;
           ai_status?: 'pending' | 'processing' | 'completed' | 'error';
           tags?: string[];
+          user_tags?: string[];
+          ai_tags?: string[];
           ai_error?: string;
           ai_processed_at?: string;
           created_at?: string;
@@ -81,6 +85,8 @@ export interface Database {
           bunny_thumbnail_url?: string;
           ai_status?: 'pending' | 'processing' | 'completed' | 'error';
           tags?: string[];
+          user_tags?: string[];
+          ai_tags?: string[];
           ai_error?: string;
           ai_processed_at?: string;
           created_at?: string;

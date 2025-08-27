@@ -34,11 +34,10 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(video.title);
   const [isEditingTags, setIsEditingTags] = useState(false);
-  const [editedTags, setEditedTags] = useState<string[]>(video.tags || []);
+  const [userTags, setUserTags] = useState<string[]>(video.user_tags || []);
+  const [aiTags, setAiTags] = useState<string[]>(video.ai_tags || []);
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [initialUserTags, setInitialUserTags] = useState<string[]>([]);
-  const [hasCapturedInitialTags, setHasCapturedInitialTags] = useState(false);
   
   // Animation values
   const translateY = useRef(new Animated.Value(0)).current;
@@ -131,30 +130,26 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
   // Reset editing states when video changes
   useEffect(() => {
     setEditedTitle(video.title);
-    setEditedTags(video.tags || []);
-    
-    // Capture initial user tags on first mount of this video
-    // This preserves user tags that were added during upload
-    if (video.id && !hasCapturedInitialTags) {
-      // Capture current tags as initial if we haven't done so yet
-      // These are the user's tags before any potential AI updates
-      setInitialUserTags(video.tags || []);
-      setHasCapturedInitialTags(true);
-    }
-    
+    setUserTags(video.user_tags || []);
+    setAiTags(video.ai_tags || []);
     setIsEditingTitle(false);
     setIsEditingTags(false);
     setCurrentAiStatus(video.ai_status);
     setNewTag(''); // Clear new tag input
-  }, [video, hasCapturedInitialTags]);
+  }, [video]);
   
-  // Reset captured state when video ID changes (different video)
+  // Reset state when video ID changes (different video)
   useEffect(() => {
     // Reset for new video
-    setHasCapturedInitialTags(false);
-    setInitialUserTags([]);
     setSummary(null); // Reset summary for new video
   }, [video.id]);
+  
+  // Compute merged tags for display
+  const displayTags = React.useMemo(() => {
+    const merged = [...userTags, ...aiTags];
+    // Remove duplicates
+    return Array.from(new Set(merged));
+  }, [userTags, aiTags]);
   
   // Subscribe to real-time updates for video status and summaries
   useEffect(() => {
@@ -176,26 +171,14 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (payload.new && 'ai_status' in payload.new) {
             setCurrentAiStatus(payload.new.ai_status);
             
-            // Merge AI tags with initial user tags when AI completes
-            if ('tags' in payload.new && payload.new.tags && payload.new.ai_status === 'completed') {
-              const incomingTags = payload.new.tags as string[];
-              
-              // Only merge if we have initial user tags to preserve
-              if (initialUserTags && initialUserTags.length > 0) {
-                // The incoming tags are AI-generated, we need to merge with user tags
-                const newAiTags = incomingTags.filter(tag => 
-                  !initialUserTags.includes(tag)
-                );
-                // Merge: user tags first, then new AI tags
-                const mergedTags = [...initialUserTags, ...newAiTags];
-                setEditedTags(mergedTags);
-                
-                // Also update the video's tags to reflect the merge
-                video.tags = mergedTags;
-              } else {
-                // No initial user tags, just use the incoming tags
-                setEditedTags(incomingTags);
-              }
+            // Update AI tags when AI completes
+            if ('ai_tags' in payload.new && payload.new.ai_tags) {
+              setAiTags(payload.new.ai_tags as string[]);
+            }
+            
+            // Update user tags if they change
+            if ('user_tags' in payload.new && payload.new.user_tags) {
+              setUserTags(payload.new.user_tags as string[]);
             }
           }
         }
@@ -338,30 +321,35 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
 
   const handleSaveTags = async () => {
     // If there's text in newTag input, add it first
-    let tagsToSave = [...editedTags];
-    if (newTag.trim()) {
-      tagsToSave = [...editedTags, newTag.trim()];
-      setEditedTags(tagsToSave);
+    let updatedUserTags = [...userTags];
+    if (newTag.trim() && !userTags.includes(newTag.trim())) {
+      updatedUserTags = [...userTags, newTag.trim()];
+      setUserTags(updatedUserTags);
       setNewTag('');
     }
     
     setIsSaving(true);
-    const success = await videoService.updateVideo(video.id, { tags: tagsToSave });
+    // Only update user_tags, not the merged tags
+    const success = await videoService.updateVideo(video.id, { user_tags: updatedUserTags });
     if (success) {
-      video.tags = tagsToSave; // Update local reference
-      setInitialUserTags(tagsToSave); // Update initial tags to preserve them
+      video.user_tags = updatedUserTags; // Update local reference
       setIsEditingTags(false);
     }
     setIsSaving(false);
   };
 
   const removeTag = (index: number) => {
-    setEditedTags(prev => prev.filter((_, i) => i !== index));
+    // Determine if it's a user tag or AI tag based on position
+    if (index < userTags.length) {
+      // It's a user tag - remove it
+      setUserTags(prev => prev.filter((_, i) => i !== index));
+    }
+    // We don't allow removing AI tags
   };
 
   const addTag = () => {
-    if (newTag.trim() && !editedTags.includes(newTag.trim())) {
-      setEditedTags(prev => [...prev, newTag.trim()]);
+    if (newTag.trim() && !userTags.includes(newTag.trim())) {
+      setUserTags(prev => [...prev, newTag.trim()]);
       setNewTag('');
     }
   };
@@ -574,7 +562,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                       </TouchableOpacity>
                     </View>
                     {/* Existing tags with delete option */}
-                    {editedTags.map((tag, index) => (
+                    {displayTags.map((tag, index) => (
                       <View key={index} style={styles.editableTagChip}>
                         <Text style={styles.tagText}>{tag}</Text>
                         <TouchableOpacity 
@@ -588,7 +576,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                   </>
                 ) : (
                   <>
-                    {editedTags.map((tag, index) => (
+                    {displayTags.map((tag, index) => (
                       <View key={index} style={styles.tagChip}>
                         <Text style={styles.tagText}>{tag}</Text>
                       </View>

@@ -141,7 +141,8 @@ class WebUploadService {
         original_filename: asset.filename,
         width: asset.width ? Math.round(asset.width) : undefined, // Ensure integer
         height: asset.height ? Math.round(asset.height) : undefined, // Ensure integer
-        tags: tags || [], // Add tags to video data
+        user_tags: tags || [], // Save user tags to user_tags column
+        tags: tags || [], // Also save to tags for immediate display
       };
 
       // Insert video data
