@@ -142,7 +142,7 @@ class WebUploadService {
         width: asset.width ? Math.round(asset.width) : undefined, // Ensure integer
         height: asset.height ? Math.round(asset.height) : undefined, // Ensure integer
         user_tags: tags || [], // Save user tags to user_tags column
-        tags: tags || [], // Also save to tags for immediate display
+        // Don't set tags - let the database trigger merge user_tags + ai_tags automatically
       };
 
       // Insert video data
@@ -154,11 +154,15 @@ class WebUploadService {
         .single();
 
       if (error) {
+        console.error('Failed to create video record:', error);
         
         // Provide user-friendly error messages
         if (error.code === '22P02') {
+          console.error('Database type mismatch error');
         } else if (error.code === '23505') {
+          console.error('Duplicate video record error');
         } else if (error.message?.includes('row-level security')) {
+          console.error('Row-level security error - user may not be authenticated');
         }
         
         return null;
@@ -167,6 +171,7 @@ class WebUploadService {
       // Video record created
       return data.id;
     } catch (error) {
+      console.error('Unexpected error creating video record:', error);
       return null;
     }
   }
@@ -197,6 +202,7 @@ class WebUploadService {
         .select('*');
 
       if (error) {
+        console.error('Failed to update video status:', error);
         return false;
       }
 
@@ -204,6 +210,7 @@ class WebUploadService {
       
       return true;
     } catch (error) {
+      console.error('Unexpected error updating video status:', error);
       return false;
     }
   }
