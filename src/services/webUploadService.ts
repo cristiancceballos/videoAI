@@ -142,7 +142,8 @@ class WebUploadService {
         width: asset.width ? Math.round(asset.width) : undefined, // Ensure integer
         height: asset.height ? Math.round(asset.height) : undefined, // Ensure integer
         user_tags: tags || [], // Save user tags to user_tags column
-        // Don't set tags - let the database trigger merge user_tags + ai_tags automatically
+        ai_tags: [], // Initialize empty AI tags
+        tags: tags || [], // Set merged tags (initially just user tags)
       };
 
       // Insert video data

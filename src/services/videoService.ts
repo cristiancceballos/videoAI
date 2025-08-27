@@ -33,7 +33,7 @@ class VideoService {
         return cachedVideos || [];
       }
 
-      // Add thumbnail URLs
+      // Add thumbnail URLs and merge tags
       // Process thumbnail URLs
       
       const videosWithThumbnails = await Promise.all(
@@ -55,9 +55,17 @@ class VideoService {
             // No thumbnail source available
           }
 
+          // Merge user_tags and ai_tags for display
+          const mergedTags = [
+            ...(video.user_tags || []),
+            ...(video.ai_tags || [])
+          ];
+          // Remove duplicates
+          const uniqueTags = Array.from(new Set(mergedTags));
 
           return {
             ...video,
+            tags: uniqueTags, // Override tags with merged array
             thumbnailUrl,
           };
         })
@@ -267,8 +275,17 @@ class VideoService {
         thumbnailUrl = await this.getFileUrl('thumbnails', data.thumbnail_path) || undefined;
       }
 
+      // Merge user_tags and ai_tags for display
+      const mergedTags = [
+        ...(data.user_tags || []),
+        ...(data.ai_tags || [])
+      ];
+      // Remove duplicates
+      const uniqueTags = Array.from(new Set(mergedTags));
+
       return {
         ...data,
+        tags: uniqueTags, // Override tags with merged array
         thumbnailUrl,
       };
     } catch (error) {
@@ -282,17 +299,38 @@ class VideoService {
     updates: Partial<Pick<Video, 'title' | 'description' | 'status' | 'tags' | 'user_tags' | 'ai_tags'>>
   ): Promise<boolean> {
     try {
+      // If updating user_tags, also update the merged tags
+      const finalUpdates = { ...updates };
+      if (updates.user_tags !== undefined) {
+        // Get current ai_tags to merge
+        const { data: currentVideo } = await supabase
+          .from('videos')
+          .select('ai_tags')
+          .eq('id', videoId)
+          .single();
+        
+        if (currentVideo) {
+          const mergedTags = [
+            ...(updates.user_tags || []),
+            ...(currentVideo.ai_tags || [])
+          ];
+          finalUpdates.tags = Array.from(new Set(mergedTags));
+        }
+      }
+
       const { error } = await supabase
         .from('videos')
-        .update(updates)
+        .update(finalUpdates)
         .eq('id', videoId);
 
       if (error) {
+        console.error('Failed to update video:', error);
         return false;
       }
 
       return true;
     } catch (error) {
+      console.error('Error updating video:', error);
       return false;
     }
   }
