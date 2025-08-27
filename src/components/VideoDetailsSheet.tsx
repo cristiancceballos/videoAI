@@ -220,7 +220,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
         // Check video status
         const { data: videoData, error: videoError } = await supabase
           .from('videos')
-          .select('ai_status, tags')
+          .select('ai_status, user_tags, ai_tags, tags')
           .eq('id', video.id)
           .single();
         
@@ -228,8 +228,12 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
           if (videoData.ai_status !== currentAiStatus) {
             setCurrentAiStatus(videoData.ai_status);
             
-            if (videoData.tags) {
-              setEditedTags(videoData.tags);
+            // Update separate tag arrays
+            if (videoData.user_tags) {
+              setUserTags(videoData.user_tags);
+            }
+            if (videoData.ai_tags) {
+              setAiTags(videoData.ai_tags);
             }
           }
           

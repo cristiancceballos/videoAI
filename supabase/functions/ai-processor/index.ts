@@ -78,11 +78,22 @@ serve(async (req: Request) => {
           model_used: 'gemini-1.5-flash',
         })
 
-      // Update video with tags and completion status
+      // Get current user_tags to merge with AI tags
+      const { data: videoData } = await supabase
+        .from('videos')
+        .select('user_tags')
+        .eq('id', videoId)
+        .single()
+      
+      const userTags = videoData?.user_tags || []
+      const mergedTags = [...new Set([...userTags, ...tags])] // Merge and remove duplicates
+
+      // Update video with AI tags and merged tags
       await supabase
         .from('videos')
         .update({
-          tags: tags,
+          ai_tags: tags,  // Save AI-generated tags separately
+          tags: mergedTags,  // Save merged tags for display
           ai_status: 'completed',
           ai_processed_at: new Date().toISOString(),
         })
