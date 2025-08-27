@@ -342,13 +342,13 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
     setIsSaving(false);
   };
 
-  const removeTag = (index: number) => {
-    // Determine if it's a user tag or AI tag based on position
-    if (index < userTags.length) {
-      // It's a user tag - remove it
-      setUserTags(prev => prev.filter((_, i) => i !== index));
+  const removeTag = (tagToRemove: string) => {
+    // Check if this tag is in userTags
+    if (userTags.includes(tagToRemove)) {
+      // Remove it from userTags
+      setUserTags(prev => prev.filter(tag => tag !== tagToRemove));
     }
-    // We don't allow removing AI tags
+    // We don't allow removing AI-only tags
   };
 
   const addTag = () => {
@@ -570,7 +570,7 @@ export function VideoDetailsSheet({ visible, video, onClose }: VideoDetailsSheet
                       <View key={index} style={styles.editableTagChip}>
                         <Text style={styles.tagText}>{tag}</Text>
                         <TouchableOpacity 
-                          onPress={() => removeTag(index)}
+                          onPress={() => removeTag(tag)}
                           hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                         >
                           <X size={14} color="#FF3B30" />

@@ -72,8 +72,13 @@ export function HomeScreen() {
       const filtered = videos.filter(video => {
         // Search in title
         if (video.title?.toLowerCase().includes(query)) return true;
-        // Search in tags
-        if (video.tags?.some(tag => tag.toLowerCase().includes(query))) return true;
+        // Search in tags - match from beginning of tag or beginning of words within tag
+        if (video.tags?.some(tag => {
+          const lowerTag = tag.toLowerCase();
+          // Match if tag starts with query or any word in the tag starts with query
+          return lowerTag.startsWith(query) || 
+                 lowerTag.split(/[-_ ]/).some(word => word.startsWith(query));
+        })) return true;
         return false;
       });
       setFilteredVideos(filtered);
