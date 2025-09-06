@@ -116,11 +116,11 @@ export function LoginScreen({ navigation }: any) {
 
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}></Text>
             <View style={styles.divider} />
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.googleButton}
             onPress={() => Alert.alert('Info', 'Google sign-in coming soon')}
             activeOpacity={0.8}
@@ -130,7 +130,7 @@ export function LoginScreen({ navigation }: any) {
               style={styles.googleIcon}
             />
             <Text style={styles.googleButtonText}>Log in with Google</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={styles.linkButton}
