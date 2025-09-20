@@ -153,11 +153,11 @@ export function SignUpScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.dividerContainer}>
+          {/* <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}></Text>
+            <Text style={styles.dividerText}>OR</Text>
             <View style={styles.divider} />
-          </View>
+          </View> */}
 
           {/* <TouchableOpacity
             style={styles.googleButton}

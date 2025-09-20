@@ -36,3 +36,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# learning notes (private)
+LEARNING_NOTES.md
