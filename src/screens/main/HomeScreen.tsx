@@ -82,8 +82,18 @@ export function HomeScreen() {
         return false;
       });
       setFilteredVideos(filtered);
+      
+      // If currently viewing a video that's no longer in filtered results, close video player
+      if (selectedVideo && showVideoPlayer) {
+        const isSelectedVideoInFiltered = filtered.some(v => v.id === selectedVideo.id);
+        if (!isSelectedVideoInFiltered) {
+          setShowVideoPlayer(false);
+          setSelectedVideo(null);
+          setVideoUrl(null);
+        }
+      }
     }
-  }, [searchQuery, videos]);
+  }, [searchQuery, videos, selectedVideo, showVideoPlayer]);
 
   // Refresh videos when screen comes into focus (e.g., after uploading)
   useFocusEffect(
@@ -278,7 +288,7 @@ export function HomeScreen() {
   };
 
   const preloadAdjacentVideos = async (currentIndex: number) => {
-    // Preload previous and next video URLs
+    // Preload previous and next video URLs from original videos list
     const prevIndex = currentIndex - 1;
     const nextIndex = currentIndex + 1;
     
@@ -299,6 +309,42 @@ export function HomeScreen() {
     
     if (nextIndex < videos.length && videos[nextIndex]) {
       const nextVideo = videos[nextIndex];
+      if (!videoUrlCache.has(nextVideo.id)) {
+        videoService.getVideoUrl(nextVideo).then(url => {
+          if (url) {
+            setVideoUrlCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(nextVideo.id, url);
+              return newCache;
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const preloadAdjacentVideosFromFiltered = async (currentIndex: number) => {
+    // Preload previous and next video URLs from filtered videos list
+    const prevIndex = currentIndex - 1;
+    const nextIndex = currentIndex + 1;
+    
+    if (prevIndex >= 0 && filteredVideos[prevIndex]) {
+      const prevVideo = filteredVideos[prevIndex];
+      if (!videoUrlCache.has(prevVideo.id)) {
+        videoService.getVideoUrl(prevVideo).then(url => {
+          if (url) {
+            setVideoUrlCache(prev => {
+              const newCache = new Map(prev);
+              newCache.set(prevVideo.id, url);
+              return newCache;
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+    
+    if (nextIndex < filteredVideos.length && filteredVideos[nextIndex]) {
+      const nextVideo = filteredVideos[nextIndex];
       if (!videoUrlCache.has(nextVideo.id)) {
         videoService.getVideoUrl(nextVideo).then(url => {
           if (url) {
@@ -348,17 +394,17 @@ export function HomeScreen() {
       setVideoLoading(false);
     }
     
-    // Preload adjacent videos
-    const videoIndex = videos.findIndex(v => v.id === video.id);
-    if (videoIndex !== -1) {
-      preloadAdjacentVideos(videoIndex);
+    // Preload adjacent videos from filtered list since that's what user is navigating
+    const filteredVideoIndex = filteredVideos.findIndex(v => v.id === video.id);
+    if (filteredVideoIndex !== -1) {
+      preloadAdjacentVideosFromFiltered(filteredVideoIndex);
     }
   };
 
   const handleVideoChange = async (newIndex: number) => {
-    if (newIndex < 0 || newIndex >= videos.length) return;
+    if (newIndex < 0 || newIndex >= filteredVideos.length) return;
     
-    const newVideo = videos[newIndex];
+    const newVideo = filteredVideos[newIndex];
     setSelectedVideo(newVideo);
     setVideoError(null);
     
@@ -374,8 +420,8 @@ export function HomeScreen() {
       setVideoLoading(false);
     }
     
-    // Preload adjacent videos
-    preloadAdjacentVideos(newIndex);
+    // Preload adjacent videos from filtered list
+    preloadAdjacentVideosFromFiltered(newIndex);
   };
 
   const handleVideoUrlExpired = async () => {
@@ -532,8 +578,8 @@ export function HomeScreen() {
         loading={videoLoading}
         error={videoError || undefined}
         onUrlExpired={handleVideoUrlExpired}
-        videos={videos}
-        currentIndex={selectedVideo ? videos.findIndex(v => v.id === selectedVideo.id) : 0}
+        videos={filteredVideos} // Pass filtered videos so swipe navigation respects current filter
+        currentIndex={selectedVideo ? filteredVideos.findIndex(v => v.id === selectedVideo.id) : 0}
         onVideoChange={handleVideoChange}
       />
     </View>
