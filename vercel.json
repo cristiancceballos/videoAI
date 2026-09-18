@@ -6,7 +6,7 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!_expo|static|assets|.*\\.(js|css|png|jpg|svg|ico|json|webmanifest)).*)",
       "destination": "/"
     }
   ],
