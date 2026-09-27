@@ -1,7 +1,7 @@
 # VideoAI - AI-Powered Video Management PWA
 Visit the app here: https://videoai-app.vercel.app
 
-A Progressive Web App (PWA) that helps users upload, organize, and interact with their video content through AI-powered summarization and Q&A capabilities.
+A Progressive Web App (PWA) that helps users upload, organize, and interact with their video content through AI-powered summarization and search filtering.
 
 ## Features
 
@@ -32,52 +32,6 @@ A Progressive Web App (PWA) that helps users upload, organize, and interact with
 4. **AI Processing**: Videos under 25MB are transcribed and summarized automatically, with tags generated
 5. **Search & Manage**: Browse your library, filter videos by tags, and edit/delete tags
 
-## Development Setup
-
-### Prerequisites
-- Node.js (18+)
-- npm or yarn
-- Supabase account
-- Vercel account (for deployment)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd videoAI
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Environment Setup**
-   Create `.env.local` with your Supabase credentials:
-   ```bash
-   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-   ```
-
-4. **Database Setup**
-   Run the SQL schema in your Supabase dashboard:
-   ```bash
-   # Execute the contents of supabase-setup.sql in your Supabase SQL editor
-   ```
-
-5. **Development Server**
-   ```bash
-   npx expo start --web
-   ```
-
-### Deployment
-
-Deploy to Vercel:
-```bash
-npx vercel
-```
-
 ## Project Structure
 
 ```
@@ -106,8 +60,6 @@ prd.md                  # Product requirements
 - Mobile-optimized UI
 - Upload progress tracking
 
-**Next Phase**: Converting VideoAI from PWA to Native iOS/Android Apps
-
 ## Known Limitations
 
 - AI restrictions on videos larger than 25MB 
@@ -116,7 +68,7 @@ prd.md                  # Product requirements
 
 ## Contributing
 
-This is currently a personal project focused on small user base (<10 users). 
+This is currently a personal project focused on small user base (~15 users). 
 
 ## License
 

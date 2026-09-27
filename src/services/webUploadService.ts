@@ -259,9 +259,9 @@ class WebUploadService {
       // Note: Thumbnail generation is handled by Bunny.net after upload
       // The video will have thumb_status: 'pending' until Bunny processes it
 
-      // 6. Trigger AI processing only for videos ≤ 25MB (Whisper API limit)
+      // 6. Trigger AI processing for videos ≤ 100MB (matches upload limit)
       const fileSizeInMB = asset.fileSize / (1024 * 1024);
-      if (fileSizeInMB <= 25) {
+      if (fileSizeInMB <= 100) {
         this.triggerAIProcessing(videoId, userId, uploadUrl.path, title).catch(error => {
           // AI processing failed but don't block upload
         });
@@ -271,7 +271,7 @@ class WebUploadService {
           .from('videos')
           .update({
             ai_status: 'error',
-            ai_error: 'File too large for AI processing (max 25MB)'
+            ai_error: 'File too large for AI processing (max 100MB)'
           })
           .eq('id', videoId);
       }
