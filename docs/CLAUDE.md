@@ -11,8 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Technology Stack
 
 - **Frontend**: Expo Web (PWA) - mobile-first Progressive Web App
-- **Backend**: Supabase (Auth, Storage, Postgres)
-- **AI Services**: OpenAI Whisper (transcription), Google Gemini (summaries + tags)
+- **Backend**: Supabase (Auth, Storage, Postgres, Edge Functions)
+- **AI Services**: Google Gemini 3.5 Flash Lite (multimodal video analysis - transcription, summaries, tags)
 - **Database**: Supabase Postgres for structured data storage
 - **Deployment**: Vercel static hosting
 - **Distribution**: QR code → PWA installation
@@ -21,12 +21,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Data Flow
 1. **Upload Pipeline**: User uploads → Direct Supabase Storage → Status updates
-2. **Processing Pipeline**: Videos ≤25MB → Whisper transcription → Gemini summary/tags → Database storage
+2. **Processing Pipeline**: Videos ≤100MB → Edge Function → Gemini Files API → Multimodal analysis → Database storage
 3. **Search Pipeline**: User searches → Text-based search across titles and tags
 
 ### Key Components
 - **Mobile App**: TikTok-style video feed, upload interface, summary/tag display
-- **AI Processing**: Direct API calls to OpenAI and Google AI services
+- **AI Processing**: Supabase Edge Function (`ai-processor`) calls Gemini API server-side
 - **Search System**: Simple text search with abbreviation expansion support
 - **Tag Management**: User-editable AI-generated tags
 
@@ -53,7 +53,7 @@ npm install             # Install dependencies
 ### Core Tables
 - `users` - Supabase Auth integration
 - `videos` - Metadata, storage URLs, processing status, thumbnails, tags
-- `transcripts` - Full video transcriptions from Whisper
+- `transcripts` - Full video transcriptions from Gemini multimodal
 - `summaries` - AI-generated summaries from Gemini
 - `notes` - User-added notes per video
 
@@ -69,8 +69,9 @@ npm install             # Install dependencies
 - Execute SQL schema from `sql/supabase-setup.sql`
 
 ### AI API Integration
-- OpenAI Whisper API for audio transcription (videos ≤25MB)
-- Google Gemini API for summarization and tag generation
+- Google Gemini 3.5 Flash Lite for multimodal video analysis (videos ≤100MB)
+- Single API call returns: transcription, summary, tags, and language detection
+- Edge Function handles: video download → Gemini Files API upload → generateContent → cleanup
 - Implement proper error handling and rate limiting
 
 ### PWA Features
@@ -81,7 +82,7 @@ npm install             # Install dependencies
 ## Key Development Patterns
 
 ### Upload Flow
-Direct client-to-Supabase-Storage upload with progress tracking. AI processing triggered for videos ≤25MB.
+Direct client-to-Supabase-Storage upload with progress tracking. AI processing triggered for videos ≤100MB via `ai-processor` edge function.
 
 ### Search Implementation  
 Text-based search across video titles and tags with abbreviation expansion (e.g., "cs" → "computer science").
@@ -101,18 +102,19 @@ Graceful handling of AI API failures, file upload errors, and offline scenarios 
 ## Environment Variables Required
 
 ```
+# Client-side (in .env)
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-OPENAI_API_KEY=your_openai_key
+
+# Edge Function secrets (set via: supabase secrets set)
 GOOGLE_AI_API_KEY=your_gemini_api_key
 ```
 
 ## Current Status: MVP Complete ✅
 
 ### Deployed Features:
-- **Video Upload**: Gallery/camera selection with progress tracking
-- **AI Transcription**: Whisper API for videos ≤25MB
-- **AI Summaries**: Gemini-generated summaries with key insights
+- **Video Upload**: Gallery/camera selection with progress tracking (up to 100MB)
+- **AI Video Analysis**: Gemini multimodal processing for transcription, summaries, and tags
 - **Smart Tags**: AI-generated tags with user edit/delete capability
 - **Search & Filter**: Text search across titles and tags with abbreviation support
 - **PWA**: Full Progressive Web App with offline support and installability
@@ -123,19 +125,18 @@ GOOGLE_AI_API_KEY=your_gemini_api_key
 - `VideoGridItem`: Mobile-optimized video cards with thumbnails and metadata
 - `VideoDetailsSheet`: Swipe-up modal with summaries, transcripts, and tags
 - `UploadProgressModal`: Real-time upload progress with visual feedback
-- `webUploadService`: Direct-to-Supabase upload with progress tracking
-- `aiService`: OpenAI Whisper + Google Gemini integration
+- `webUploadService`: Direct-to-Supabase upload with progress tracking + AI trigger
+- `ai-processor` (Edge Function): Gemini multimodal video analysis
 
 ### Architecture:
 - **PWA-First**: Mobile browser optimized, installable via home screen
-- **Direct API**: Client-side AI API calls, no complex backend processing
+- **Edge Function AI**: Server-side AI processing via Supabase Edge Functions
 - **Real-time**: Supabase subscriptions for upload status updates
 - **Vercel Deployed**: Production app at https://videoai-app.vercel.app
 
 ## Current Limitations
 
-- AI processing limited to videos ≤25MB (Whisper API constraint)
-- Maximum video upload: 50MB per file
+- Maximum video upload/AI processing: 100MB per file
 - Text-based search only (no semantic/vector search)
 - PWA-only distribution (no native app stores)
 - Optimized for <10 users (free tier usage)

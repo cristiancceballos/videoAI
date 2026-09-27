@@ -1,222 +1,89 @@
-# VideoAI - Phase 3: AI Integration Plan
+# VideoAI - AI Integration
 
-## Overview
-This document outlines the implementation plan for integrating AI-powered video summarization and tagging into VideoAI, enabling users to automatically generate summaries and searchable tags for their uploaded videos.
-
-## MVP Phase 1: Basic Transcription & Summarization
+## Current Implementation (September 2026)
 
 ### Architecture Overview
-1. **Direct Video Processing** - Whisper API supports MP4 files directly (up to 25MB)
-2. **Supabase Queue System** - Background processing using pgmq extension  
-3. **Edge Functions** - Coordinate AI API calls and database updates
+The AI integration uses **Google Gemini 3.5 Flash Lite** multimodal capabilities to process videos directly. This replaced the previous OpenAI Whisper + Gemini combo approach.
 
-### Implementation Steps
-
-#### 1. Database Setup
-- Use existing `transcripts` and `summaries` tables (already in schema)
-- Add `tags` column to videos table (JSON array for simplicity in MVP)
-- Add AI processing status fields to videos table:
-  ```sql
-  ALTER TABLE videos ADD COLUMN ai_status TEXT DEFAULT 'pending' 
-    CHECK (ai_status IN ('pending', 'processing', 'completed', 'error'));
-  ALTER TABLE videos ADD COLUMN tags JSONB DEFAULT '[]';
-  ALTER TABLE videos ADD COLUMN ai_error TEXT;
-  ```
-
-#### 2. Queue System
-- Enable Supabase Queues in dashboard
-- Create `ai-processing` queue
-- Trigger queue job when video upload completes
-
-#### 3. Edge Function Workflow
 ```
-Video Upload → Queue Job → Edge Function → Whisper API → GPT-4o → Update DB
+Video Upload → Supabase Storage → Edge Function → Gemini Files API → Gemini generateContent → Database
 ```
 
-#### 4. AI Processing Flow
-1. Download video from Supabase Storage (temporary URL)
-2. Send to Whisper API for transcription ($0.006/minute)
-3. Use GPT-4o to generate summary from transcript ($3/1M input, $10/1M output)
-4. Extract 5-10 relevant tags from summary
-5. Store everything in database
+### How It Works
+1. **Video Upload**: User uploads video to Supabase Storage (up to 100MB)
+2. **Edge Function Triggered**: `ai-processor` edge function is invoked with video details
+3. **Download Video**: Edge function downloads video from Supabase using signed URL
+4. **Gemini Files API Upload**: Video uploaded to Gemini's temporary storage (resumable upload)
+5. **Wait for Processing**: Poll until file state is `ACTIVE`
+6. **Multimodal Analysis**: Single `generateContent` call analyzes video and returns:
+   - Complete transcript of spoken content
+   - Language detection (e.g., 'en', 'es', 'fr')
+   - 1-2 paragraph summary considering both audio and visual content
+   - 5-6 relevant tags (specific topics + categories + mood)
+7. **Database Storage**: Results saved to `transcripts`, `summaries` tables; tags merged into `videos` table
+8. **Cleanup**: Temporary file deleted from Gemini (auto-deletes after 48 hours anyway)
 
-### Cost Estimates
-- 10-minute video: ~$0.074 total
-  - Whisper: $0.06 (10 min × $0.006)
-  - GPT-4o: ~$0.014 (assuming ~3k tokens)
-- Well within budget for <10 users
+### Key Files
+| File | Purpose |
+|------|---------|
+| `supabase/functions/ai-processor/index.ts` | Edge function handling all AI processing |
+| `src/services/webUploadService.ts` | Triggers AI processing after upload |
 
-## Handling Videos Over 25MB
-
-### Option 1: Client-Side Compression (Recommended)
-**Approach**: Compress video on client before upload
-```javascript
-// Use browser-based video compression
-const compressVideo = async (file: File): Promise<File> => {
-  // Options:
-  // 1. Use video.js with custom encoding settings
-  // 2. Use WebCodecs API (modern browsers)
-  // 3. Use libraries like ffmpeg.wasm
-  
-  // Target: 720p, 30fps, lower bitrate
-  // This typically reduces file size by 60-80%
-}
+### Edge Function Flow
+```typescript
+// Simplified flow in ai-processor/index.ts
+1. downloadVideo(signedUrl)           // Get video blob from Supabase
+2. uploadVideoToGemini(blob, mimeType) // Upload to Gemini Files API
+3. waitForFileReady(fileName)          // Poll until ACTIVE
+4. generateVideoAnalysis(fileUri)      // Single multimodal API call
+5. deleteGeminiFile(fileName)          // Cleanup
+6. Save to database                    // transcripts, summaries, videos tables
 ```
 
-**Pros**: 
-- Works within existing architecture
-- No additional backend services
-- Faster uploads for users
-
-**Cons**: 
-- Processing burden on client device
-- May impact mobile performance
-
-### Option 2: Audio-Only Extraction (Most Efficient)
-**Approach**: Extract audio track for transcription
-```javascript
-// Edge Function approach
-const extractAudioForTranscription = async (videoUrl: string) => {
-  // Use external service or Lambda function with ffmpeg
-  // Convert to MP3/M4A at 64kbps mono
-  // 10-minute audio ≈ 5MB (well under 25MB limit)
-}
-```
-
-**Implementation Options**:
-1. **Trigger.dev Integration** (Recommended)
-   - Set up Trigger.dev worker with ffmpeg
-   - Process: Video → Audio → Whisper
-   - Cost: ~$20/month for starter plan
-
-2. **AWS Lambda Layer**
-   - Deploy Lambda with ffmpeg layer
-   - Triggered by Supabase webhook
-   - Cost: ~$0.0002 per invocation
-
-3. **Cloudflare Workers + R2**
-   - Use Workers for processing
-   - Store temp files in R2
-   - Cost: Minimal with free tier
-
-### Option 3: Chunked Processing
-**Approach**: Split video into smaller segments
-```javascript
-// Process video in chunks
-const processLargeVideo = async (videoFile: File) => {
-  const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
-  const chunks = splitVideo(videoFile, CHUNK_SIZE);
-  
-  const transcripts = await Promise.all(
-    chunks.map(chunk => whisperAPI.transcribe(chunk))
-  );
-  
-  return mergeTranscripts(transcripts);
-}
-```
-
-**Pros**: Works with existing APIs
-**Cons**: Complex transcript merging, potential context loss
-
-### Option 4: Alternative Transcription Services
-**Services that handle larger files**:
-1. **AssemblyAI** 
-   - 5GB file limit
-   - $0.65/hour (competitive)
-   - Direct video support
-
-2. **Rev.ai**
-   - 2GB file limit  
-   - $0.02/minute
-   - High accuracy
-
-3. **AWS Transcribe**
-   - 2GB file limit
-   - $0.024/minute
-   - Integrated with S3
-
-## Phase 2: Enhanced Search with Tags
-
-### Tag Implementation
-```sql
--- Create GIN index for fast JSON searches
-CREATE INDEX idx_videos_tags ON videos USING GIN (tags);
-
--- Enable fuzzy search
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_videos_title_trgm ON videos USING GIN (title gin_trgm_ops);
-```
-
-### Search Features
-- Tag-based filtering
-- Full-text search on titles/descriptions
-- Fuzzy matching for typos
-- Combined tag + text search
-
-## Phase 3: Vision Fallback (Future Enhancement)
-
-### For Silent/Visual Videos
-1. **Detect Low Audio**
-   - Check audio levels in first 30 seconds
-   - Flag videos with <10% audio content
-
-2. **Vision Processing**
-   - Extract keyframes (every 10 seconds)
-   - Use GPT-4 Vision or Gemini Vision
-   - Generate visual-based summary
-
-3. **Cost Optimization**
-   - Process only first 2 minutes for preview
-   - Let users request full analysis
-
-## Recommended Implementation Path
-
-### Week 1: Core Infrastructure
-1. Set up Supabase Queues
-2. Create Edge Function skeleton
-3. Add database columns
-4. Implement Trigger.dev for audio extraction
-
-### Week 2: AI Integration  
-1. Integrate Whisper API
-2. Integrate GPT-4o for summaries
-3. Implement tag extraction
-4. Error handling & retries
-
-### Week 3: UI Updates
-1. Show AI processing status
-2. Display summaries in video details
-3. Implement tag display
-4. Make search bar functional
-
-### Week 4: Testing & Optimization
-1. Test with various video types
-2. Optimize for cost
-3. Handle edge cases
-4. Deploy to production
-
-## Environment Variables to Add
+### Environment Variables
 ```bash
-# AI Services
-OPENAI_API_KEY=sk-...
-TRIGGER_DEV_API_KEY=... # If using Trigger.dev
-AWS_LAMBDA_ENDPOINT=... # If using Lambda
+# Required (set in Supabase Edge Function secrets)
+GOOGLE_AI_API_KEY=your_gemini_api_key
 
-# Feature Flags
-ENABLE_AI_PROCESSING=true
-MAX_VIDEO_SIZE_MB=100
+# Automatic (provided by Supabase)
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-## Success Metrics
-- 95% successful transcription rate
-- <2 minute processing time for 10-min videos
-- <$0.10 cost per video
-- 80% accuracy in tag generation
+### Database Schema
+```sql
+-- AI status tracking on videos table
+ai_status: 'pending' | 'processing' | 'completed' | 'error'
+ai_tags: string[]           -- AI-generated tags
+user_tags: string[]         -- User-added tags  
+tags: string[]              -- Merged (ai_tags + user_tags)
+ai_error: string            -- Error message if failed
+ai_processed_at: timestamp  -- When processing completed
 
-## Future Enhancements
-1. Multi-language support
-2. Speaker diarization
-3. Sentiment analysis
-4. Auto-generated chapters
-5. Video highlights/clips
-6. Q&A chatbot per video
+-- Separate tables
+transcripts: video_id, content, language
+summaries: video_id, content, model_used
+```
+
+### Advantages Over Previous Implementation
+| Aspect | Old (Whisper + Gemini) | New (Gemini Multimodal) |
+|--------|------------------------|-------------------------|
+| API Calls | 2 (Whisper → Gemini) | 1 (Gemini only) |
+| Max Video Size | 25MB | 100MB |
+| Dependencies | OpenAI + Google | Google only |
+| Analysis | Audio only | Audio + Visual |
+| Cost | ~$0.07/10-min video | Free tier available |
+
+---
+
+## Historical Reference
+
+<details>
+<summary>Original Plan (August 2025) - Archived</summary>
+
+The original implementation used:
+- **OpenAI Whisper API** for transcription (25MB limit, $0.006/minute)
+- **Google Gemini 1.5 Flash** for summarization and tagging
+
+The original approach required complex workarounds for videos >25MB. The new approach uses Gemini’s multimodal capabilities to process videos directly, supporting files up to 2GB while eliminating the need for multiple tools.
+</details>

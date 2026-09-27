@@ -36,8 +36,8 @@ Analyze this video and provide:
 
 1. TRANSCRIPT: Complete, accurate transcript of all spoken content. Include all dialogue and narration.
 2. LANGUAGE: Detected language code (e.g., 'en', 'es', 'fr')
-3. SUMMARY: 2-3 paragraph summary covering main topics and key takeaways. Consider both audio and visual content.
-4. TAGS: 5-7 relevant tags following this pattern:
+3. SUMMARY: 1-2 paragraph summary covering main topics and key takeaways. Consider both audio and visual content.
+4. TAGS: 5-6 relevant tags following this pattern:
    - 1-2 specific tags about the exact topic/subject
    - 2-3 broader category tags from: education, technology, programming, cooking, fitness, health, motivation, lifestyle, business, science, entertainment, gaming, music, art, travel, sports, diy, tutorial, review, comedy, news
    - 1 mood/tone tag if clearly identifiable from: inspirational, educational, humorous, serious, relaxing, energetic, informative, entertaining, emotional, calming, exciting
