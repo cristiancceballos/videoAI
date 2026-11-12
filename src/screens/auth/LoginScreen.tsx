@@ -15,6 +15,7 @@ import {
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { getInterFontConfig, getInterFontConfigForInputs } from '../../utils/fontUtils';
+import { DesktopBanner } from '../../components/DesktopBanner';
 
 export function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -43,11 +44,12 @@ export function LoginScreen({ navigation }: any) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <DesktopBanner />
         <View style={styles.form}>
           <View style={styles.header}>
             <Text style={styles.title}>Welcome to VideoAI</Text>
